@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucide — Signaux de trading par IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FCFBFF;
+    --surface: #FFFFFF;
+    --ink: #17132B;
+    --ink-soft: #6B6580;
+    --line: #ECE8F7;
+    --lav: #F1ECFB;
+    --violet: #7C3AED;
+    --magenta: #C026D3;
+    --grad: linear-gradient(135deg, #8B3DFF, #C026D3);
+    --green: #16A34A;
+    --green-bg: #DCFCE7;
+    font-family: 'Inter', sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14101F; --surface: #1C1730; --ink: #F3F0FC; --ink-soft: #A79FC2; --line: #2C2547; --lav: #241D3D;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #14101F; --surface: #1C1730; --ink: #F3F0FC; --ink-soft: #A79FC2; --line: #2C2547; --lav: #241D3D; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--ink); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); overflow-x: hidden; }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.01em; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
+  a { color: inherit; text-decoration: none; }
+  .gradient-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* nav */
+  nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 66px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; }
+  .brand-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--grad); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(139,61,255,.35); }
+  .navlinks { display: flex; gap: 30px; font-size: .9rem; color: var(--ink-soft); }
+  .navlinks a:hover { color: var(--ink); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 11px 22px; border-radius: 10px; font-size: .9rem; font-weight: 600; cursor: pointer; border: none; }
+  .btn-primary { background: var(--ink); color: var(--bg); }
+  .btn-ghost { border: 1px solid var(--line); color: var(--ink); background: var(--surface); }
+  @media (max-width: 720px) { .navlinks { display: none; } }
+
+  /* hero */
+  .hero { position: relative; padding: 64px 0 56px; text-align: center; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -10% -10% auto -10%; height: 620px;
+    background: radial-gradient(60% 60% at 50% 20%, rgba(196,38,211,.16), transparent 70%),
+                radial-gradient(50% 50% at 20% 40%, rgba(139,61,255,.14), transparent 70%);
+    pointer-events: none; z-index: -1;
+  }
+  .pill { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); padding: 8px 16px; border-radius: 999px; font-size: .82rem; color: var(--ink-soft); }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #22D3EE; }
+  .hero h1 { margin-top: 22px; font-size: clamp(2.1rem, 5.4vw, 3.3rem); line-height: 1.12; font-weight: 700; max-width: 16ch; margin-inline: auto; }
+  .hero p.lede { margin: 20px auto 0; max-width: 52ch; font-size: 1.05rem; line-height: 1.65; color: var(--ink-soft); }
+  .hero-cta { margin-top: 30px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .ticker { margin-top: 36px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .ticker span { background: var(--surface); border: 1px solid var(--line); padding: 8px 18px; border-radius: 999px; font-size: .85rem; font-weight: 600; color: var(--violet); }
+
+  /* stats */
+  .stats { padding: 46px 0 10px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: center; }
+  @media (max-width: 720px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+  .stat-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--grad); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+  .stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 1.7rem; font-weight: 700; }
+  .stat span { font-size: .85rem; color: var(--ink-soft); }
+
+  /* signal card */
+  .signal-wrap { padding: 54px 0; }
+  .signal-card { max-width: 460px; margin: 0 auto; background: var(--grad); border-radius: 22px; padding: 26px; color: #fff; box-shadow: 0 30px 60px -20px rgba(139,61,255,.45); }
+  .signal-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .signal-engine { display: flex; align-items: center; gap: 10px; }
+  .signal-engine .ico { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; }
+  .signal-engine div b { display: block; font-size: .92rem; font-family: 'Space Grotesk', sans-serif; }
+  .signal-engine div span { font-size: .74rem; opacity: .85; display: flex; align-items: center; gap: 5px; }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ADE80; }
+  .signal-conf { text-align: right; }
+  .signal-conf span { font-size: .74rem; opacity: .8; display: block; }
+  .signal-conf b { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; }
+  .signal-pair { margin-top: 20px; font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; }
+  .signal-grid { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .signal-box { background: rgba(255,255,255,.14); border-radius: 12px; padding: 12px 14px; }
+  .signal-box span { display: block; font-size: .72rem; opacity: .8; }
+  .signal-box b { font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem; }
+  .signal-strategy { margin-top: 16px; font-size: .8rem; opacity: .88; display: flex; align-items: center; gap: 6px; }
+  .signal-ratio { margin-top: 14px; font-size: .78rem; opacity: .75; }
+
+  /* sections */
+  section.block { padding: 60px 0; }
+  .section-head { text-align: center; max-width: 52ch; margin: 0 auto 40px; }
+  .section-head h2 { font-size: clamp(1.6rem, 3.4vw, 2.2rem); font-weight: 700; }
+  .section-head p { margin-top: 12px; color: var(--ink-soft); font-size: 1rem; line-height: 1.6; }
+
+  .card-list { display: flex; flex-direction: column; gap: 16px; max-width: 620px; margin: 0 auto; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: flex; gap: 16px; align-items: flex-start; box-shadow: 0 2px 10px rgba(23,19,43,.03); }
+  .card.hi { border-color: var(--violet); }
+  .card .ico { width: 46px; height: 46px; border-radius: 12px; background: var(--lav); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .card h4 { font-size: 1.02rem; font-weight: 700; }
+  .card p { margin-top: 4px; color: var(--ink-soft); font-size: .9rem; line-height: 1.5; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 780px) { .grid3 { grid-template-columns: 1fr; } }
+
+  /* eyebrows */
+  .eyebrow { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .04em; padding: 7px 15px; border-radius: 999px; margin-bottom: 14px; }
+  .eyebrow.violet { background: var(--lav); color: var(--violet); }
+  .eyebrow.green { background: var(--green-bg); color: var(--green); }
+  .eyebrow.pink { background: #FCE7FA; color: var(--magenta); }
+
+  /* steps */
+  .steps { display: flex; flex-direction: column; gap: 16px; max-width: 620px; margin: 0 auto; }
+  .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 26px; overflow: hidden; }
+  .step .num { position: absolute; top: 16px; right: 22px; font-family: 'Space Grotesk', sans-serif; font-size: 2.6rem; font-weight: 700; color: var(--lav); }
+  .step .ico { width: 46px; height: 46px; border-radius: 12px; background: var(--grad); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .step h4 { font-size: 1.05rem; font-weight: 700; }
+  .step p { margin-top: 6px; color: var(--ink-soft); font-size: .9rem; line-height: 1.55; }
+
+  /* testimonial */
+  .testimonial { max-width: 520px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 26px; }
+  .quote-mark { font-family: 'Space Grotesk', sans-serif; font-size: 2.4rem; color: var(--lav); line-height: 1; }
+  .stars { color: #F59E0B; font-size: .95rem; margin: 8px 0 12px; letter-spacing: 2px; }
+  .testimonial p.t { color: var(--ink-soft); font-size: .92rem; line-height: 1.6; }
+  .testimonial .who { margin-top: 14px; font-size: .85rem; font-weight: 700; }
+
+  /* faq */
+  .faq { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .faq details { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .faq summary { list-style: none; cursor: pointer; font-weight: 700; font-size: .96rem; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--violet); font-size: 1.3rem; font-weight: 400; flex-shrink: 0; }
+  .faq details[open] summary::after { content: "–"; }
+  .faq details p { margin-top: 12px; color: var(--ink-soft); font-size: .89rem; line-height: 1.6; }
+
+  /* final cta */
+  .final-cta { background: var(--grad); border-radius: 26px; padding: 52px 26px; text-align: center; color: #fff; }
+  .final-cta .pill2 { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.16); padding: 8px 16px; border-radius: 999px; font-size: .82rem; margin-bottom: 20px; }
+  .final-cta h2 { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; max-width: 16ch; margin: 0 auto; }
+  .final-cta p { margin: 16px auto 0; max-width: 44ch; opacity: .92; font-size: .98rem; line-height: 1.6; }
+  .final-cta .cta-row { margin-top: 26px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn-white { background: #fff; color: var(--violet); }
+  .btn-outline-w { border: 1px solid rgba(255,255,255,.5); color: #fff; background: transparent; }
+
+  /* footer grid */
+  footer .foot-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 28px; text-align: left; margin-bottom: 34px; }
+  @media (max-width: 700px) { footer .foot-grid { grid-template-columns: 1fr 1fr; } }
+  footer .foot-col h5 { font-size: .84rem; font-weight: 700; margin-bottom: 12px; }
+  footer .foot-col a { display: block; color: var(--ink-soft); font-size: .86rem; margin-bottom: 10px; }
+  footer .foot-bottom { border-top: 1px solid var(--line); padding-top: 20px; text-align: center; }
+
+  /* pricing */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+  @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .plan { border: 1px solid var(--line); border-radius: 20px; padding: 30px; background: var(--surface); display: flex; flex-direction: column; }
+  .plan.featured { border-color: var(--violet); box-shadow: 0 20px 40px -20px rgba(139,61,255,.35); position: relative; }
+  .plan-badge { position: absolute; top: -12px; right: 24px; background: var(--grad); color: #fff; font-size: .7rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; }
+  .plan-icon { width: 40px; height: 40px; border-radius: 11px; background: var(--lav); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .plan h3 { font-size: 1.1rem; font-weight: 700; }
+  .plan .desc { color: var(--ink-soft); font-size: .86rem; margin-top: 4px; }
+  .plan .price { margin-top: 18px; font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 700; }
+  .plan .price small { font-family: 'Inter', sans-serif; font-size: .82rem; color: var(--ink-soft); font-weight: 400; }
+  .plan .fcfa { font-size: .78rem; color: var(--ink-soft); }
+  .plan ul { margin-top: 20px; list-style: none; display: flex; flex-direction: column; gap: 11px; flex: 1; }
+  .plan li { font-size: .87rem; display: flex; gap: 9px; align-items: flex-start; }
+  .check { width: 17px; height: 17px; border-radius: 50%; background: var(--green-bg); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .plan .btn { margin-top: 24px; width: 100%; }
+  .pay-row { margin-top: 32px; text-align: center; font-size: .85rem; color: var(--ink-soft); }
+  .pay-row span { border: 1px solid var(--line); padding: 6px 12px; border-radius: 8px; margin: 0 4px; display: inline-block; }
+
+  footer { padding: 40px 0 calc(40px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); text-align: center; }
+  footer p { color: var(--ink-soft); font-size: .82rem; margin-top: 6px; }
+
+  /* ===== v2 : thème du héros SniperSignal + touches futuristes ===== */
+  :root { --hero-a:#B9A6FB; --hero-b:#C98BFA; --hero-c:#E879F9; --hero-d:#F7EDFF; --navbg:rgba(255,255,255,.62); --navborder:rgba(255,255,255,.78); --glass:rgba(255,255,255,.55); --pillc:#6D28D9; --lede:#6A5C8E; --grid:rgba(255,255,255,.30); --cyan:#22D3EE; }
+  :root[data-theme="dark"] { --hero-a:#241552; --hero-b:#4C1D95; --hero-c:#86198F; --hero-d:#14101F; --navbg:rgba(28,23,48,.62); --navborder:rgba(255,255,255,.12); --glass:rgba(255,255,255,.08); --pillc:#C4B5FD; --lede:#B9AEDC; --grid:rgba(255,255,255,.07); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --hero-a:#241552; --hero-b:#4C1D95; --hero-c:#86198F; --hero-d:#14101F; --navbg:rgba(28,23,48,.62); --navborder:rgba(255,255,255,.12); --glass:rgba(255,255,255,.08); --pillc:#C4B5FD; --lede:#B9AEDC; --grid:rgba(255,255,255,.07); } }
+  h1,h2,h3,h4,.brand,.stat b,.plan .price { font-family:'Plus Jakarta Sans','Space Grotesk',sans-serif; letter-spacing:-.03em; }
+  .ticker span,.signal-box b,.ring b,.live-panel b,.eyebrow { font-family:'JetBrains Mono',ui-monospace,monospace; letter-spacing:0; }
+  .eyebrow { letter-spacing:.12em; }
+  .gradient-text { background:linear-gradient(90deg,#7C3AED,#D946EF 55%,#7C3AED); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  nav { margin:10px 14px 0; border:1px solid var(--navborder); border-radius:24px; background:var(--navbg); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:0 14px 34px -14px rgba(124,58,237,.45); z-index:40; }
+  nav .wrap { height:76px; padding:0 16px; }
+  @media (min-width:1000px) { nav { max-width:1080px; margin:10px auto 0; } }
+  .brand { font-size:1.45rem; font-weight:800; gap:12px; color:var(--ink); }
+  .brand-mark { position:relative; width:50px; height:50px; border-radius:16px; background:linear-gradient(135deg,#7C3AED,#D946EF); box-shadow:0 10px 24px -6px rgba(168,85,247,.65); }
+  .brand-mark::after { content:""; position:absolute; top:-5px; right:-5px; width:16px; height:16px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 3px rgba(34,211,238,.28); }
+  .burger { display:none; background:none; border:0; padding:8px; color:var(--ink); cursor:pointer; }
+  nav .btn-primary { display:none; }
+  @media (min-width:781px) { nav .btn-primary { display:inline-flex; } }
+  @media (max-width:780px) { .burger { display:block; } .navlinks { display:none; position:absolute; top:84px; left:0; right:0; flex-direction:column; gap:4px; padding:14px; border-radius:22px; background:var(--navbg); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border:1px solid var(--navborder); box-shadow:0 18px 40px -16px rgba(124,58,237,.5); } .navlinks.open { display:flex; } .navlinks a { padding:12px 14px; border-radius:14px; font-size:1rem; color:var(--ink); } }
+  .hero { margin-top:-86px; padding:150px 0 70px; text-align:left; background:linear-gradient(180deg,var(--hero-a) 0%,var(--hero-b) 30%,var(--hero-c) 64%,var(--hero-d) 100%); }
+  .hero::before { display:none; }
+  .hero::after { content:""; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size:56px 56px; -webkit-mask-image:linear-gradient(#000 30%,transparent 92%); mask-image:linear-gradient(#000 30%,transparent 92%); }
+  .hero .wrap { position:relative; z-index:1; }
+  .pill { background:var(--glass); border:1px solid var(--navborder); color:var(--pillc); font-weight:600; font-size:.95rem; padding:12px 20px; }
+  .pill .dot { width:12px; height:12px; background:var(--cyan); box-shadow:0 0 0 4px rgba(34,211,238,.28); animation:pulsec 1.8s infinite; }
+  .hero h1 { margin:26px 0 0; max-width:13ch; font-size:clamp(2.5rem,11vw,5rem); line-height:1.02; font-weight:800; }
+  .hero p.lede { margin:26px 0 0; max-width:50ch; color:var(--lede); font-size:1.12rem; line-height:1.7; }
+  .hero p.lede strong { color:var(--ink); }
+  .hero-cta { margin-top:30px; flex-direction:column; align-items:flex-start; justify-content:flex-start; }
+  .btn-cta { display:inline-flex; align-items:center; justify-content:center; gap:10px; width:100%; max-width:440px; padding:20px 28px; border-radius:20px; background:linear-gradient(90deg,#7C3AED,#D946EF); color:#fff; font-weight:700; font-size:1.1rem; box-shadow:0 20px 42px -14px rgba(168,85,247,.7); transition:transform .2s, box-shadow .2s; }
+  .btn-cta:hover { transform:translateY(-2px); box-shadow:0 26px 50px -14px rgba(168,85,247,.85); }
+  .hero .btn-ghost { background:var(--glass); border-color:var(--navborder); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+  .ticker { justify-content:flex-start; }
+  .ticker span { background:var(--glass); border-color:var(--navborder); font-size:.9rem; }
+  .card,.step,.plan,.path-card,.stat,.testimonial,.live-panel,.faq details { border:1px solid transparent; background:linear-gradient(var(--surface),var(--surface)) padding-box, linear-gradient(135deg,rgba(139,61,255,.5),rgba(217,70,239,.14) 45%,rgba(34,211,238,.4)) border-box; transition:transform .25s, box-shadow .25s; }
+  .card:hover,.step:hover,.plan:hover,.stat:hover { box-shadow:0 22px 44px -22px rgba(139,61,255,.55); }
+  .plan.featured { border-color:var(--violet); box-shadow:0 30px 60px -28px rgba(168,85,247,.75); }
+  .stat { padding:18px 8px; border-radius:20px; }
+  section.block, .stats { position:relative; }
+  section.block::before { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(520px 260px at 85% 0%,rgba(139,61,255,.10),transparent 70%),radial-gradient(420px 220px at 5% 100%,rgba(34,211,238,.08),transparent 70%); }
+  section.block > .wrap { position:relative; }
+  .signal-card { position:relative; overflow:hidden; background:linear-gradient(150deg,#6D28D9 0%,#A21CAF 60%,#D946EF 100%); box-shadow:0 40px 80px -30px rgba(168,85,247,.75), inset 0 0 0 1px rgba(255,255,255,.22); }
+  .signal-card::after { content:""; position:absolute; left:0; right:0; top:-40%; height:40%; background:linear-gradient(180deg,transparent,rgba(255,255,255,.16),transparent); animation:scan 5s linear infinite; pointer-events:none; }
+  .live-dot { animation:pulse 1.6s infinite; }
+  .ring { position:relative; width:68px; height:68px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(#4ADE80 calc(var(--p,0)*1%),rgba(255,255,255,.22) 0); }
+  .ring::before { content:""; position:absolute; inset:6px; border-radius:50%; background:#7A1FB8; }
+  .ring b { position:relative; font-size:.95rem; font-weight:600; }
+  .live-panel { max-width:620px; margin:0 auto; padding:26px; border-radius:20px; text-align:center; }
+  .live-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+  .live-panel b { display:block; font-size:2rem; font-weight:600; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .live-panel .l { font-size:.78rem; color:var(--ink-soft); }
+  .live-panel p { color:var(--ink-soft); font-size:.9rem; line-height:1.6; }
+  html.js .rv { opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease, box-shadow .25s; }
+  html.js .rv.in { opacity:1; transform:none; }
+  html.js .rv.in:hover { transform:translateY(-4px); }
+  @keyframes scan { to { top:100%; } }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(74,222,128,.6); } 70% { box-shadow:0 0 0 10px rgba(74,222,128,0); } 100% { box-shadow:0 0 0 0 rgba(74,222,128,0); } }
+  @keyframes pulsec { 0% { box-shadow:0 0 0 0 rgba(34,211,238,.55); } 70% { box-shadow:0 0 0 10px rgba(34,211,238,0); } 100% { box-shadow:0 0 0 0 rgba(34,211,238,0); } }
+  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } html.js .rv { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">
+      <span class="brand-mark"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span>
+      <span>Lu<span class="gradient-text">cide</span></span>
+    </div>
+    <div class="navlinks">
+      <a href="#comment">Comment ça marche</a>
+      <a href="#analyse">Analyse IA</a>
+      <a href="#tarifs">Tarifs</a>
+    </div>
+    <a href="/dashboard.html" target="_blank" rel="noopener" class="btn btn-primary">Essayer gratuitement</a>
+    <button class="burger" id="burger" aria-label="Menu"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="pill"><span class="dot"></span>IA en temps réel · Signaux Lucide</span>
+    <h1>Des signaux de trading <span class="gradient-text">d'une précision chirurgicale</span></h1>
+    <p class="lede">Notre moteur IA analyse le marché en continu avec les meilleures stratégies — Smart Money Concepts, Wyckoff, offre et demande, figures chartistes, moyennes mobiles 50/200 — pour vous livrer des <strong>entrées sniper</strong> avec Entry, Stop Loss et 3 Take Profits.</p>
+    <div class="hero-cta">
+      <a href="/dashboard.html" target="_blank" rel="noopener" class="btn-cta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Démarrer maintenant</a>
+      <a href="#comment" class="btn btn-ghost">Voir comment ça marche</a>
+    </div>
+    <div class="ticker"><span>XAU/USD</span><span>US30</span><span>USTEC</span><span>BTC/USD</span></div>
+  </div>
+</header>
+
+<section class="stats">
+  <div class="wrap stats-grid">
+    <div class="stat">
+      <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" stroke-linecap="round"/><circle cx="10" cy="7" r="4"/></svg></div>
+      <b>1</b><span>seul trade à la fois par actif</span>
+    </div>
+    <div class="stat">
+      <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg></div>
+      <b id="live-rate">—</b><span>atteint TP1 · mesuré sur 90 jours</span>
+    </div>
+    <div class="stat">
+      <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <b>3</b><span>Échelles de temps (H1, H4, D1)</span>
+    </div>
+    <div class="stat">
+      <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 16l4-5 3 3 5-7 4 5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <b>4</b><span>Actifs : Or, US30, USTEC, Bitcoin</span>
+    </div>
+  </div>
+</section>
+
+<section class="signal-wrap" id="comment">
+  <div class="wrap">
+    <div class="signal-card">
+      <div class="signal-top">
+        <div class="signal-engine">
+          <div class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke-linecap="round"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <div><b>Lucide AI Engine</b><span><span class="live-dot"></span>En direct</span></div>
+        </div>
+        <div class="ring" style="--p:92" title="Confiance"><b>92%</b></div>
+      </div>
+      <div class="signal-pair">XAU/USD · BUY</div>
+      <div class="signal-grid">
+        <div class="signal-box"><span>Entry</span><b>2350.40</b></div>
+        <div class="signal-box"><span>Stop Loss</span><b>2347.20</b></div>
+        <div class="signal-box"><span>TP1</span><b>2353.10</b></div>
+        <div class="signal-box"><span>TP2</span><b>2356.00</b></div>
+      </div>
+      <div class="signal-strategy">🎯 Stratégie : SMC + Order Blocks + Liquidité</div>
+      <div class="signal-ratio">Ratio R/R 1:3.2</div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="fonctionnalites">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Un signal seulement quand tout s’aligne</h2>
+      <p>Pas de bruit : Lucide se tait tant que toutes les conditions ne sont pas réunies.</p>
+    </div>
+    <div class="card-list">
+      <div class="card">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M4 16l4-5 3 3 5-7 4 5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><h4>Confluence stricte</h4><p>Tendance MM 50/200 sur H1, H4 et D1, zones SMC (order blocks, FVG), offre et demande, Wyckoff et figures chartistes doivent s’accorder avant toute alerte. Un seul trade à la fois par actif, suivi jusqu’à son résultat.</p></div>
+      </div>
+      <div class="card">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><h4>Validation par plusieurs IA</h4><p>Des IA de pointe confrontent chaque setup au contexte macro et géopolitique (taux, inflation, tensions mondiales, news à fort impact). Pas de consensus, pas de signal. Elles réalisent aussi leur propre analyse indépendante du marché.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="comment">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow pink">PROCESSUS</span>
+      <h2>Comment ça marche <span class="gradient-text">concrètement</span> ?</h2>
+      <p>De la sélection de l'actif à la réception du signal, en 4 étapes simples.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="num">01</span>
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M4 4l16 6-7 2-2 7-7-15Z" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h4>Surveillance continue</h4>
+        <p>Or, US30, USTEC et Bitcoin sont analysés à chaque clôture de bougie H1, sur trois échelles de temps (H1, H4, D1).</p>
+      </div>
+      <div class="step">
+        <span class="num">02</span>
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 6V4h8v2" stroke-linecap="round"/></svg></div>
+        <h4>Détection multi-stratégies</h4>
+        <p>Moyennes mobiles 50/200, structure de marché, order blocks, FVG, zones d’offre et de demande, Wyckoff, figures chartistes.</p>
+      </div>
+      <div class="step">
+        <span class="num">03</span>
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-5 5c0 2 1 3 1 5a4 4 0 0 0 8 0c0-2 1-3 1-5a5 5 0 0 0-5-5Z"/></svg></div>
+        <h4>Validation IA et macro</h4>
+        <p>Les IA vérifient le setup face au contexte fondamental. Une news majeure imminente ou un veto bloque le signal.</p>
+      </div>
+      <div class="step">
+        <span class="num">04</span>
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg></div>
+        <h4>Signal sniper reçu</h4>
+        <p>Entry, Stop Loss et 3 Take Profits avec score de confiance — vous décidez d’exécuter, et le résultat est suivi automatiquement.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="analyse">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Ce que le moteur IA analyse pour vous</h2>
+      <p>Une analyse complète en quelques secondes.</p>
+    </div>
+    <div class="grid3">
+      <div class="card" style="flex-direction:column"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><path d="M3 12h4l2 6 4-14 2 8h6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h4>Analyse Technique</h4><p>RSI, MACD, Bollinger Bands, moyennes mobiles.</p></div>
+      <div class="card" style="flex-direction:column"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5" stroke-linecap="round"/></svg></div><h4>Actualités Éco</h4><p>NFP, FOMC, CPI et leur impact sur le marché.</p></div>
+      <div class="card" style="flex-direction:column"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-5 5c0 2 1 3 1 5a4 4 0 0 0 8 0c0-2 1-3 1-5a5 5 0 0 0-5-5Z"/><path d="M9 21h6" stroke-linecap="round"/></svg></div><h4>Price Action</h4><p>Order Blocks, BOS, ChoCH, Fair Value Gaps.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Ce qui rend <span class="gradient-text">Lucide</span> unique</h2>
+      <p>Un moteur d'analyse IA qui combine les meilleures stratégies de trading pour des signaux d'une précision inégalée.</p>
+    </div>
+    <div class="card-list">
+      <div class="card"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="10"/></svg></div><div><h4>3 Take Profits</h4><p>Niveaux optimaux calculés avec l'ATR.</p></div></div>
+      <div class="card hi"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><h4>Stop Loss</h4><p>Gestion du risque automatique et optimisée.</p></div></div>
+      <div class="card"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.8"><path d="M4 15a8 8 0 0 1 16 0" stroke-linecap="round"/><path d="M12 15l3-4" stroke-linecap="round"/></svg></div><div><h4>Score de Confiance</h4><p>Évaluation du niveau de fiabilité du signal.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow green">TRANSPARENCE</span>
+      <h2>Des résultats <span class="gradient-text">mesurés</span>, pas promis</h2>
+    </div>
+    <div class="live-panel">
+      <div class="live-grid">
+        <div><b id="lv-open">—</b><span class="l">en cours</span></div>
+        <div><b id="lv-win">—</b><span class="l">TP1 atteint ou plus</span></div>
+        <div><b id="lv-loss">—</b><span class="l">stoppés avant TP1</span></div>
+      </div>
+      <p>Chaque signal est suivi automatiquement jusqu’au Take Profit ou au Stop Loss, et un seul trade reste ouvert par actif. Les résultats sont affichés tels quels, gagnants comme perdants (90 derniers jours).</p>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow pink">QUESTIONS FRÉQUENTES</span>
+      <h2>Vous avez des <span class="gradient-text">questions</span> ?</h2>
+    </div>
+    <div class="faq">
+      <details open>
+        <summary>Est-ce un robot de trading automatique ?</summary>
+        <p>Non. Lucide est un outil d'aide à la décision. Notre IA analyse le marché et vous donne des niveaux précis (Entry, SL, 3 Take Profits). C'est vous qui décidez d'exécuter le trade ou non.</p>
+      </details>
+      <details>
+        <summary>Comment fonctionne le moteur de génération de signaux ?</summary>
+        <p>Il combine moyennes mobiles 50/200, price action (Smart Money Concepts, Wyckoff, offre et demande, figures chartistes) et contexte macro/géopolitique, puis fait valider le setup par plusieurs IA avant de publier un plan de trade complet.</p>
+      </details>
+      <details>
+        <summary>À quelle fréquence reçoit-on des signaux ?</summary>
+        <p>Lucide privilégie la qualité : un signal n’est émis que si toutes les conditions sont remplies, donc parfois seulement quelques-uns par semaine. Chaque signal est ensuite suivi automatiquement jusqu’au Take Profit ou au Stop Loss.</p>
+      </details>
+      <details>
+        <summary>Puis-je payer en Mobile Money ?</summary>
+        <p>Oui, Orange Money et Moov Money sont acceptés, en plus de la carte bancaire internationale.</p>
+      </details>
+      <details>
+        <summary>Puis-je annuler à tout moment ?</summary>
+        <p>Oui, sans engagement. Vous pouvez résilier votre abonnement à tout moment depuis votre tableau de bord.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="tarifs">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Un plan pour chaque niveau</h2>
+      <p>Sans engagement, résiliable à tout moment.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="#7C3AED" stroke="none"><path d="M12 2l2.6 6.6L21 9.3l-5 4.3L17.5 21 12 17.5 6.5 21 8 13.6l-5-4.3 6.4-.7z"/></svg></div>
+        <h3>Starter</h3>
+        <div class="desc">Pour découvrir la puissance des signaux IA</div>
+        <div class="price">19$<small>/mois</small></div>
+        <div class="fcfa">≈ 10 000 FCFA</div>
+        <ul>
+          <li><span class="check">✓</span>Signaux sur XAU/USD et BTC/USD</li>
+          <li><span class="check">✓</span>Suivi automatique TP / SL</li>
+          <li><span class="check">✓</span>Entry, SL et 3 Take Profits</li>
+          <li><span class="check">✓</span>Score de confiance</li>
+        </ul>
+        <a href="/dashboard.html?plan=starter" target="_blank" rel="noopener" class="btn btn-ghost">Choisir ce plan</a>
+      </div>
+      <div class="plan featured">
+        <span class="plan-badge">Le plus choisi</span>
+        <div class="plan-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke-linecap="round"/><circle cx="12" cy="12" r="4"/></svg></div>
+        <h3>Pro</h3>
+        <div class="desc">Pour trader sérieusement, chaque jour</div>
+        <div class="price">39$<small>/mois</small></div>
+        <div class="fcfa">≈ 21 000 FCFA</div>
+        <ul>
+          <li><span class="check">✓</span>Tous les actifs : or, US30, USTEC, Bitcoin</li>
+          <li><span class="check">✓</span>Explication détaillée de chaque signal</li>
+          <li><span class="check">✓</span>Avis des IA et score de confluence</li>
+          <li><span class="check">✓</span>Statistiques de performance en direct</li>
+          <li><span class="check">✓</span>Support prioritaire</li>
+        </ul>
+        <a href="/dashboard.html?plan=pro" target="_blank" rel="noopener" class="btn btn-primary">Choisir ce plan</a>
+      </div>
+      <div class="plan">
+        <div class="plan-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2"><path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1 3-6z"/></svg></div>
+        <h3>Elite</h3>
+        <div class="desc">Pour les traders exigeants</div>
+        <div class="price">79$<small>/mois</small></div>
+        <div class="fcfa">≈ 43 000 FCFA</div>
+        <ul>
+          <li><span class="check">✓</span>Tout Pro, plus :</li>
+          <li><span class="check">✓</span>Accès anticipé aux nouvelles fonctions</li>
+          <li><span class="check">✓</span>Demandes d’actifs prioritaires</li>
+          <li><span class="check">✓</span>Appel stratégie mensuel</li>
+        </ul>
+        <a href="/dashboard.html?plan=elite" target="_blank" rel="noopener" class="btn btn-ghost">Choisir ce plan</a>
+      </div>
+    </div>
+    <div class="pay-row">Paiement accepté : <span>Carte bancaire</span><span>Orange Money</span><span>Moov Money</span></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="final-cta">
+      <span class="pill2">➤ Chaque signal est suivi jusqu’au résultat</span>
+      <h2>Prêt à trader avec la précision d'un sniper ?</h2>
+      <p>Rejoignez la communauté Lucide et recevez vos premiers signaux IA en moins de 2 minutes.</p>
+      <div class="cta-row">
+        <a href="/dashboard.html?plan=pro" target="_blank" rel="noopener" class="btn btn-white">S'abonner — 39$/mois →</a>
+        <a href="/dashboard.html" target="_blank" rel="noopener" class="btn btn-outline-w">Essayer le dashboard</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-col">
+        <div class="brand"><span class="brand-mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="#fff" stroke="none"/></svg></span><span class="gradient-text">Lucide</span></div>
+        <p style="margin-top:12px; max-width:32ch;">Signaux de trading par IA pour l’Or, les indices US et le Bitcoin.</p>
+      </div>
+      <div class="foot-col">
+        <h5>Plateforme</h5>
+        <a href="/dashboard.html" target="_blank" rel="noopener">Dashboard</a>
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="#comment">Comment ça marche</a>
+        <a href="#tarifs">Tarifs</a>
+      </div>
+      <div class="foot-col">
+        <h5>Ressources</h5>
+        <a href="#analyse">Stratégies IA</a>
+        <a href="#">Témoignages</a>
+        <a href="#">FAQ</a>
+        <a href="#">Support</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© 2026 Lucide. Le trading comporte des risques de perte en capital. Outil d'aide à la décision, pas de trading automatique.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  document.documentElement.classList.add("js");
+  var b = document.getElementById("burger"), l = document.querySelector(".navlinks");
+  if (b && l) {
+    b.addEventListener("click", function () { l.classList.toggle("open"); });
+    l.addEventListener("click", function (e) { if (e.target.tagName === "A") l.classList.remove("open"); });
+  }
+  var els = document.querySelectorAll(".card,.step,.plan,.stat,.path-card,.live-panel,.faq details");
+  els.forEach(function (e) { e.classList.add("rv"); });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } }); }, { threshold: 0.12 });
+    els.forEach(function (e) { io.observe(e); });
+  } else { els.forEach(function (e) { e.classList.add("in"); }); }
+  // Résultats réels (si l'API est disponible sur le même domaine)
+  fetch("/api/stats").then(function (r) { return r.json(); }).then(function (j) {
+    var set = function (id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+    set("live-rate", j.tp1_rate == null ? "—" : j.tp1_rate + " %");
+    set("lv-open", j.open); set("lv-win", j.reached_tp1_or_more); set("lv-loss", j.stopped_before_tp1);
+  }).catch(function () {});
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucide — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#FCFBFF; --surface:#FFFFFF; --ink:#17132B; --ink-soft:#6B6580; --line:#ECE8F7; --lav:#F1ECFB;
+    --violet:#7C3AED; --grad: linear-gradient(135deg, #8B3DFF, #C026D3); --green:#16A34A; --green-bg:#DCFCE7; --red:#DC2626; --red-bg:#FEE2E2;
+    font-family:'Inter',sans-serif; }
+  :root[data-theme="dark"] { --bg:#14101F; --surface:#1C1730; --ink:#F3F0FC; --ink-soft:#A79FC2; --line:#2C2547; --lav:#241D3D; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#14101F; --surface:#1C1730; --ink:#F3F0FC; --ink-soft:#A79FC2; --line:#2C2547; --lav:#241D3D; } }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-padding-top: env(safe-area-inset-top,0px); }
+  body { background:var(--bg); color:var(--ink); padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  h1,h2,h3 { font-family:'Space Grotesk',sans-serif; }
+  .wrap { max-width: 760px; margin:0 auto; padding: 0 20px; }
+  a { color:inherit; }
+  .gradient-text { background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  nav { position:sticky; top:env(safe-area-inset-top,0px); background:color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); z-index:10; }
+  nav .wrap { display:flex; align-items:center; justify-content:space-between; height:64px; }
+  .brand { display:flex; align-items:center; gap:9px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.1rem; }
+  .brand-mark { width:30px; height:30px; border-radius:9px; background:var(--grad); display:flex; align-items:center; justify-content:center; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:10px; font-size:.88rem; font-weight:600; cursor:pointer; border:none; }
+  .btn-primary { background:var(--ink); color:var(--bg); }
+  .btn-ghost { border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+  .btn:disabled { opacity:.55; cursor:not-allowed; }
+  main { padding: 34px 0 60px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:24px; margin-bottom:18px; }
+  .card h2 { font-size:1.1rem; margin-bottom:14px; }
+  label { display:block; font-size:.85rem; font-weight:600; margin: 12px 0 6px; }
+  input[type=email], input[type=password], input[type=text], select { width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--ink); font-size:.92rem; }
+  input[type=file] { margin-top:6px; font-size:.85rem; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tab { flex:1; text-align:center; padding:9px; border-radius:9px; font-size:.85rem; font-weight:600; cursor:pointer; border:1px solid var(--line); color:var(--ink-soft); }
+  .tab.active { background:var(--lav); color:var(--violet); border-color:var(--violet); }
+  .msg { font-size:.85rem; margin-top:10px; padding:10px 12px; border-radius:9px; }
+  .msg.err { background:var(--red-bg); color:var(--red); }
+  .msg.ok { background:var(--green-bg); color:var(--green); }
+  .row { display:flex; justify-content:space-between; align-items:center; }
+  .plan-badge { font-size:.78rem; font-weight:700; background:var(--lav); color:var(--violet); padding:5px 12px; border-radius:999px; }
+  .signal { background:var(--grad); border-radius:16px; padding:18px; color:#fff; margin-bottom:12px; }
+  .signal .top { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; opacity:.9; }
+  .signal .pair { font-family:'Space Grotesk',sans-serif; font-size:1.2rem; font-weight:700; margin-top:6px; }
+  .signal .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+  .signal .box { background:rgba(255,255,255,.15); border-radius:9px; padding:8px 6px; text-align:center; }
+  .signal .box span { display:block; font-size:.65rem; opacity:.85; }
+  .signal .box b { font-family:'Space Grotesk',sans-serif; font-size:.88rem; }
+  .signal .why { margin-top:10px; font-size:.78rem; opacity:.9; }
+  .empty { color:var(--ink-soft); font-size:.88rem; text-align:center; padding:20px 0; }
+  .hidden { display:none !important; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(124,58,237,.25); border-top-color:var(--violet); border-radius:50%; animation:sp .7s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="brand-mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="#fff" stroke="none"/></svg></span><span class="gradient-text">Lucide</span></div>
+    <div id="nav-account" class="row" style="gap:10px"></div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- Config notice -->
+  <div id="config-warning" class="card hidden" style="border-color:var(--red)">
+    <p style="font-size:.85rem;color:var(--red)"><strong>API_BASE non configuré.</strong> Ouvre ce fichier et remplace la valeur de <code>API_BASE</code> en haut du script par l'URL de ton Worker déployé (ex. https://lucide-backend.ton-compte.workers.dev), ou lance <code>wrangler dev</code> en local sur ce port.</p>
+  </div>
+
+  <!-- Auth card -->
+  <section id="auth-section" class="card">
+    <div class="tabs">
+      <div class="tab active" data-tab="login">Connexion</div>
+      <div class="tab" data-tab="register">Créer un compte</div>
+    </div>
+    <form id="auth-form">
+      <label>Email</label>
+      <input type="email" id="auth-email" required placeholder="vous@exemple.com">
+      <label>Mot de passe</label>
+      <input type="password" id="auth-password" required minlength="8" placeholder="8 caractères minimum">
+      <button class="btn btn-primary" style="width:100%; margin-top:18px" type="submit" id="auth-submit">Se connecter</button>
+    </form>
+    <div id="auth-msg"></div>
+  </section>
+
+  <!-- Dashboard (shown once authenticated) -->
+  <div id="dashboard" class="hidden">
+    <section class="card">
+      <div class="row"><h2 style="margin:0">Mon compte</h2><span class="plan-badge" id="plan-badge">Aucun abonnement actif</span></div>
+      <p style="color:var(--ink-soft); font-size:.85rem; margin-top:8px" id="account-email"></p>
+      <p style="color:var(--ink-soft); font-size:.82rem; margin-top:10px">Starter : signaux XAU/USD et BTC/USD. Pro et Elite : tous les actifs, explication détaillée et avis des IA. Le paiement (Stripe / Mobile Money) sera branché ici une fois les webhooks activés ; en attendant, l'administrateur peut activer ton abonnement.</p>
+    </section>
+
+    <section class="card">
+      <div class="row"><h2 style="margin:0">Signaux en direct</h2><button class="btn btn-ghost" id="refresh-signals" style="padding:7px 12px; font-size:.78rem">Actualiser</button></div>
+      <div id="signals-list" style="margin-top:14px"></div>
+    </section>
+  </div>
+
+</main>
+
+<script>
+  // ⚠️ Remplace par l'URL de ton Worker déployé (voir README du backend).
+  const API_BASE = ""; // même domaine que le site (Worker + pages statiques)
+
+  const $ = (sel) => document.querySelector(sel);
+  let token = localStorage.getItem("lucide_token") || null;
+  let email = localStorage.getItem("lucide_email") || null;
+  let mode = "login";
+
+  if (API_BASE.includes("YOUR-SUBDOMAIN")) $("#config-warning").classList.remove("hidden");
+
+  const OUT = { open: "En cours", sl: "Stoppé", tp1: "TP1 atteint", tp2: "TP2 atteint", tp3: "TP3 atteint", expired: "Expiré", closed: "Clôturé" };
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function signalCard(s) {
+    const when = s.created_at ? new Date(s.created_at * 1000).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
+    const levels = s.locked
+      ? '<div class="why">🔒 Abonne-toi (ou passe au plan Pro pour cet actif) pour voir Entry, Stop Loss et Take Profits.</div>'
+      : '<div class="grid">' +
+        [["Entry", s.entry], ["SL", s.stop_loss], ["TP1", s.tp1], ["TP2", s.tp2]].map((x) => '<div class="box"><span>' + x[0] + "</span><b>" + (x[1] == null ? "—" : x[1]) + "</b></div>").join("") + "</div>" +
+        (s.tp3 != null ? '<div class="why">TP3 : ' + s.tp3 + "</div>" : "");
+    const votes = Array.isArray(s.ai_votes) ? '<div class="why">Validé par : ' + s.ai_votes.map((v) => esc(v.provider) + " " + v.confidence + "%").join(" · ") + "</div>" : "";
+    return '<div class="signal"><div class="top"><span>' + esc(s.symbol) + " · " + esc(when) + (s.source === "ai" ? " · Analyse IA" : "") + "</span><span>Confiance " + esc(s.confidence) + "%</span></div>" +
+      '<div class="pair">' + esc(s.direction) + (s.rr_ratio ? " · R/R " + esc(s.rr_ratio) : "") + ' <span style="font-size:.7rem;font-weight:600;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:99px;margin-left:6px">' + esc(OUT[s.outcome] || "En cours") + "</span></div>" +
+      levels + (s.strategy ? '<div class="why">Stratégie : ' + esc(s.strategy) + "</div>" : "") +
+      (s.reasoning ? '<div class="why">' + esc(s.reasoning).replace(/\n/g, "<br>") + "</div>" : "") + votes + "</div>";
+  }
+
+  function renderAccountState() {
+    if (token) {
+      $("#auth-section").classList.add("hidden");
+      $("#dashboard").classList.remove("hidden");
+      $("#account-email").textContent = "Connecté en tant que " + email;
+      $("#nav-account").innerHTML = `<button class="btn btn-ghost" id="logout-btn">Déconnexion</button>`;
+      $("#logout-btn").onclick = () => { localStorage.removeItem("lucide_token"); localStorage.removeItem("lucide_email"); token = null; renderAccountState(); };
+      loadSignals();
+      loadMe();
+    } else {
+      $("#auth-section").classList.remove("hidden");
+      $("#dashboard").classList.add("hidden");
+      $("#nav-account").innerHTML = "";
+    }
+  }
+
+  const ADMIN_URL = "/admin.html";
+  async function loadMe() {
+    try {
+      const res = await fetch(API_BASE + "/api/me", { headers: { Authorization: "Bearer " + token } });
+      if (res.status === 401) { localStorage.removeItem("lucide_token"); localStorage.removeItem("lucide_email"); token = null; renderAccountState(); return; }
+      const me = await res.json();
+      $("#plan-badge").textContent = me.plan
+        ? me.plan.toUpperCase() + (me.plan_end ? " · jusqu'au " + new Date(me.plan_end * 1000).toLocaleDateString("fr-FR") : "")
+        : "Aucun abonnement actif";
+      if (me.is_admin) {
+        const a = document.createElement("a");
+        a.href = ADMIN_URL; a.target = "_blank"; a.rel = "noopener"; a.className = "btn btn-ghost"; a.textContent = "Admin";
+        $("#nav-account").prepend(a);
+      }
+    } catch (e) {}
+  }
+
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+    t.classList.add("active");
+    mode = t.dataset.tab;
+    $("#auth-submit").textContent = mode === "login" ? "Se connecter" : "Créer mon compte";
+  }));
+
+  $("#auth-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("#auth-msg");
+    msg.innerHTML = "";
+    const body = { email: $("#auth-email").value.trim(), password: $("#auth-password").value };
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/${mode === "login" ? "login" : "register"}`, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur");
+      token = data.token; email = data.user.email;
+      localStorage.setItem("lucide_token", token); localStorage.setItem("lucide_email", email);
+      renderAccountState();
+    } catch (err) {
+      msg.innerHTML = `<div class="msg err">${err.message}</div>`;
+    }
+  });
+
+  async function loadSignals() {
+    const list = $("#signals-list");
+    list.innerHTML = '<div class="empty"><span class="spin"></span> Chargement…</div>';
+    try {
+      const res = await fetch(`${API_BASE}/api/signals/latest`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) { list.innerHTML = '<div class="empty">Aucun signal pour le moment : Lucide n’émet un signal que lorsque toutes les conditions sont réunies.</div>'; return; }
+      list.innerHTML = data.map(signalCard).join("");
+    } catch {
+      list.innerHTML = '<div class="empty">Impossible de charger les signaux. Vérifie que le backend est déployé et que API_BASE est correct.</div>';
+    }
+  }
+  $("#refresh-signals").addEventListener("click", loadSignals);
+
+  renderAccountState();
+</script>
+
+</body>
+</html>

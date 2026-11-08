@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucide — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#FCFBFF; --surface:#FFF; --ink:#17132B; --soft:#6B6580; --line:#ECE8F7; --lav:#F1ECFB; --violet:#7C3AED; --grad:linear-gradient(135deg,#8B3DFF,#C026D3); --green:#16A34A; --gbg:#DCFCE7; --red:#DC2626; --rbg:#FEE2E2; font-family:'Inter',sans-serif; }
+  :root[data-theme="dark"] { --bg:#14101F; --surface:#1C1730; --ink:#F3F0FC; --soft:#A79FC2; --line:#2C2547; --lav:#241D3D; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#14101F; --surface:#1C1730; --ink:#F3F0FC; --soft:#A79FC2; --line:#2C2547; --lav:#241D3D; } }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--ink); padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  h2 { font-family:'Space Grotesk',sans-serif; font-size:1.05rem; margin-bottom:12px; }
+  .wrap { max-width:820px; margin:0 auto; padding:0 18px; }
+  .g { background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  nav { border-bottom:1px solid var(--line); position:sticky; top:env(safe-area-inset-top,0px); background:var(--bg); z-index:5; }
+  nav .wrap { display:flex; justify-content:space-between; align-items:center; height:60px; }
+  .brand { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.1rem; display:flex; gap:8px; align-items:center; }
+  .tag { font-size:.7rem; background:var(--lav); color:var(--violet); padding:3px 9px; border-radius:99px; font-family:'Inter',sans-serif; }
+  .btn { padding:10px 16px; border-radius:10px; font-size:.85rem; font-weight:600; cursor:pointer; border:none; background:var(--ink); color:var(--bg); }
+  .btn.ghost { background:var(--surface); color:var(--ink); border:1px solid var(--line); }
+  .btn.sm { padding:6px 10px; font-size:.75rem; }
+  .btn.danger { color:var(--red); }
+  main { padding:24px 0 60px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; }
+  label { display:block; font-size:.78rem; font-weight:600; margin:10px 0 5px; }
+  input, select { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; background:var(--bg); color:var(--ink); font-size:.88rem; }
+  .cols { display:grid; grid-template-columns:repeat(2,1fr); gap:0 10px; }
+  .cols3 { display:grid; grid-template-columns:repeat(3,1fr); gap:0 10px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tab { flex:1; text-align:center; padding:9px; border-radius:9px; font-size:.82rem; font-weight:600; cursor:pointer; border:1px solid var(--line); color:var(--soft); }
+  .tab.on { background:var(--lav); color:var(--violet); border-color:var(--violet); }
+  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .stat span { font-size:.78rem; color:var(--soft); display:block; }
+  .stat b { font-family:'Space Grotesk',sans-serif; font-size:1.7rem; }
+  .stat small { display:block; font-size:.72rem; color:var(--soft); margin-top:2px; }
+  .item { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); flex-wrap:wrap; }
+  .item:first-child { border-top:none; }
+  .item b { font-size:.9rem; word-break:break-all; }
+  .item small { display:block; font-size:.75rem; color:var(--soft); }
+  .item.dim { opacity:.5; }
+  .acts { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .badge { font-size:.72rem; font-weight:700; background:var(--lav); color:var(--violet); padding:4px 10px; border-radius:99px; }
+  .badge.off { background:var(--line); color:var(--soft); }
+  .empty { color:var(--soft); font-size:.85rem; text-align:center; padding:16px 0; }
+  .msg { font-size:.83rem; margin-top:10px; padding:9px 11px; border-radius:9px; background:var(--rbg); color:var(--red); }
+  #flash { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px; font-size:.83rem; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; max-width:90%; }
+  #flash.show { opacity:1; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <div class="brand"><span class="g">Lucide</span><span class="tag">Admin</span></div>
+  <button class="btn ghost sm hidden" id="logout">Déconnexion</button>
+</div></nav>
+
+<main class="wrap">
+  <div id="cfg" class="msg hidden">API_BASE non configuré : remplace la constante en haut du script par l'URL de ton Worker déployé.</div>
+
+  <section id="login" class="card">
+    <h2>Connexion administrateur</h2>
+    <form id="login-form">
+      <label>Email</label><input type="email" id="em" required>
+      <label>Mot de passe</label><input type="password" id="pw" required>
+      <button class="btn" style="width:100%;margin-top:16px" type="submit">Se connecter</button>
+    </form>
+    <div id="login-msg"></div>
+  </section>
+
+  <div id="app" class="hidden">
+    <div class="tabs">
+      <div class="tab on" data-t="ov">Aperçu</div>
+      <div class="tab" data-t="us">Utilisateurs</div>
+      <div class="tab" data-t="sg">Signaux</div>
+    </div>
+
+    <section id="ov"><div class="stats" id="stats"></div><div class="card" style="margin-top:16px"><h2>Dernières analyses du moteur</h2><div id="alist"></div></div></section>
+
+    <section id="us" class="hidden">
+      <div class="card">
+        <h2>Attribuer un abonnement</h2>
+        <form id="grant-form">
+          <label>Email de l'utilisateur</label><input type="email" id="g-email" required>
+          <div class="cols">
+            <div><label>Plan</label><select id="g-plan"><option value="starter">Starter</option><option value="pro" selected>Pro</option><option value="elite">Elite</option></select></div>
+            <div><label>Durée (jours)</label><input type="number" id="g-days" value="30" min="1" max="3650"></div>
+          </div>
+          <button class="btn" style="width:100%;margin-top:14px" type="submit">Activer</button>
+        </form>
+      </div>
+      <div class="card">
+        <input type="text" id="uq" placeholder="Rechercher par email…">
+        <div id="ulist" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+    <section id="sg" class="hidden">
+      <div class="card">
+        <h2>Moteur IA</h2><div class="acts"><select id="run-sym" style="width:auto"><option>XAU/USD</option><option>US30</option><option>USTEC</option><option>BTC/USD</option></select><button class="btn ghost sm" id="run">Analyser maintenant</button><button class="btn ghost sm" id="tg-test">Tester Telegram</button></div><small style="display:block;margin-top:8px;color:var(--soft)">Analyse un actif (1 à 2 min avec les IA). Un signal n’est publié que si toutes les conditions sont réunies.</small>
+      </div>
+      <div class="card">
+        <h2>Créer un signal manuel</h2>
+        <form id="sig-form">
+          <div class="cols">
+            <div><label>Symbole</label><input id="s-symbol" placeholder="XAU/USD" required></div>
+            <div><label>Direction</label><select id="s-dir"><option>BUY</option><option>SELL</option></select></div>
+            <div><label>Entry</label><input id="s-entry" type="number" step="any"></div>
+            <div><label>Stop Loss</label><input id="s-sl" type="number" step="any"></div>
+          </div>
+          <div class="cols3">
+            <div><label>TP1</label><input id="s-tp1" type="number" step="any"></div>
+            <div><label>TP2</label><input id="s-tp2" type="number" step="any"></div>
+            <div><label>TP3</label><input id="s-tp3" type="number" step="any"></div>
+          </div>
+          <div class="cols">
+            <div><label>Confiance (0-100)</label><input id="s-conf" type="number" min="0" max="100"></div>
+            <div><label>R/R</label><input id="s-rr" placeholder="1:3"></div>
+          </div>
+          <label>Stratégie</label><input id="s-strat" placeholder="SMC + Order Blocks">
+          <button class="btn" style="width:100%;margin-top:14px" type="submit">Publier</button>
+        </form>
+      </div>
+      <div class="card"><h2>Tous les signaux</h2><div id="slist"></div></div>
+    </section>
+  </div>
+</main>
+<div id="flash"></div>
+
+<script>
+  // Remplace par l'URL de ton Worker déployé.
+  const API_BASE = ""; // même domaine que le site (Worker + pages statiques)
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (t) => (t ? new Date(t * 1000).toLocaleDateString("fr-FR") : "—");
+  const fmtDT = (t) => new Date(t * 1000).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  const EMPTY = '<p class="empty">Rien à afficher.</p>';
+  let token = null;
+  try { token = localStorage.getItem("lucide_admin_token"); } catch (e) {}
+  if (API_BASE.indexOf("YOUR-SUBDOMAIN") > -1) $("#cfg").classList.remove("hidden");
+
+  function flash(text) { const f = $("#flash"); f.textContent = text; f.classList.add("show"); setTimeout(() => f.classList.remove("show"), 2600); }
+  function setToken(t) { token = t; try { t ? localStorage.setItem("lucide_admin_token", t) : localStorage.removeItem("lucide_admin_token"); } catch (e) {} }
+
+  async function api(path, opts) {
+    opts = opts || {};
+    const res = await fetch(API_BASE + path, Object.assign({}, opts, { headers: { "content-type": "application/json", Authorization: "Bearer " + token } }));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error(data.error || "Erreur"); e.status = res.status; throw e; }
+    return data;
+  }
+  const post = (p, body, method) => api(p, { method: method || "POST", body: JSON.stringify(body || {}) });
+
+  function showLogin(msg) {
+    $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); $("#logout").classList.add("hidden");
+    $("#login-msg").innerHTML = msg ? '<div class="msg">' + esc(msg) + "</div>" : "";
+  }
+
+  async function boot() {
+    if (!token) return showLogin();
+    try {
+      await loadStats();
+      $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); $("#logout").classList.remove("hidden");
+    } catch (e) { setToken(null); showLogin(e.message); }
+  }
+
+  $("#login-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    try {
+      const r = await fetch(API_BASE + "/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("#em").value.trim(), password: $("#pw").value }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Erreur");
+      setToken(d.token); boot();
+    } catch (e) { showLogin(e.message); }
+  });
+  $("#logout").onclick = () => { setToken(null); showLogin(); };
+
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on")); t.classList.add("on");
+    ["ov", "us", "sg"].forEach((id) => $("#" + id).classList.toggle("hidden", id !== t.dataset.t));
+    if (t.dataset.t === "ov") loadStats(); if (t.dataset.t === "us") loadUsers(); if (t.dataset.t === "sg") loadSignals();
+  }));
+
+  async function loadAnalysis() {
+    try {
+      const a = await api("/api/admin/analysis");
+      const ST = { rejected: "Rejeté (règles)", published: "Signal publié", ai_rejected: "Rejeté par les IA", ai_signal: "Signal IA indépendant", stale: "Données obsolètes", no_ai: "Aucune IA configurée", error: "Erreur" };
+      $("#alist").innerHTML = a.length ? a.map((x) => {
+        const failed = (x.gates || []).filter((g) => !g.ok).map((g) => esc(g.name) + " : " + esc(g.detail)).join("<br>");
+        const ai = (x.ai && x.ai.consensus ? "<small>IA (validation) : " + esc(x.ai.consensus) + (x.ai.errors && x.ai.errors.length ? " · erreurs : " + esc(x.ai.errors.join(" | ")) : "") + "</small>" : "") + (x.ai && x.ai.independent ? "<small>IA indépendante : " + esc(x.ai.independent.consensus) + (x.ai.independent.guard ? " · " + esc(x.ai.independent.guard) : "") + (x.ai.independent.errors && x.ai.independent.errors.length ? " · erreurs : " + esc(x.ai.independent.errors.join(" | ")) : "") + "</small>" : "");
+        return '<div class="item"><div><b>' + esc(x.symbol) + " · " + esc(x.dir || "") + " · score " + esc(x.score) + "</b><small>" + fmtDT(x.ts) + " · " + esc(ST[x.status] || x.status) + "</small>" + (failed ? "<small>Bloqué par : " + failed + "</small>" : "") + ai + "</div></div>";
+      }).join("") : '<p class="empty">Aucune analyse pour le moment (le cron s\u2019exécute toutes les 30 min).</p>';
+    } catch (e) { flash(e.message); }
+  }
+
+  async function loadStats() {
+    loadAnalysis();
+    const s = await api("/api/admin/stats");
+    const plans = Object.keys(s.by_plan).map((k) => k + " " + s.by_plan[k]).join(" · ");
+    const cards = [["Utilisateurs", s.users, ""], ["Abonnés actifs", s.active_subscribers, plans], ["Signaux (24 h)", s.signals_24h, ""], ["Signaux ouverts", s.open_signals, ""], ["Atteint TP1 (90 j)", s.tp1_rate == null ? "—" : s.tp1_rate + " %", s.wins + " gagnants · " + s.losses + " stoppés · règles " + (s.rules_rate == null ? "—" : s.rules_rate + " %") + " · IA seule " + (s.ai_rate == null ? "—" : s.ai_rate + " %")]];
+    $("#stats").innerHTML = cards.map((c) => '<div class="stat"><span>' + c[0] + "</span><b>" + esc(c[1]) + "</b>" + (c[2] ? "<small>" + esc(c[2]) + "</small>" : "") + "</div>").join("");
+  }
+
+  async function loadUsers() {
+    try {
+      const u = await api("/api/admin/users?q=" + encodeURIComponent($("#uq").value.trim()));
+      $("#ulist").innerHTML = u.length ? u.map((x) =>
+        '<div class="item"><div><b>' + esc(x.email) + "</b><small>Inscrit le " + fmt(x.created_at) + '</small></div><div class="acts">' +
+        (x.plan ? '<span class="badge">' + esc(x.plan) + " → " + fmt(x.plan_end) + "</span>" : '<span class="badge off">Aucun plan</span>') +
+        '<button class="btn ghost sm" data-grant="' + esc(x.email) + '">Attribuer</button>' +
+        (x.plan ? '<button class="btn ghost sm danger" data-revoke="' + esc(x.email) + '">Révoquer</button>' : "") + "</div></div>").join("") : EMPTY;
+    } catch (e) { flash(e.message); }
+  }
+  let uT; $("#uq").addEventListener("input", () => { clearTimeout(uT); uT = setTimeout(loadUsers, 300); });
+
+  $("#ulist").addEventListener("click", async (ev) => {
+    const g = ev.target.dataset.grant, r = ev.target.dataset.revoke;
+    if (g) { $("#g-email").value = g; $("#g-email").scrollIntoView({ behavior: "smooth", block: "center" }); }
+    if (r && confirm("Révoquer l'abonnement de " + r + " ?")) { try { await post("/api/admin/subscriptions/revoke", { email: r }); flash("Abonnement révoqué"); loadUsers(); } catch (e) { flash(e.message); } }
+  });
+
+  $("#grant-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    try { await post("/api/admin/subscriptions", { email: $("#g-email").value.trim(), plan: $("#g-plan").value, days: Number($("#g-days").value) }); flash("Abonnement activé"); loadUsers(); }
+    catch (e) { flash(e.message); }
+  });
+
+  async function loadSignals() {
+    try {
+      const s = await api("/api/admin/signals");
+      $("#slist").innerHTML = s.length ? s.map((x) => {
+        const hid = x.status === "hidden";
+        return '<div class="item' + (hid ? " dim" : "") + '"><div><b>' + esc(x.symbol) + " · " + esc(x.direction) + "</b><small>" + esc(x.source) + " · " + esc(x.outcome || "open") + " · " + (x.confidence == null ? "—" : x.confidence + "%") +
+          " · E " + (x.entry == null ? "—" : x.entry) + " SL " + (x.stop_loss == null ? "—" : x.stop_loss) + " TP1 " + (x.tp1 == null ? "—" : x.tp1) + "</small><small>" + fmtDT(x.created_at) + (hid ? " · masqué" : "") +
+          '</small></div><div class="acts">' + (x.outcome === "open" ? '<button class="btn ghost sm" data-close="' + esc(x.id) + '">Clôturer</button>' : "") + '<button class="btn ghost sm" data-tog="' + esc(x.id) + '" data-st="' + (hid ? "published" : "hidden") + '">' + (hid ? "Afficher" : "Masquer") +
+          '</button><button class="btn ghost sm danger" data-del="' + esc(x.id) + '">Supprimer</button></div></div>';
+      }).join("") : EMPTY;
+    } catch (e) { flash(e.message); }
+  }
+
+  $("#slist").addEventListener("click", async (ev) => {
+    const t = ev.target.dataset.tog, d = ev.target.dataset.del, c = ev.target.dataset.close;
+    try {
+      if (c && confirm("Clôturer ce trade ? Il ne sera compté ni gagnant ni perdant et l'actif sera libéré pour un nouveau signal.")) { await post("/api/admin/signals/" + c, { outcome: "closed" }, "PATCH"); flash("Trade clôturé"); loadSignals(); }
+      if (t) { await post("/api/admin/signals/" + t, { status: ev.target.dataset.st }, "PATCH"); loadSignals(); }
+      if (d && confirm("Supprimer définitivement ce signal ?")) { await api("/api/admin/signals/" + d, { method: "DELETE" }); flash("Signal supprimé"); loadSignals(); }
+    } catch (e) { flash(e.message); }
+  });
+
+  $("#sig-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const v = (id) => $(id).value.trim();
+    try {
+      await post("/api/admin/signals", { symbol: v("#s-symbol"), direction: $("#s-dir").value, entry: v("#s-entry"), stop_loss: v("#s-sl"), tp1: v("#s-tp1"), tp2: v("#s-tp2"), tp3: v("#s-tp3"), confidence: v("#s-conf"), rr_ratio: v("#s-rr"), strategy: v("#s-strat") });
+      flash("Signal publié"); ev.target.reset(); loadSignals();
+    } catch (e) { flash(e.message); }
+  });
+
+  $("#tg-test").addEventListener("click", async () => {
+    try { const r = await post("/api/admin/telegram/test"); flash("Telegram : message envoyé (" + r.sent + ")"); } catch (e) { flash("Telegram : " + e.message); }
+  });
+
+  $("#run").addEventListener("click", async () => {
+    const btn = $("#run"); btn.disabled = true; btn.textContent = "Analyse en cours…";
+    try {
+      const r = await post("/api/admin/run-signals", { symbol: $("#run-sym").value });
+      const x = r.results[0]; flash(x ? x.symbol + " : " + x.status + " (score " + x.score + ")" : "Aucun actif analysé");
+      loadSignals(); loadAnalysis();
+    } catch (e) { flash(e.message); } finally { btn.disabled = false; btn.textContent = "Analyser maintenant"; }
+  });
+
+  boot();
+</script>
+</body>
+</html>

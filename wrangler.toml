@@ -1,0 +1,38 @@
+name = "lucide-backend"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# --- Site (landing, dashboard, admin) servi par le même Worker : dossier public/ ---
+# Seules les adresses /api/* passent par le code ; les pages statiques sont servies gratuitement par Cloudflare.
+[assets]
+directory = "./public"
+run_worker_first = ["/api/*"]
+
+# --- Ressources créées AUTOMATIQUEMENT au premier déploiement (aucun identifiant à copier) ---
+[[d1_databases]]
+binding = "DB"
+
+[[kv_namespaces]]
+binding = "CACHE"
+
+# --- Cron : toutes les 5 minutes (analyse à la clôture de chaque bougie H1 + suivi des TP/SL) ---
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Journaux visibles dans le dashboard Cloudflare (utile pour diagnostiquer)
+[observability]
+enabled = true
+
+# Réglages (modifiables sans toucher au code)
+[vars]
+MAX_PER_RUN = "1"              # actifs analysés par passage : "1" sur Workers Free (limite CPU 10 ms) ; "4" sur Workers Paid
+MIN_SCORE = "55"               # score de confluence minimal
+AI_INDEPENDENT = "prefilter"   # analyse indépendante des IA : "off", "prefilter" ou "always"
+AI_PREFILTER_SCORE = "30"
+
+# Secrets à créer dans le dashboard (Worker > Paramètres > Variables et secrets > type « Secret ») :
+#   TWELVEDATA_API_KEY, JWT_SECRET, ADMIN_EMAILS
+#   au moins une IA : DEEPSEEK_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY
+#   optionnel : ALPHAVANTAGE_API_KEY, TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram)
+#   plus tard : STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CINETPAY_API_KEY, CINETPAY_SITE_ID
