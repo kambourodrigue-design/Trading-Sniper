@@ -6,7 +6,7 @@
 <title>Lucide — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg:#FCFBFF; --surface:#FFFFFF; --ink:#17132B; --ink-soft:#6B6580; --line:#ECE8F7; --lav:#F1ECFB;
     --violet:#7C3AED; --grad: linear-gradient(135deg, #8B3DFF, #C026D3); --green:#16A34A; --green-bg:#DCFCE7; --red:#DC2626; --red-bg:#FEE2E2;
@@ -54,16 +54,60 @@
   .hidden { display:none !important; }
   .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(124,58,237,.25); border-top-color:var(--violet); border-radius:50%; animation:sp .7s linear infinite; }
   @keyframes sp { to { transform:rotate(360deg); } }
+
+  /* ===== v2 : même thème que la page d'accueil ===== */
+  :root { --hero-a:#B9A6FB; --hero-b:#C98BFA; --hero-c:#E879F9; --hero-d:#FCFBFF; --navbg:rgba(255,255,255,.62); --navborder:rgba(255,255,255,.78); --glass:rgba(255,255,255,.55); --pillc:#6D28D9; --lede:#6A5C8E; --grid:rgba(255,255,255,.18); --cyan:#22D3EE; }
+  :root[data-theme="dark"] { --hero-a:#241552; --hero-b:#4C1D95; --hero-c:#86198F; --hero-d:#14101F; --navbg:rgba(28,23,48,.62); --navborder:rgba(255,255,255,.12); --glass:rgba(255,255,255,.08); --pillc:#C4B5FD; --lede:#B9AEDC; --grid:rgba(255,255,255,.07); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --hero-a:#241552; --hero-b:#4C1D95; --hero-c:#86198F; --hero-d:#14101F; --navbg:rgba(28,23,48,.62); --navborder:rgba(255,255,255,.12); --glass:rgba(255,255,255,.08); --pillc:#C4B5FD; --lede:#B9AEDC; --grid:rgba(255,255,255,.07); } }
+  h1,h2,h3,.brand { font-family:'Plus Jakarta Sans','Space Grotesk',sans-serif; letter-spacing:-.03em; }
+  .gradient-text { background:linear-gradient(90deg,#7C3AED,#D946EF 55%,#7C3AED); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  nav { top:calc(10px + env(safe-area-inset-top,0px)); margin:10px auto 0; width:calc(100% - 28px); max-width:760px; border:1px solid var(--navborder); border-radius:24px; background:var(--navbg); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:0 14px 34px -14px rgba(124,58,237,.45); z-index:40; }
+  nav .wrap { height:72px; padding:0 16px; }
+  .brand { font-size:1.35rem; font-weight:800; gap:12px; color:var(--ink); }
+  .brand-mark { position:relative; width:46px; height:46px; border-radius:15px; background:linear-gradient(135deg,#7C3AED,#D946EF); box-shadow:0 10px 24px -6px rgba(168,85,247,.65); }
+  .brand-mark::after { content:""; position:absolute; top:-5px; right:-5px; width:15px; height:15px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 3px rgba(34,211,238,.28); }
+  .dhead { position:relative; overflow:hidden; margin-top:-82px; padding:122px 0 70px; background:linear-gradient(180deg,var(--hero-a) 0%,var(--hero-b) 32%,var(--hero-c) 66%,var(--hero-d) 100%); }
+  .dhead::after { content:""; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size:56px 56px; -webkit-mask-image:linear-gradient(#000 30%,transparent 92%); mask-image:linear-gradient(#000 30%,transparent 92%); }
+  .dhead .wrap { position:relative; z-index:1; }
+  .pill { display:inline-flex; align-items:center; gap:8px; background:var(--glass); border:1px solid var(--navborder); color:var(--pillc); font-weight:600; font-size:.9rem; padding:10px 18px; border-radius:999px; }
+  .pill .dot { width:11px; height:11px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 4px rgba(34,211,238,.28); animation:pulsec 1.8s infinite; }
+  .dhead h1 { margin-top:22px; font-size:clamp(2.1rem,9vw,3.4rem); line-height:1.04; font-weight:800; max-width:14ch; text-wrap:balance; }
+  #nav-account { gap:8px !important; }
+  #nav-account .btn { padding:8px 12px; font-size:.78rem; border-radius:12px; }
+  .btn-ghost { border-color:rgba(124,58,237,.30); background:rgba(124,58,237,.07); }
+  .dlede { margin-top:14px; color:var(--lede); font-size:1.02rem; line-height:1.6; max-width:44ch; }
+  main { position:relative; z-index:1; margin-top:-34px; }
+  .card { border:1px solid transparent; background:linear-gradient(var(--surface),var(--surface)) padding-box, linear-gradient(135deg,rgba(139,61,255,.5),rgba(217,70,239,.14) 45%,rgba(34,211,238,.4)) border-box; box-shadow:0 18px 40px -26px rgba(139,61,255,.45); }
+  .btn { border-radius:14px; }
+  .btn-primary { background:linear-gradient(90deg,#7C3AED,#D946EF); color:#fff; box-shadow:0 14px 30px -12px rgba(168,85,247,.7); }
+  .btn-ghost { background:var(--glass); border-color:var(--navborder); }
+  input:focus, select:focus { outline:none; border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,58,237,.18); }
+  .tab.active { background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(217,70,239,.12)); }
+  .plan-badge { font-family:'JetBrains Mono',ui-monospace,monospace; }
+  .signal { position:relative; overflow:hidden; border-radius:18px; background:linear-gradient(150deg,#6D28D9 0%,#A21CAF 60%,#D946EF 100%); box-shadow:0 26px 50px -24px rgba(168,85,247,.8), inset 0 0 0 1px rgba(255,255,255,.22); }
+  .signal::after { content:""; position:absolute; left:0; right:0; top:-40%; height:40%; background:linear-gradient(180deg,transparent,rgba(255,255,255,.14),transparent); animation:scan 5s linear infinite; pointer-events:none; }
+  .signal .box b, .signal .top span:last-child { font-family:'JetBrains Mono',ui-monospace,monospace; }
+  @keyframes scan { to { top:100%; } }
+  @keyframes pulsec { 0% { box-shadow:0 0 0 0 rgba(34,211,238,.55); } 70% { box-shadow:0 0 0 10px rgba(34,211,238,0); } 100% { box-shadow:0 0 0 0 rgba(34,211,238,0); } }
+  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none !important; } }
 </style>
 </head>
 <body>
 
 <nav>
   <div class="wrap">
-    <div class="brand"><span class="brand-mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="#fff" stroke="none"/></svg></span><span class="gradient-text">Lucide</span></div>
+    <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="gradient-text">cide</span></span></div>
     <div id="nav-account" class="row" style="gap:10px"></div>
   </div>
 </nav>
+
+<header class="dhead">
+  <div class="wrap">
+    <span class="pill"><span class="dot"></span>IA en temps réel · Signaux Lucide</span>
+    <h1>Votre <span class="gradient-text">tableau de bord</span></h1>
+    <p class="dlede">Les signaux de Lucide, suivis automatiquement jusqu’au résultat.</p>
+  </div>
+</header>
 
 <main class="wrap">
 

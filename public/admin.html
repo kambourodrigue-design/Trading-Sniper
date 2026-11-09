@@ -6,7 +6,7 @@
 <title>Lucide — Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Space+Grotesk:wght@600;700&family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg:#FCFBFF; --surface:#FFF; --ink:#17132B; --soft:#6B6580; --line:#ECE8F7; --lav:#F1ECFB; --violet:#7C3AED; --grad:linear-gradient(135deg,#8B3DFF,#C026D3); --green:#16A34A; --gbg:#DCFCE7; --red:#DC2626; --rbg:#FEE2E2; font-family:'Inter',sans-serif; }
   :root[data-theme="dark"] { --bg:#14101F; --surface:#1C1730; --ink:#F3F0FC; --soft:#A79FC2; --line:#2C2547; --lav:#241D3D; }
@@ -51,13 +51,52 @@
   #flash { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px; font-size:.83rem; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; max-width:90%; }
   #flash.show { opacity:1; }
   .hidden { display:none !important; }
+
+  /* ===== v2 : même thème que la page d'accueil ===== */
+  :root { --hero-a:#B9A6FB; --hero-b:#C98BFA; --hero-c:#E879F9; --hero-d:#FCFBFF; --navbg:rgba(255,255,255,.62); --navborder:rgba(255,255,255,.78); --glass:rgba(255,255,255,.55); --pillc:#6D28D9; --lede:#6A5C8E; --grid:rgba(255,255,255,.18); --cyan:#22D3EE; }
+  :root[data-theme="dark"] { --hero-a:#241552; --hero-b:#4C1D95; --hero-c:#86198F; --hero-d:#14101F; --navbg:rgba(28,23,48,.62); --navborder:rgba(255,255,255,.12); --glass:rgba(255,255,255,.08); --pillc:#C4B5FD; --lede:#B9AEDC; --grid:rgba(255,255,255,.07); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --hero-a:#241552; --hero-b:#4C1D95; --hero-c:#86198F; --hero-d:#14101F; --navbg:rgba(28,23,48,.62); --navborder:rgba(255,255,255,.12); --glass:rgba(255,255,255,.08); --pillc:#C4B5FD; --lede:#B9AEDC; --grid:rgba(255,255,255,.07); } }
+  h1,h2,.brand { font-family:'Plus Jakarta Sans','Space Grotesk',sans-serif; letter-spacing:-.03em; }
+  .g { background:linear-gradient(90deg,#7C3AED,#D946EF 55%,#7C3AED); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  nav { top:calc(10px + env(safe-area-inset-top,0px)); margin:10px auto 0; width:calc(100% - 28px); max-width:820px; border:1px solid var(--navborder); border-radius:24px; background:var(--navbg); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:0 14px 34px -14px rgba(124,58,237,.45); z-index:40; }
+  nav .wrap { height:72px; padding:0 16px; }
+  .brand { font-size:1.3rem; font-weight:800; gap:12px; color:var(--ink); align-items:center; }
+  .brand-mark { position:relative; width:46px; height:46px; border-radius:15px; background:linear-gradient(135deg,#7C3AED,#D946EF); box-shadow:0 10px 24px -6px rgba(168,85,247,.65); display:flex; align-items:center; justify-content:center; }
+  .brand-mark::after { content:""; position:absolute; top:-5px; right:-5px; width:15px; height:15px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 3px rgba(34,211,238,.28); }
+  .dhead { position:relative; overflow:hidden; margin-top:-82px; padding:122px 0 70px; background:linear-gradient(180deg,var(--hero-a) 0%,var(--hero-b) 32%,var(--hero-c) 66%,var(--hero-d) 100%); }
+  .dhead::after { content:""; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size:56px 56px; -webkit-mask-image:linear-gradient(#000 30%,transparent 92%); mask-image:linear-gradient(#000 30%,transparent 92%); }
+  .dhead .wrap { position:relative; z-index:1; }
+  .pill { display:inline-flex; align-items:center; gap:8px; background:var(--glass); border:1px solid var(--navborder); color:var(--pillc); font-weight:600; font-size:.9rem; padding:10px 18px; border-radius:999px; }
+  .pill .dot { width:11px; height:11px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 4px rgba(34,211,238,.28); animation:pulsec 1.8s infinite; }
+  .dhead h1 { margin-top:22px; font-size:clamp(2.1rem,9vw,3.4rem); line-height:1.04; font-weight:800; max-width:14ch; }
+  .dlede { margin-top:14px; color:var(--lede); font-size:1.02rem; line-height:1.6; max-width:46ch; }
+  main { position:relative; z-index:1; margin-top:-34px; }
+  .card, .stat { border:1px solid transparent; background:linear-gradient(var(--surface),var(--surface)) padding-box, linear-gradient(135deg,rgba(139,61,255,.5),rgba(217,70,239,.14) 45%,rgba(34,211,238,.4)) border-box; box-shadow:0 18px 40px -26px rgba(139,61,255,.45); }
+  .btn { border-radius:14px; background:linear-gradient(90deg,#7C3AED,#D946EF); color:#fff; box-shadow:0 14px 30px -12px rgba(168,85,247,.7); }
+  .btn.ghost { background:rgba(124,58,237,.07); color:var(--ink); border:1px solid rgba(124,58,237,.30); box-shadow:none; }
+  input:focus, select:focus { outline:none; border-color:var(--violet); box-shadow:0 0 0 3px rgba(124,58,237,.18); }
+  .tab.on { background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(217,70,239,.12)); }
+  .stat b, .badge, .tag { font-family:'JetBrains Mono',ui-monospace,monospace; }
+  .stat b { letter-spacing:0; }
+  .stats .stat:last-child:nth-child(odd) { grid-column:1 / -1; }
+  .dhead h1 { text-wrap:balance; }
+  @keyframes pulsec { 0% { box-shadow:0 0 0 0 rgba(34,211,238,.55); } 70% { box-shadow:0 0 0 10px rgba(34,211,238,0); } 100% { box-shadow:0 0 0 0 rgba(34,211,238,0); } }
+  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none !important; } }
 </style>
 </head>
 <body>
 <nav><div class="wrap">
-  <div class="brand"><span class="g">Lucide</span><span class="tag">Admin</span></div>
+  <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="g">cide</span></span><span class="tag">Admin</span></div>
   <button class="btn ghost sm hidden" id="logout">Déconnexion</button>
 </div></nav>
+
+<header class="dhead">
+  <div class="wrap">
+    <span class="pill"><span class="dot"></span>Administration · Lucide</span>
+    <h1>Centre de <span class="g">contrôle</span></h1>
+    <p class="dlede">Abonnés, signaux et diagnostic du moteur, au même endroit.</p>
+  </div>
+</header>
 
 <main class="wrap">
   <div id="cfg" class="msg hidden">API_BASE non configuré : remplace la constante en haut du script par l'URL de ton Worker déployé.</div>
@@ -193,7 +232,7 @@
       $("#alist").innerHTML = a.length ? a.map((x) => {
         const failed = (x.gates || []).filter((g) => !g.ok).map((g) => esc(g.name) + " : " + esc(g.detail)).join("<br>");
         const ai = (x.ai && x.ai.consensus ? "<small>IA (validation) : " + esc(x.ai.consensus) + (x.ai.errors && x.ai.errors.length ? " · erreurs : " + esc(x.ai.errors.join(" | ")) : "") + "</small>" : "") + (x.ai && x.ai.independent ? "<small>IA indépendante : " + esc(x.ai.independent.consensus) + (x.ai.independent.guard ? " · " + esc(x.ai.independent.guard) : "") + (x.ai.independent.errors && x.ai.independent.errors.length ? " · erreurs : " + esc(x.ai.independent.errors.join(" | ")) : "") + "</small>" : "");
-        return '<div class="item"><div><b>' + esc(x.symbol) + " · " + esc(x.dir || "") + " · score " + esc(x.score) + "</b><small>" + fmtDT(x.ts) + " · " + esc(ST[x.status] || x.status) + "</small>" + (failed ? "<small>Bloqué par : " + failed + "</small>" : "") + ai + "</div></div>";
+        return '<div class="item"><div><b>' + esc(x.symbol) + (x.dir ? " · " + esc(x.dir) : "") + " · score " + esc(x.score) + "</b><small>" + fmtDT(x.ts) + " · " + esc(ST[x.status] || x.status) + "</small>" + (failed ? "<small>Bloqué par : " + failed + "</small>" : (x.note ? "<small>" + esc(x.note) + "</small>" : "")) + ai + "</div></div>";
       }).join("") : '<p class="empty">Aucune analyse pour le moment (le cron s\u2019exécute toutes les 30 min).</p>';
     } catch (e) { flash(e.message); }
   }
