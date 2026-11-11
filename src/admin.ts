@@ -1,6 +1,8 @@
 import { bearerToken, getUser, isAdminEmail, newId } from "./lib/auth";
 import { runAutoSignals } from "./scheduled";
 import { tgSend, notify, signalMessage, closedMessage } from "./lib/telegram";
+import { SYMBOLS } from "./engine/config";
+import { probeSources } from "./lib/prices";
 
 const PLANS = ["starter", "pro", "elite"];
 
@@ -131,6 +133,13 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     await env.DB.prepare("DELETE FROM signals WHERE id = ?").bind(one[1]).run();
     await env.CACHE.delete("signals:latest");
     return json({ ok: true });
+  }
+
+  // --- Test des sources de données (Yahoo / Binance / TwelveData) ---
+  if (pathname === "/api/admin/datatest" && m === "POST") {
+    const b = await req.json<{ symbol?: string }>().catch(() => ({} as { symbol?: string }));
+    const cfg = SYMBOLS.find((x) => x.symbol === b.symbol) ?? SYMBOLS[0];
+    return json({ symbol: cfg.symbol, sources: await probeSources(env, cfg) });
   }
 
   // --- Test de la connexion Telegram ---

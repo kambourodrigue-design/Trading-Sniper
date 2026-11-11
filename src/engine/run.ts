@@ -1,7 +1,9 @@
-import { SYMBOLS, CFG, SymbolCfg } from "./config";
+import { SYMBOLS, CFG, SymbolCfg, PROFILES, Profile } from "./config";
 import { Candle, Dir, Evaluation } from "./types";
 import { Analysis, buildAnalysis, evaluate, roundP } from "./analyze";
-import { getCandles, fetchSeries } from "../lib/prices";
+import { getBundle, getM15 } from "../lib/prices";
+import { isMarketOpen } from "./sessions";
+import { evaluateOutcome, Sig } from "./outcome";
 import { getCalendar, getMacroContext, newsBlock, upcomingEvents, CalEvent } from "../lib/macro";
 import { askAIs, askIndependent, configuredAIs, consensus, independentConsensus, mergeLevels } from "../lib/ai";
 import { validateLevels } from "./independent";
@@ -14,42 +16,12 @@ export interface RunResult { symbol: string; status: string; score: number; note
 const HOUR = 3_600_000;
 const isUnique = (e: unknown) => /UNIQUE constraint/i.test(String((e as Error)?.message ?? e));
 
-// Séance ouverte ? (fx : dim 22h → ven 22h UTC ; us : 9h30-16h New York, jours ouvrés, heure d'été gérée ; crypto : toujours)
-export function isMarketOpen(s: SymbolCfg, now: number): boolean {
-  if (s.session === "crypto") return true;
-  const d = new Date(now);
-  if (s.session === "us") {
-    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(d);
-    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-    const mins = Number(get("hour")) * 60 + Number(get("minute"));
-    return get("weekday") !== "Sat" && get("weekday") !== "Sun" && mins >= 9 * 60 + 30 && mins < 16 * 60;
-  }
-  const day = d.getUTCDay(), h = d.getUTCHours();
-  return !(day === 6 || (day === 5 && h >= 22) || (day === 0 && h < 22));
-}
+export { isMarketOpen, evaluateOutcome };
 
-// ---------- Suivi des résultats (TP / SL) ----------
-interface Sig { id: string; symbol: string; direction: string; entry: number; stop_loss: number; tp1: number | null; tp2: number | null; tp3: number | null; tp_reached: number; created_at: number }
-
-export function evaluateOutcome(s: Sig, c15: Candle[], now: number): { tp: number; outcome: string } {
-  const buy = s.direction === "BUY", lv = [s.tp1, s.tp2, s.tp3];
-  let tp = s.tp_reached;
-  // Après TP1 le SL passe à l'entrée, après TP2 il passe à TP1.
-  let sl = tp === 0 ? s.stop_loss : tp === 1 ? s.entry : (lv[tp - 2] as number);
-  for (const k of c15) {
-    if (k.t < s.created_at * 1000) continue;
-    if (k.t + 900_000 > now) break;
-    if (buy ? k.l <= sl : k.h >= sl) return { tp, outcome: tp === 0 ? "sl" : `tp${tp}` }; // ordre pessimiste : le stop est testé en premier
-    for (;;) {
-      const next = lv[tp];
-      if (next == null || !(buy ? k.h >= next : k.l <= next)) break;
-      tp++;
-      if (tp === 3) return { tp, outcome: "tp3" };
-      sl = tp === 1 ? s.entry : (lv[tp - 2] as number);
-    }
-  }
-  if (now - s.created_at * 1000 > CFG.expiryHours * HOUR) return { tp, outcome: tp === 0 ? "expired" : `tp${tp}` };
-  return { tp, outcome: "open" };
+export function getProfile(env: Env): Profile {
+  const p = PROFILES[(env.PROFILE ?? "active").toLowerCase()] ?? PROFILES.active;
+  const ms = Number(env.MIN_SCORE);
+  return Number.isFinite(ms) && ms > 0 ? { ...p, minScore: ms } : p; // MIN_SCORE (facultatif) remplace le seuil du profil
 }
 
 // Un trade reste « ouvert » (et bloque l'actif) tant qu'il n'a pas atteint son résultat : SL, TP3, stop suiveur ou expiration.
@@ -61,12 +33,11 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
   for (const r of rows) bySymbol.set(r.symbol, [...(bySymbol.get(r.symbol) ?? []), r]);
   let changed = false;
   for (const [symbol, sigs] of bySymbol) {
-    const td = SYMBOLS.find((x) => x.symbol === symbol)?.td ?? symbol;
-    // Fenêtre M15 couvrant le plus ancien trade ouvert de cet actif (max ~12 jours).
+    const cfg = SYMBOLS.find((x) => x.symbol === symbol);
+    if (!cfg) continue;
     const oldest = Math.min(...sigs.map((x) => x.created_at)) * 1000;
-    const size = Math.min(1200, Math.max(40, Math.ceil((now - oldest) / 900_000) + 8));
     let c15: Candle[];
-    try { c15 = await fetchSeries(env, td, "15min", size); } catch (e) { console.error("suivi", symbol, e); continue; }
+    try { c15 = await getM15(env, cfg, oldest - HOUR, now); } catch (e) { console.error("suivi", symbol, (e as Error).message); continue; }
     for (const s of sigs) {
       const r = evaluateOutcome(s, c15, now);
       if (r.outcome !== "open" || r.tp !== s.tp_reached) {
@@ -150,7 +121,8 @@ async function independentAnalysis(env: Env, s: SymbolCfg, an: Analysis, best: E
 // ---------- Analyse d'un actif ----------
 async function analyzeOne(env: Env, s: SymbolCfg, now: number, cal: { ok: boolean; events: CalEvent[] }): Promise<RunResult | null> {
   const maxAge = s.session === "us" ? 9_000_000 : 4_500_000; // la dernière bougie H1 clôturée doit être récente
-  const h1 = await getCandles(env, s, "1h", 300, now, maxAge);
+  const bundle = await getBundle(env, s, now, maxAge);
+  const { h1, h4, d1 } = bundle;
   if (h1.length === 0 || now - h1[h1.length - 1].t > maxAge) {
     const k = `try:${s.symbol}:${Math.floor(now / HOUR)}`;
     const n = Number(await cacheGet(env, k) ?? 0) + 1;
@@ -161,14 +133,12 @@ async function analyzeOne(env: Env, s: SymbolCfg, now: number, cal: { ok: boolea
     await env.DB.prepare("INSERT INTO analysis_state (symbol, last_hour) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET last_hour = excluded.last_hour").bind(s.symbol, Math.floor(now / HOUR)).run();
     return { symbol: s.symbol, status: "stale", score: 0, note };
   }
-  const h4 = await getCandles(env, s, "4h", 260, now);
-  const d1 = await getCandles(env, s, "1day", 260, now);
   const an = buildAnalysis(s.symbol, h1, h4, d1);
   // Règle : 1 seul trade par actif, suivi jusqu'à son résultat (SL / TP / stop suiveur / expiration) avant tout nouveau signal.
   const open = await env.DB.prepare("SELECT COUNT(*) n FROM signals WHERE symbol = ? AND outcome = 'open' AND user_id IS NULL").bind(s.symbol).first<{ n: number }>();
   const ctx = {
     newsBlock: newsBlock(cal.events, s.currencies, now, CFG.newsBeforeMin, CFG.newsAfterMin),
-    marketOpen: isMarketOpen(s, now), hasOpen: (open?.n ?? 0) > 0, minScore: Number(env.MIN_SCORE) || CFG.minScore,
+    marketOpen: isMarketOpen(s, now), hasOpen: (open?.n ?? 0) > 0, p: getProfile(env),
   };
   const evals = (["BUY", "SELL"] as Dir[]).map((d) => evaluate(an, d, ctx)).sort((a, b) => Number(b.passed) - Number(a.passed) || b.score - a.score);
   const best = evals[0];
@@ -206,17 +176,19 @@ async function analyzeOne(env: Env, s: SymbolCfg, now: number, cal: { ok: boolea
 
   // Chemin 2 : analyse indépendante des IA (AI_INDEPENDENT : off | prefilter (défaut) | always).
   // Non lancée si les IA viennent de rejeter le setup des règles (mêmes données → évite de payer deux fois).
-  const mode = (env.AI_INDEPENDENT || "prefilter").toLowerCase();
+  // off : jamais ; prefilter : si score moteur >= AI_PREFILTER_SCORE ; h4 (défaut) : prefilter + à chaque clôture H4 (0h, 4h, 8h… UTC) ; always : chaque heure.
+  const mode = (env.AI_INDEPENDENT || "h4").toLowerCase();
   const pre = Number(env.AI_PREFILTER_SCORE) || 30;
+  const h4Close = Math.floor(now / HOUR) % 4 === 0;
   if (mode !== "off" && configuredAIs(env).length > 0 && ctx.marketOpen && !ctx.hasOpen && ctx.newsBlock === null
-      && status !== "published" && status !== "ai_rejected" && (mode === "always" || best.score >= pre)) {
+      && status !== "published" && status !== "ai_rejected" && (mode === "always" || best.score >= pre || (mode === "h4" && h4Close))) {
     const ind = await independentAnalysis(env, s, an, best, h1, h4, d1, cal.events, now);
     aiLog = { ...(aiLog ?? {}), independent: ind.log };
     if (ind.published) { status = "ai_signal"; note = ind.note; } else note = `${note} | IA indépendante : ${ind.note}`;
   }
 
   await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-    .bind(s.symbol, Math.floor(now / 1000), status, best.dir, best.score, JSON.stringify(best.gates), aiLog ? JSON.stringify(aiLog) : null, note.slice(0, 400)).run();
+    .bind(s.symbol, Math.floor(now / 1000), status, best.dir, best.score, JSON.stringify(best.gates), aiLog ? JSON.stringify(aiLog) : null, `${note} · données : ${bundle.source}`.slice(0, 400)).run();
   await env.DB.prepare("INSERT INTO analysis_state (symbol, last_hour) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET last_hour = excluded.last_hour")
     .bind(s.symbol, Math.floor(now / HOUR)).run();
   return { symbol: s.symbol, status, score: best.score, note };
@@ -255,14 +227,12 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
     } catch (e) {
       const msg = String((e as Error).message).slice(0, 300);
       console.error("analyse", s.symbol, msg);
-      if (/available starting with|grow plan|pro plan|ultra plan|not available|403/i.test(msg)) {
-        // L'actif n'est pas inclus dans le plan de données : on le désactive 12 h au lieu de gaspiller des crédits.
-        await cacheSet(env, `dis:${s.symbol}`, msg, 12 * 3600);
-        await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, 'error', NULL, 0, '[]', NULL, ?)")
-          .bind(s.symbol, Math.floor(now / 1000), `actif désactivé 12 h — ${msg}`).run();
-      } else if (/run out of api credits|daily limit|429/i.test(msg)) {
-        await cacheSet(env, "td:pause", msg, 3600); // quota de données atteint : pause 1 h
-      }
+      const planErr = /available starting with|grow plan|pro plan|ultra plan|not available on your plan/i.test(msg);
+      // Plan de données insuffisant : 12 h. Panne passagère (429, blocage, réseau) : 30 min, pour ne pas marteler les fournisseurs.
+      await cacheSet(env, `dis:${s.symbol}`, msg, planErr ? 12 * 3600 : 1800);
+      await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, 'error', NULL, 0, '[]', NULL, ?)")
+        .bind(s.symbol, Math.floor(now / 1000), `actif en pause ${planErr ? "12 h" : "30 min"} — ${msg}`.slice(0, 400)).run();
+      if (/run out of api credits|daily limit/i.test(msg)) await cacheSet(env, "td:pause", msg, 3600);
       results.push({ symbol: s.symbol, status: "error", score: 0, note: msg });
     }
   }

@@ -4,7 +4,7 @@ declare global {
   interface Env {
     DB: D1Database;
     CACHE: KVNamespace;
-    TWELVEDATA_API_KEY: string;
+    TWELVEDATA_API_KEY?: string; // facultatif : dernier recours si Yahoo/Binance échouent
     JWT_SECRET: string;
     ADMIN_EMAILS: string;
     // IA (au moins une clé requise ; plus il y en a, plus la validation est robuste)
@@ -16,7 +16,8 @@ declare global {
     DEEPSEEK_MODEL?: string;
     GEMINI_MODEL?: string;
     CLAUDE_MODEL?: string;
-    MIN_SCORE?: string;
+    PROFILE?: string;            // strict | balanced (défaut) | active
+    MIN_SCORE?: string;          // facultatif : remplace le seuil du profil
     MAX_PER_RUN?: string;
     AI_INDEPENDENT?: string;     // off | prefilter (défaut) | always
     AI_PREFILTER_SCORE?: string; // score minimal du moteur pour lancer l'analyse indépendante (défaut 30)

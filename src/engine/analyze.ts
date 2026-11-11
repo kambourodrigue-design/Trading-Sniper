@@ -5,7 +5,7 @@ import { detectFVG, detectOB, detectSweeps, equalLevels, premiumDiscount } from 
 import { detectSD } from "./zones";
 import { detectWyckoff } from "./wyckoff";
 import { detectPatterns } from "./patterns";
-import { CFG } from "./config";
+import { CFG, Profile } from "./config";
 
 export interface TfStat { close: number; sma50: number; sma200: number; trend: "up" | "down" | "mixed"; rsi: number; atr: number }
 export interface Analysis {
@@ -15,7 +15,7 @@ export interface Analysis {
   pd: { hi: number; lo: number; eq: number; pos: number }; eq: { highs: number[]; lows: number[] };
   pivotsH4: Pivot[]; rejection: Dir | null; lastCandles: Candle[];
 }
-export interface EvalCtx { newsBlock: string | null; marketOpen: boolean; hasOpen: boolean; minScore: number }
+export interface EvalCtx { newsBlock: string | null; marketOpen: boolean; hasOpen: boolean; p: Profile }
 
 export function tfStat(c: Candle[]): TfStat {
   const cl = c.map((x) => x.c);
@@ -82,12 +82,16 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   const ev = an.structure.event, evAligned = !!ev && ev.dir === dir;
   if (an.structure.trend === upT) score += 6;
   if (evAligned) { score += 8; tags.add("SMC"); reasons.push(`${ev!.type} ${dirFr} il y a ${ev!.barsAgo} bougies (niveau ${roundP(ev!.level, P)})`); }
-  const htfOk = (h4Full || (d1Full && an.h4.trend === "mixed" && evAligned)) && an.d1.trend !== oppT;
-  gate("Tendance HTF", htfOk, `H4 ${an.h4.trend}, D1 ${an.d1.trend} (requis : H4 ${upT}, ou D1 ${upT} + H4 neutre + cassure H1 alignée)`);
+  // H4 aligné, ou D1 aligné avec H4 neutre (profils équilibré/actif) ou avec H4 neutre + cassure H1 alignée (profil strict)
+  const htfOk = (h4Full || (d1Full && an.h4.trend === "mixed" && (evAligned || ctx.p.htfD1Only))) && an.d1.trend !== oppT;
+  gate("Tendance HTF", htfOk, `H4 ${an.h4.trend}, D1 ${an.d1.trend} (requis : H4 ${upT}, ou D1 ${upT} avec H4 neutre${ctx.p.htfD1Only ? "" : " + cassure H1 alignée"})`);
 
   // 3. Zones d'intérêt (POI) à proximité du prix
-  const tol = 0.25 * A;
-  const near = (z: Zone) => z.dir === dir && P <= z.top + tol && P >= z.bottom - tol;
+  const tol = ctx.p.poiTolAtr * A;
+  // Zone « au prix » : le prix est dedans/à proximité, ou la zone vient d'être touchée (dernières bougies) et le prix réagit sans s'en être éloigné de plus de 1 ATR
+  const recent = an.lastCandles.slice(-Math.max(1, ctx.p.poiRecentBars));
+  const near = (z: Zone) => z.dir === dir && ((P <= z.top + tol && P >= z.bottom - tol) ||
+    (ctx.p.poiRecentBars > 0 && recent.some((k) => k.l <= z.top && k.h >= z.bottom) && (buy ? P <= z.top + A && P >= z.bottom - tol : P >= z.bottom - A && P <= z.top + tol)));
   const poi = an.zones.filter(near), htfPoi = an.htfZones.filter(near);
   let poiScore = 0;
   for (const k of ["OB", "SD", "FVG"] as const) {
@@ -138,7 +142,7 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   for (const z of an.htfZones) if (z.dir !== dir && (buy ? z.bottom > P : z.top < P)) obst.push(buy ? z.bottom : z.top); // obstacles = H4 uniquement (les zones H1 proches servent de cibles, pas de blocage)
   const nearest = obst.length ? (buy ? Math.min(...obst) : Math.max(...obst)) : null;
   const room = nearest === null ? Infinity : Math.abs(nearest - P) / risk;
-  gate(`Espace ≥ ${CFG.minRoomR}R`, room >= CFG.minRoomR, nearest === null ? "aucun obstacle H4 en vue" : `obstacle à ${roundP(nearest, P)} = ${room.toFixed(1)}R`);
+  gate(`Espace ≥ ${ctx.p.minRoomR}R`, room >= ctx.p.minRoomR, nearest === null ? "aucun obstacle H4 en vue" : `obstacle à ${roundP(nearest, P)} = ${room.toFixed(1)}R`);
 
   // 8. Contexte
   gate("Actualités", ctx.newsBlock === null, ctx.newsBlock ?? "aucune news à fort impact proche");
@@ -146,6 +150,6 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   gate("Pas de signal ouvert", !ctx.hasOpen, ctx.hasOpen ? "un signal est déjà ouvert sur cet actif" : "ok");
 
   score = Math.max(0, Math.min(100, Math.round(score)));
-  gate(`Score ≥ ${ctx.minScore}`, score >= ctx.minScore, `score ${score}`);
+  gate(`Score ≥ ${ctx.p.minScore}`, score >= ctx.p.minScore, `score ${score}`);
   return { dir, gates, score, reasons, tags: [...tags], entry: roundP(P, P), sl: roundP(sl, P), tps, rr: `1:${CFG.tpRR[1]}`, passed: gates.every((g) => g.ok) };
 }

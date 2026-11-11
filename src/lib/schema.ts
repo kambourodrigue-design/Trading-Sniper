@@ -16,11 +16,34 @@ export const SCHEMA: string[] = [
   "CREATE UNIQUE INDEX IF NOT EXISTS uniq_open_per_symbol ON signals(symbol) WHERE outcome = 'open' AND user_id IS NULL"
 ];
 
+// Colonnes ajoutées au fil des versions : ajoutées si elles manquent (l'erreur « colonne déjà existante » est ignorée).
+const COLUMNS: string[] = [
+  "ALTER TABLE signals ADD COLUMN status TEXT NOT NULL DEFAULT 'published'",
+  "ALTER TABLE signals ADD COLUMN timeframe TEXT",
+  "ALTER TABLE signals ADD COLUMN score INTEGER",
+  "ALTER TABLE signals ADD COLUMN reasoning TEXT",
+  "ALTER TABLE signals ADD COLUMN ai_votes TEXT",
+  "ALTER TABLE signals ADD COLUMN tp_reached INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE signals ADD COLUMN outcome TEXT NOT NULL DEFAULT 'open'",
+  "ALTER TABLE signals ADD COLUMN closed_at INTEGER",
+];
+
 let ready: Promise<void> | null = null;
-// Crée les tables si elles n'existent pas (instructions idempotentes) — une seule fois par instance du Worker.
+async function tolerant(env: Env, stmts: string[]): Promise<string[]> {
+  const errs: string[] = [];
+  for (const s of stmts) { try { await env.DB.prepare(s).run(); } catch (e) { errs.push(`${s.slice(0, 60)} → ${(e as Error).message}`); } }
+  return errs;
+}
+// Crée les tables manquantes et met à niveau une ancienne base (colonnes manquantes, index) — une seule fois par instance du Worker.
+// Chaque instruction est exécutée séparément : une instruction en échec n'empêche pas les autres.
 export function ensureSchema(env: Env): Promise<void> {
   if (!ready) {
-    ready = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))).then(() => undefined).catch((e) => { ready = null; throw e; });
+    ready = (async () => {
+      await tolerant(env, SCHEMA);                       // tables (et index quand les colonnes existent déjà)
+      await tolerant(env, COLUMNS);                      // colonnes manquantes d'une ancienne base
+      const errs = await tolerant(env, SCHEMA);          // 2e passe : index qui dépendaient de ces colonnes
+      if (errs.length) console.error("schéma : ", errs.join(" | "));
+    })().catch((e) => { ready = null; throw e; });
   }
   return ready;
 }

@@ -3,23 +3,29 @@
 Un seul projet Cloudflare : le Worker (`src/`) fournit l'API et le moteur de signaux ; le dossier `public/` contient le site
 (landing `index.html`, `dashboard.html`, `admin.html`), servi gratuitement par Cloudflare. Seules les adresses `/api/*` passent par le code.
 
-## Actifs et séances
-| Actif | Source de prix (TwelveData) | Séance analysée |
+## Actifs, sources de données et séances
+| Actif | Sources (essayées dans l'ordre, repli automatique) | Séance analysée |
 |---|---|---|
-| XAU/USD | XAU/USD | dimanche 22h → vendredi 22h (UTC) |
-| US30 | DJI (indice Dow Jones) | 9h30-16h New York, jours ouvrés (heure d'été gérée) |
-| USTEC | NDX (indice Nasdaq 100) | 9h30-16h New York, jours ouvrés |
-| BTC/USD | BTC/USD | 24h/24, 7j/7 |
+| XAU/USD | Yahoo `XAUUSD=X` → TwelveData | dimanche 22h → vendredi 22h (UTC) |
+| US30 | Yahoo `^DJI` → TwelveData `DJI` | 9h30-16h New York, jours ouvrés (heure d'été gérée) |
+| USTEC | Yahoo `^NDX` → TwelveData `NDX` | 9h30-16h New York, jours ouvrés |
+| BTC/USD | Binance `BTCUSDT` → Yahoo `BTC-USD` → TwelveData | 24h/24, 7j/7 |
 
-⚠ Les indices ne sont pas inclus dans le plan gratuit TwelveData : tant que ton plan ne les inclut pas, le moteur désactive l'actif 12 h
-(message dans l'admin) et continue avec les autres. Les niveaux US30/USTEC sont ceux de l'indice : ils peuvent différer de quelques points du CFD de ton courtier.
-Modifier les actifs : `src/engine/config.ts`.
+- **Aucune clé de données n'est nécessaire** : Yahoo Finance et Binance sont gratuits sans compte. `TWELVEDATA_API_KEY` est facultative (dernier recours).
+- ⚠ **Yahoo est un service non officiel**, réservé à un usage personnel, sans garantie ; depuis les serveurs il renvoie parfois des erreurs `429`. Le moteur essaie alors la source suivante et met l'actif en pause 30 min sans marteler le fournisseur. **Admin → Signaux → « Tester les données »** montre, source par source, ce qui répond. Pour une offre payante aux abonnés, il faudra une source licenciée (ou un flux de ton courtier via MT5).
+- Les niveaux US30/USTEC sont ceux de l'indice « cash » (Yahoo) : ils peuvent différer de quelques points du CFD de ton courtier.
+- Modifier les actifs ou les sources : `src/engine/config.ts`.
 
-## Fréquence d'analyse
-- Le cron passe **toutes les 5 minutes** ; un actif est analysé **une fois par heure, dès que sa bougie H1 est clôturée** (donc à partir de :05), seulement pendant sa séance.
-- H4 et D1 sont rechargées à leur clôture. Analyser plus souvent n'apporterait aucune information nouvelle (les décisions reposent sur des bougies clôturées) et gaspillerait des crédits.
-- Les trades ouverts sont suivis (bougies M15) toutes les ~25 min. Contexte macro rafraîchi toutes les 3 h ; calendrier économique toutes les heures.
-- Si les données ne sont pas à jour (flux en retard, jour férié), le moteur réessaie 3 fois puis ignore l'actif jusqu'à l'heure suivante.
+## Profils de sélectivité (`PROFILE`)
+| Profil | Seuil de score | Tendance H4/D1 | Zone d'intérêt | Espace vers l'obstacle |
+|---|---|---|---|---|
+| `strict` (v1) | 55 | H4 aligné, ou D1 aligné + H4 neutre + cassure H1 | prix à ≤ 0,25 ATR d'une zone | ≥ 2 R |
+| `balanced` | 45 | H4 aligné, ou D1 aligné + H4 neutre | ≤ 0,5 ATR, ou zone touchée dans les 3 dernières bougies | ≥ 1,5 R |
+| `active` (défaut) | 38 | idem | ≤ 0,75 ATR, ou zone touchée dans les 5 dernières bougies | ≥ 1,2 R |
+Les conditions fixes restent : un déclencheur, SL ≤ 3 ATR, pas de news à fort impact, séance ouverte, 1 seul trade ouvert par actif. Les IA (validation par consensus) sont le second filtre.
+
+## Mesurer avant de régler : backtest local
+`npm install` puis `npx tsx scripts/backtest.ts` (sur ton ordinateur, avec Internet) : rejoue les règles sur ~2 ans d'historique Yahoo et affiche, par actif et par profil, le nombre de setups par semaine, les résultats TP/SL, le R moyen et les conditions qui bloquent le plus. Options : `--symbols XAU/USD,US30`, `--profiles balanced,active`, `--synthetic` (test hors-ligne sans valeur statistique). Limites : règles seules (sans IA ni news), pas de spread, bougies H1.
 
 ## Comment le moteur décide
 1. **Règles** : MM 50/200 (H1/H4/D1), structure (BOS/CHoCH), order blocks, FVG, sweeps, offre/demande, Wyckoff, figures, premium/discount, RSI. Conditions obligatoires : tendance HTF alignée, prix en zone d'intérêt, un déclencheur, SL ≤ 3 ATR, espace ≥ 2R, pas de news à fort impact (−45/+20 min), séance ouverte, **aucun trade déjà ouvert sur l'actif**, score ≥ `MIN_SCORE`.
@@ -54,8 +60,8 @@ Ton compte admin voit tous les niveaux de signaux sans abonnement.
 | Réglage | Défaut | Effet |
 |---|---|---|
 | `MAX_PER_RUN` | 1 | Actifs analysés par passage. Free : 1 (le 4e actif est analysé ~15 min après la clôture). Paid : 4. |
-| `MIN_SCORE` | 55 | Score de confluence minimal. Plus bas = plus de signaux, moins sélectifs. |
-| `AI_INDEPENDENT` | prefilter | `off` / `prefilter` (si score moteur ≥ `AI_PREFILTER_SCORE`) / `always`. |
+| `PROFILE` | active | `strict` / `balanced` / `active` (voir ci-dessus). `MIN_SCORE` (facultatif) remplace le seuil du profil. |
+| `AI_INDEPENDENT` | h4 | `off` / `prefilter` (score moteur ≥ `AI_PREFILTER_SCORE`) / `h4` (prefilter + à chaque clôture H4, soit 6 fois par jour et par actif) / `always` (chaque heure). |
 | `AI_PREFILTER_SCORE` | 30 | Seuil de déclenchement de l'analyse indépendante. |
 | Modèles | v4-pro / gemini-3.1-pro-preview / claude-sonnet-5-5 | Secrets/variables optionnels `DEEPSEEK_MODEL`, `GEMINI_MODEL`, `CLAUDE_MODEL`. |
 

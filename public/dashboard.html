@@ -90,6 +90,13 @@
   @keyframes scan { to { top:100%; } }
   @keyframes pulsec { 0% { box-shadow:0 0 0 0 rgba(34,211,238,.55); } 70% { box-shadow:0 0 0 10px rgba(34,211,238,0); } 100% { box-shadow:0 0 0 0 rgba(34,211,238,0); } }
   @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none !important; } }
+
+  /* ===== menu horizontal du bas (style application mobile) ===== */
+  body { padding-bottom: calc(112px + env(safe-area-inset-bottom,0px)); }
+  .bnav { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(12px + env(safe-area-inset-bottom,0px)); width:calc(100% - 24px); max-width:520px; display:flex; gap:2px; padding:8px; border-radius:32px; background:var(--navbg); border:1px solid var(--navborder); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:0 18px 44px -14px rgba(124,58,237,.55); z-index:60; }
+  .bnav a { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 2px 9px; border-radius:24px; font-size:.68rem; font-weight:600; color:var(--ink-soft); text-decoration:none; transition:background .2s, color .2s; }
+  .bnav a svg { width:22px; height:22px; }
+  .bnav a.on { color:#fff; background:linear-gradient(135deg,#7C3AED,#D946EF); box-shadow:0 10px 22px -10px rgba(168,85,247,.85); }
 </style>
 </head>
 <body>
@@ -147,6 +154,14 @@
   </div>
 
 </main>
+
+<div class="bnav" role="navigation" aria-label="Navigation principale">
+  <a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>Accueil</a>
+  <a href="/#comment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Fonctions</a>
+  <a href="/#tarifs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>Tarifs</a>
+  <a href="#" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Dashboard</a>
+  <a href="/admin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.2 7.7 8 9 4.8-1.3 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Admin</a>
+</div>
 
 <script>
   // ⚠️ Remplace par l'URL de ton Worker déployé (voir README du backend).
