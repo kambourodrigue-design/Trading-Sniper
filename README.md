@@ -6,15 +6,19 @@ Un seul projet Cloudflare : le Worker (`src/`) fournit l'API et le moteur de sig
 ## Actifs, sources de données et séances
 | Actif | Sources (essayées dans l'ordre, repli automatique) | Séance analysée |
 |---|---|---|
-| XAU/USD | Yahoo `XAUUSD=X` → TwelveData | dimanche 22h → vendredi 22h (UTC) |
-| US30 | Yahoo `^DJI` → TwelveData `DJI` | 9h30-16h New York, jours ouvrés (heure d'été gérée) |
-| USTEC | Yahoo `^NDX` → TwelveData `NDX` | 9h30-16h New York, jours ouvrés |
-| BTC/USD | Binance `BTCUSDT` → Yahoo `BTC-USD` → TwelveData | 24h/24, 7j/7 |
+| XAU/USD | OANDA `XAU_USD` → TwelveData → Yahoo | dimanche 22h → vendredi 22h (UTC) |
+| US30 | OANDA `US30_USD` → Yahoo `^DJI` | avec OANDA : CFD ~23 h/jour ; sans OANDA : 9h30-16h New York seulement |
+| USTEC | OANDA `NAS100_USD` → Yahoo `^NDX` | idem |
+| BTC/USD | Binance → Kraken → OANDA → TwelveData → Yahoo | 24h/24, 7j/7 |
 
-- **Aucune clé de données n'est nécessaire** : Yahoo Finance et Binance sont gratuits sans compte. `TWELVEDATA_API_KEY` est facultative (dernier recours).
-- ⚠ **Yahoo est un service non officiel**, réservé à un usage personnel, sans garantie ; depuis les serveurs il renvoie parfois des erreurs `429`. Le moteur essaie alors la source suivante et met l'actif en pause 30 min sans marteler le fournisseur. **Admin → Signaux → « Tester les données »** montre, source par source, ce qui répond. Pour une offre payante aux abonnés, il faudra une source licenciée (ou un flux de ton courtier via MT5).
-- Les niveaux US30/USTEC sont ceux de l'indice « cash » (Yahoo) : ils peuvent différer de quelques points du CFD de ton courtier.
-- Modifier les actifs ou les sources : `src/engine/config.ts`.
+Sources gratuites (secrets Cloudflare) :
+- **OANDA** *(recommandé : forex, or, indices)* — crée un compte **démo** gratuit sur oanda.com, puis génère un jeton API (« Gérer l'accès API ») et ajoute-le comme secret `OANDA_API_TOKEN`. Prix de CFD (proches de ceux d'un courtier MT5), H4 natif, aucune limite gênante. Sans compte démo : pas d'OANDA. Les données du compte démo peuvent avoir un léger décalage, sans conséquence pour des bougies H1. `OANDA_ENV = live` seulement si tu utilises un jeton de compte réel.
+- **TwelveData** — clé gratuite (`TWELVEDATA_API_KEY`) : forex, or, crypto ; **pas** les indices ; 800 crédits/jour.
+- **Binance / Kraken** — Bitcoin, sans clé.
+- **Yahoo** — sans clé mais non officiel : bloque souvent les serveurs ; dernier recours.
+- **Admin → Signaux → « Tester les données »** montre, source par source, ce qui répond (✔/✖ et la raison). Si une source échoue (429, 401, blocage…), la suivante prend le relais ; si toutes échouent, l'actif est mis en pause 30 min.
+- Pour une offre payante aux abonnés, vérifie les conditions d'usage de chaque fournisseur (ou utilise le flux de ton courtier via MT5).
+- Ajouter du forex ou d'autres actifs : `src/engine/config.ts` (exemples EUR/USD, GBP/JPY, USD/JPY prêts à décommenter).
 
 ## Profils de sélectivité (`PROFILE`)
 | Profil | Seuil de score | Tendance H4/D1 | Zone d'intérêt | Espace vers l'obstacle |
@@ -71,9 +75,14 @@ Ton compte admin voit tous les niveaux de signaux sans abonnement.
 | `POST /api/auth/register`, `/api/auth/login` | public |
 | `GET /api/me` | Bearer |
 | `GET /api/signals/latest` | public ; niveaux **verrouillés** sans abonnement (Starter : XAU/USD + BTC/USD ; Pro/Elite : tout + explication + avis IA) |
+| `GET /api/candles?symbol=XAU/USD&tf=H1` | compte requis ; bougies clôturées (H1 : 200, H4 : 160, D1 : 120) servies depuis le cache horaire du moteur (aucun appel supplémentaire aux fournisseurs de données) — alimente le graphique du dashboard |
 | `GET /api/stats` | public — résultats réels suivis (90 j), séparés règles+IA / IA seule |
+| `GET /api/candles?symbol=XAU/USD&tf=H1` | compte requis — bougies clôturées (H1 / H4 / D1) pour le graphique du dashboard, servies depuis le cache horaire du moteur (aucune requête supplémentaire aux fournisseurs de données) |
 | `/api/admin/*` | admin (`ADMIN_EMAILS`) : stats, utilisateurs, abonnements manuels, signaux (création, masquage, suppression, clôture), journal d'analyse, analyse d'un actif à la demande |
 | `POST /api/webhooks/stripe`, `/api/webhooks/cinetpay` | squelette — **signature à vérifier avant la production** |
+
+## Graphique du dashboard
+Sur chaque signal débloqué, « Voir le graphique » ouvre un graphique en bougies (H1 / H4 / D1) avec les lignes **Entry, SL, TP1, TP2, TP3** et une flèche à l'émission du signal. Bibliothèque : TradingView Lightweight Charts™ 4.2.0 (Apache-2.0), hébergée dans `public/vendor/` avec sa licence ; la mention « TradingView Lightweight Charts™ » avec lien doit rester affichée sous le graphique. Les bougies sont celles de ta source de données (OANDA, etc.) : pour une offre payante, vérifie que ses conditions autorisent l'affichage aux abonnés.
 
 ## Avant la mise en production
 1. Paiements : vérifier les signatures des webhooks ; en attendant, activer les abonnements depuis l'admin.
@@ -81,3 +90,6 @@ Ton compte admin voit tous les niveaux de signaux sans abonnement.
 3. Sécurité : rate limiting sur `/api/auth/*`, confirmation d'email, restreindre les accès à ton domaine.
 4. Valider le moteur dans la durée (quelques semaines) avec `/api/stats` et le journal d'analyse avant d'annoncer des performances. Il n'a pas été backtesté sur données réelles.
 5. Le calendrier économique utilise un flux public non officiel ; s'il tombe, le filtre news est désactivé (les IA en sont informées).
+
+## Graphique du dashboard
+Chaque signal débloqué a un bouton « Voir le graphique » : bougies (H1 / H4 / D1) avec les niveaux **Entry, SL, TP1, TP2, TP3** tracés et une flèche à l'émission du signal. Bibliothèque : TradingView Lightweight Charts v4.2.0 (Apache 2.0), hébergée dans `public/vendor/` ; l'attribution « TradingView Lightweight Charts™ » (lien) est affichée sous le graphique, comme l'exige la licence — garde-la. Les bougies viennent de la même source que le moteur (OANDA, etc.) : pour un service payant, vérifie que la licence de ta source autorise l'affichage à des tiers.

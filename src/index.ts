@@ -1,7 +1,8 @@
 import { hashPassword, verifyPassword, newId, createSession, bearerToken, getUser, isAdminEmail, getActivePlan } from "./lib/auth";
 import { runAutoSignals } from "./scheduled";
 import { handleAdmin } from "./admin";
-import { CFG } from "./engine/config";
+import { CFG, SYMBOLS } from "./engine/config";
+import { getBundle, chartPayload } from "./lib/prices";
 import { ensureSchema } from "./lib/schema";
 
 function json(data: unknown, status = 200): Response {
@@ -77,6 +78,19 @@ export default {
       // L'administrateur voit tout (accès complet sans abonnement)
       const plan = user ? (isAdminEmail(env, user.email) ? "elite" : (await getActivePlan(env.DB, user.id))?.plan ?? null) : null;
       return json(applyAccess(JSON.parse(raw) as SignalRow[], plan));
+    }
+
+    // --- Bougies pour le graphique du dashboard (compte requis ; servi depuis le cache horaire du moteur) ---
+    if (pathname === "/api/candles" && req.method === "GET") {
+      if (!(await getUser(env.DB, bearerToken(req)))) return err("Non authentifié.", 401);
+      const symbol = url.searchParams.get("symbol") ?? "", tf = (url.searchParams.get("tf") ?? "H1").toUpperCase();
+      const cfg = SYMBOLS.find((s) => s.symbol === symbol);
+      if (!cfg) return err("Actif inconnu.", 404);
+      if (!["H1", "H4", "D1"].includes(tf)) return err("tf : H1 | H4 | D1.");
+      try {
+        const b = await getBundle(env, cfg, Date.now());
+        return json({ symbol, tf, source: b.source, candles: chartPayload(b, tf) });
+      } catch (e) { return err(`Données indisponibles : ${(e as Error).message.slice(0, 200)}`, 503); }
     }
 
     // --- Statistiques réelles (public) : suivi automatique des TP/SL, séparées par origine du signal ---

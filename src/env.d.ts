@@ -12,6 +12,8 @@ declare global {
     GEMINI_API_KEY?: string;
     ANTHROPIC_API_KEY?: string;
     // Optionnels
+    OANDA_API_TOKEN?: string;    // jeton d'un compte DÉMO OANDA (gratuit) : forex, or, indices
+    OANDA_ENV?: string;          // practice (défaut) | live
     ALPHAVANTAGE_API_KEY?: string;
     DEEPSEEK_MODEL?: string;
     GEMINI_MODEL?: string;

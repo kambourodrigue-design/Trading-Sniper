@@ -14,6 +14,8 @@ import { notify, signalMessage, outcomeMessage } from "../lib/telegram";
 export interface RunResult { symbol: string; status: string; score: number; note: string }
 
 const HOUR = 3_600_000;
+// Indices : avec OANDA on analyse le CFD (≈ 23 h/jour, comme sur MT5) ; sans OANDA, seulement la séance « cash » de New York (Yahoo).
+const effective = (env: Env, s: SymbolCfg): SymbolCfg => (s.session === "us" && env.OANDA_API_TOKEN ? { ...s, session: "fx" } : s);
 const isUnique = (e: unknown) => /UNIQUE constraint/i.test(String((e as Error)?.message ?? e));
 
 export { isMarketOpen, evaluateOutcome };
@@ -119,7 +121,8 @@ async function independentAnalysis(env: Env, s: SymbolCfg, an: Analysis, best: E
 }
 
 // ---------- Analyse d'un actif ----------
-async function analyzeOne(env: Env, s: SymbolCfg, now: number, cal: { ok: boolean; events: CalEvent[] }): Promise<RunResult | null> {
+async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boolean; events: CalEvent[] }): Promise<RunResult | null> {
+  const s = effective(env, s0);
   const maxAge = s.session === "us" ? 9_000_000 : 4_500_000; // la dernière bougie H1 clôturée doit être récente
   const bundle = await getBundle(env, s, now, maxAge);
   const { h1, h4, d1 } = bundle;
@@ -213,7 +216,7 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
   const due: Array<{ s: SymbolCfg; last: number }> = [];
   for (const s of SYMBOLS) {
     if (opts.symbol && s.symbol !== opts.symbol) continue;
-    if (!opts.force && !isMarketOpen(s, now)) continue;
+    if (!opts.force && !isMarketOpen(effective(env, s), now)) continue;
     if (!opts.force && await cacheGet(env, `dis:${s.symbol}`)) continue; // actif désactivé (formule de données insuffisante)
     const st = await env.DB.prepare("SELECT last_hour FROM analysis_state WHERE symbol = ?").bind(s.symbol).first<{ last_hour: number }>();
     if (opts.force || ((!st || st.last_hour < hour) && minute >= 1)) due.push({ s, last: st?.last_hour ?? 0 });

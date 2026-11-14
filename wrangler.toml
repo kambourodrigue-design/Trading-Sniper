@@ -32,7 +32,8 @@ AI_INDEPENDENT = "h4"          # analyse indépendante des IA : "off", "prefilte
 AI_PREFILTER_SCORE = "30"
 
 # Secrets à créer dans le dashboard (Worker > Paramètres > Variables et secrets > type « Secret ») :
-#   JWT_SECRET, ADMIN_EMAILS   (TWELVEDATA_API_KEY est désormais facultatif : Yahoo et Binance n'ont pas besoin de clé)
+#   JWT_SECRET, ADMIN_EMAILS
+#   données (au moins l'une) : OANDA_API_TOKEN (compte démo gratuit, recommandé), TWELVEDATA_API_KEY ; le Bitcoin marche aussi sans clé
 #   au moins une IA : DEEPSEEK_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY
 #   optionnel : ALPHAVANTAGE_API_KEY, TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram)
 #   plus tard : STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CINETPAY_API_KEY, CINETPAY_SITE_ID

@@ -5,16 +5,53 @@ import { cacheGet, cacheSet } from "./cache";
 // Données de marché : Yahoo Finance (sans clé, non officiel), Binance (crypto, sans clé) et TwelveData (clé facultative).
 // Chaque actif a une liste de sources essayées dans l'ordre (voir engine/config.ts) : si l'une échoue (429, blocage…), la suivante prend le relais.
 const H = 3_600_000, D = 86_400_000;
-export type Iv = "15m" | "1h" | "1d";
+export type Iv = "15m" | "1h" | "4h" | "1d";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 // Espacement minimal entre deux appels d'un même fournisseur (TwelveData gratuit : 8 requêtes/minute)
-const SPACING: Record<string, number> = { yahoo: 1500, binance: 300, twelvedata: 7600 };
+const SPACING: Record<string, number> = { yahoo: 1500, binance: 300, kraken: 1200, oanda: 250, twelvedata: 7600 };
 const lastCall: Record<string, number> = {};
 async function throttle(p: string): Promise<void> {
   const wait = (lastCall[p] ?? 0) + (SPACING[p] ?? 0) - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   lastCall[p] = Date.now();
+}
+
+// ---------- OANDA (compte démo gratuit, jeton API ; alignement UTC pour que H4 et D soient sur 00h/04h/… UTC) ----------
+interface OandaJson { candles?: Array<{ complete: boolean; time: string; mid?: { o: string; h: string; l: string; c: string } }>; errorMessage?: string }
+export function parseOanda(j: unknown): Candle[] {
+  const r = j as OandaJson;
+  if (!r?.candles) throw new Error(`OANDA : ${r?.errorMessage ?? "réponse vide"}`);
+  return r.candles.filter((k) => k.complete && k.mid).map((k) => ({ t: Math.round(Number(k.time) * 1000), o: +k.mid!.o, h: +k.mid!.h, l: +k.mid!.l, c: +k.mid!.c }));
+}
+async function oanda(env: Env, id: string, iv: Iv, fromMs?: number): Promise<Candle[]> {
+  if (!env.OANDA_API_TOKEN) throw new Error("OANDA_API_TOKEN absent");
+  await throttle("oanda");
+  const g = { "15m": "M15", "1h": "H1", "4h": "H4", "1d": "D" }[iv];
+  const host = (env.OANDA_ENV ?? "practice").toLowerCase() === "live" ? "api-fxtrade.oanda.com" : "api-fxpractice.oanda.com";
+  const span = fromMs !== undefined ? `from=${Math.floor(fromMs / 1000)}&count=5000` : `count=${iv === "1h" ? 320 : 260}`;
+  const res = await fetch(`https://${host}/v3/instruments/${id}/candles?price=M&granularity=${g}&alignmentTimezone=UTC&dailyAlignment=0&${span}`,
+    { headers: { Authorization: `Bearer ${env.OANDA_API_TOKEN}`, "Accept-Datetime-Format": "UNIX" } });
+  const j = (await res.json().catch(() => ({}))) as OandaJson;
+  if (!res.ok) throw new Error(`OANDA ${id} HTTP ${res.status}${j.errorMessage ? ` : ${j.errorMessage}` : ""}`);
+  return parseOanda(j);
+}
+
+// ---------- Kraken (public, sans clé) ----------
+export function parseKraken(j: unknown): Candle[] {
+  const r = j as { error?: string[]; result?: Record<string, unknown> };
+  if (r?.error?.length) throw new Error(`Kraken : ${r.error.join(", ")}`);
+  const key = Object.keys(r?.result ?? {}).find((k) => k !== "last");
+  const rows = key ? (r.result![key] as Array<Array<string | number>>) : null;
+  if (!rows) throw new Error("Kraken : réponse vide");
+  return rows.map((x) => ({ t: Number(x[0]) * 1000, o: +x[1], h: +x[2], l: +x[3], c: +x[4] }));
+}
+async function kraken(id: string, iv: Iv, fromMs?: number): Promise<Candle[]> {
+  await throttle("kraken");
+  const interval = { "15m": 15, "1h": 60, "4h": 240, "1d": 1440 }[iv];
+  const res = await fetch(`https://api.kraken.com/0/public/OHLC?pair=${id}&interval=${interval}${fromMs !== undefined ? `&since=${Math.floor(fromMs / 1000)}` : ""}`);
+  if (!res.ok) throw new Error(`Kraken ${id} HTTP ${res.status}`);
+  return parseKraken(await res.json());
 }
 
 // ---------- Yahoo ----------
@@ -32,6 +69,7 @@ export function parseYahoo(j: unknown): Candle[] {
   return out;
 }
 async function yahoo(id: string, iv: Iv, s: SymbolCfg, fromMs?: number, now = Date.now()): Promise<Candle[]> {
+  if (iv === "4h") throw new Error("Yahoo : pas de H4 (agrégé depuis H1)");
   await throttle("yahoo");
   const interval = iv === "1h" ? "60m" : iv;
   const span = fromMs !== undefined ? `period1=${Math.floor(fromMs / 1000)}&period2=${Math.floor(now / 1000) + 3600}`
@@ -47,6 +85,7 @@ export function parseBinance(rows: unknown): Candle[] {
   return rows.map((r) => ({ t: Number(r[0]), o: +r[1], h: +r[2], l: +r[3], c: +r[4] }));
 }
 async function binance(id: string, iv: Iv, fromMs?: number): Promise<Candle[]> {
+  if (iv === "4h") throw new Error("Binance : H4 agrégé depuis H1");
   await throttle("binance");
   const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${id}&interval=${iv}&limit=1000${fromMs !== undefined ? `&startTime=${fromMs}` : ""}`);
   if (!res.ok) throw new Error(`Binance ${id} HTTP ${res.status}${res.status === 451 ? " (région restreinte)" : ""}`);
@@ -80,13 +119,18 @@ export interface Bundle { h1: Candle[]; h4: Candle[]; d1: Candle[]; source: stri
 const closedOf = (c: Candle[], ms: number, now: number) => c.filter((k) => k.t + ms <= now);
 const enc = (c: Candle[]) => JSON.stringify(c.map((k) => [k.t, k.o, k.h, k.l, k.c]));
 const dec = (s: string): Candle[] => (JSON.parse(s) as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
-const usable = (env: Env, src: Src) => src.p !== "twelvedata" || !!env.TWELVEDATA_API_KEY;
+const usable = (env: Env, src: Src) => (src.p !== "twelvedata" || !!env.TWELVEDATA_API_KEY) && (src.p !== "oanda" || !!env.OANDA_API_TOKEN);
+const missingKey = (src: Src) => (src.p === "twelvedata" ? "TWELVEDATA_API_KEY" : "OANDA_API_TOKEN");
+// Fournisseurs qui livrent du H4 natif (les autres : H4 agrégé depuis le H1)
+const nativeH4 = (p: string) => p === "twelvedata" || p === "oanda" || p === "kraken";
 
 async function rawSeries(env: Env, s: SymbolCfg, src: Src, iv: Iv, fromMs?: number, now = Date.now()): Promise<Candle[]> {
+  if (src.p === "oanda") return oanda(env, src.id, iv, fromMs);
+  if (src.p === "kraken") return kraken(src.id, iv, fromMs);
   if (src.p === "yahoo") return yahoo(src.id, iv, s, fromMs, now);
   if (src.p === "binance") return binance(src.id, iv, fromMs);
   const size = iv === "15m" ? 400 : iv === "1h" ? 300 : 260;
-  return twelveSeries(env, src.id, iv === "15m" ? "15min" : iv === "1h" ? "1h" : "1day", size);
+  return twelveSeries(env, src.id, { "15m": "15min", "1h": "1h", "4h": "4h", "1d": "1day" }[iv], size);
 }
 
 async function bundleFrom(env: Env, s: SymbolCfg, src: Src, now: number, maxAgeMs?: number): Promise<Bundle> {
@@ -97,7 +141,7 @@ async function bundleFrom(env: Env, s: SymbolCfg, src: Src, now: number, maxAgeM
   else {
     const raw = await rawSeries(env, s, src, "1h");
     h1 = closedOf(raw, H, now);
-    h4 = src.p === "twelvedata" ? closedOf(await twelveSeries(env, src.id, "4h", 260), 4 * H, now) : aggregate(raw, 4 * H, now);
+    h4 = nativeH4(src.p) ? closedOf(await rawSeries(env, s, src, "4h"), 4 * H, now) : aggregate(raw, 4 * H, now);
     h1 = h1.slice(-320); h4 = h4.slice(-260);
     const stale = maxAgeMs !== undefined && (h1.length === 0 || now - h1[h1.length - 1].t > maxAgeMs);
     if (!stale) await cacheSet(env, kh, JSON.stringify({ h1: enc(h1), h4: enc(h4) }), 2 * 3600);
@@ -135,7 +179,7 @@ export async function getM15(env: Env, s: SymbolCfg, fromMs: number, now: number
 export async function probeSources(env: Env, s: SymbolCfg, now = Date.now()): Promise<Array<{ provider: string; id: string; ok: boolean; detail: string }>> {
   const out: Array<{ provider: string; id: string; ok: boolean; detail: string }> = [];
   for (const src of s.sources) {
-    if (!usable(env, src)) { out.push({ provider: src.p, id: src.id, ok: false, detail: "clé TWELVEDATA_API_KEY absente (facultatif)" }); continue; }
+    if (!usable(env, src)) { out.push({ provider: src.p, id: src.id, ok: false, detail: `${missingKey(src)} absent (facultatif)` }); continue; }
     try {
       const c = closedOf(await rawSeries(env, s, src, "1h"), H, now);
       if (!c.length) throw new Error("aucune bougie");
@@ -143,4 +187,10 @@ export async function probeSources(env: Env, s: SymbolCfg, now = Date.now()): Pr
     } catch (e) { out.push({ provider: src.p, id: src.id, ok: false, detail: (e as Error).message.slice(0, 160) }); }
   }
   return out;
+}
+
+// Bougies pour le graphique du dashboard : [temps (s), ouverture, haut, bas, clôture], clôturées uniquement.
+export function chartPayload(b: Bundle, tf: string): number[][] {
+  const c = tf === "H4" ? b.h4.slice(-160) : tf === "D1" ? b.d1.slice(-120) : b.h1.slice(-200);
+  return c.map((k) => [Math.floor(k.t / 1000), k.o, k.h, k.l, k.c]);
 }
