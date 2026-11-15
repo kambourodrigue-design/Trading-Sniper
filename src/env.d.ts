@@ -4,7 +4,8 @@ declare global {
   interface Env {
     DB: D1Database;
     CACHE: KVNamespace;
-    LSE_API_KEY?: string;        // LSE Data (London Strategic Edge) : source de données de marché (requise pour analyser)
+    DERIV_WS_URL?: string;       // facultatif : adresse WebSocket Deriv à utiliser à la place des adresses par défaut (aucune clé requise)
+    DERIV_APP_ID?: string;       // facultatif : app_id pour l'ancienne API Deriv (défaut 1089)
     JWT_SECRET: string;
     ADMIN_EMAILS: string;
     // IA (au moins une clé requise ; plus il y en a, plus la validation est robuste)

@@ -4,19 +4,23 @@ Un seul projet Cloudflare : le Worker (`src/`) fournit l'API et le moteur de sig
 (landing `index.html`, `dashboard.html`, `admin.html`), servi gratuitement par Cloudflare. Seules les adresses `/api/*` passent par le code.
 
 ## Actifs, source de données et séances
-Source unique : **LSE Data** (London Strategic Edge), API REST avec bougies M15, H1, H4 et D1 natives.
+Source unique : **Deriv** (WebSocket public, **sans clé ni compte**), bougies M15, H1, H4 et D1.
 
-| Actif | Symbole LSE (marché : symbole) | Séance analysée |
+| Actif | Symbole Deriv | Séance analysée |
 |---|---|---|
-| XAU/USD | `forex:XAU_USD`, sinon `commodities:XAU_USD`, `commodities:XAUUSD`, `commodities:GOLD` (essayés dans l'ordre) | dimanche 22h → vendredi 22h (UTC) |
-| BTC/USD | `crypto:BTCUSDT` (Bitcoin coté en Tether) | 24h/24, 7j/7 |
+| XAU/USD | `frxXAUUSD` | dimanche 22h → vendredi 22h (UTC) |
+| BTC/USD | `cryBTCUSD` | 24h/24, 7j/7 |
+| EUR/USD, GBP/USD, USD/JPY | `frxEURUSD`, `frxGBPUSD`, `frxUSDJPY` | dimanche 22h → vendredi 22h (UTC) |
+| US30 (Dow Jones) | `OTC_DJI` | 9h30-16h, heure de New York |
+| USTEC (Nasdaq 100) | `OTC_NDX` | 9h30-16h, heure de New York |
 
 Configuration :
-- Crée un compte sur londonstrategicedge.com, génère une clé sur la page « Data » et ajoute-la comme secret Cloudflare `LSE_API_KEY`. Plan gratuit : 60 appels/minute, forex, crypto et matières premières inclus ; la clé est envoyée dans l'en-tête `X-API-Key`.
-- Le symbole exact de l'or dans le catalogue LSE n'a pas pu être vérifié à l'écriture du code : si « Tester les données » échoue pour XAU/USD, le message affiche les symboles proches du catalogue ; corrige alors `id` et `market` dans `src/engine/config.ts`.
-- **Admin → Signaux → « Tester les données »** montre si LSE Data répond pour l'actif (✔/✖ et la raison). Si la source échoue (429, 401, symbole inconnu…), l'actif est mis en pause 30 min.
-- **Conditions d'usage LSE** : les données peuvent servir à ta recherche et à ton trading, y compris commercial, mais **pas être redistribuées ni mises à disposition de tiers**. Le bouton « Voir le graphique » (bougies affichées aux abonnés) est donc à vérifier avec LSE avant toute offre payante (londonstrategicedge.com/terms).
-- Ajouter du forex ou d'autres actifs : `src/engine/config.ts` (exemples EUR/USD, GBP/JPY, USD/JPY prêts à décommenter).
+- Rien à créer : le Worker se connecte à `wss://api.derivws.com/trading/v1/options/ws/public`, puis, en cas d'échec, à l'ancienne API (`wss://ws.derivws.com/websockets/v3?app_id=1089`). Variables facultatives : `DERIV_WS_URL` (impose une adresse) et `DERIV_APP_ID` (ton propre app_id pour l'ancienne API, gratuit sur api.deriv.com).
+- Les symboles Deriv n'ont pas pu être testés en direct à l'écriture du code : **Admin → Signaux → « Tester les données »** pour chaque actif. En cas de symbole refusé, le message liste les symboles proches du catalogue Deriv ; corrige alors `id` dans `src/engine/config.ts` (un actif refusé est mis en pause 12 h).
+- Les prix Deriv ne sont pas ceux de ton broker : les écarts (quelques pips sur le forex, davantage sur les indices) décalent un peu les SL/TP par rapport à MT5. Vérifie les conditions de Deriv avant d'afficher ses données à des abonnés payants.
+- Les indices US sont analysés sur la séance new-yorkaise (`session: "us"` dans `config.ts`) ; passe à `"fx"` pour suivre les heures Deriv.
+- Intermarchés : seul le dollar (proxy EUR/USD en D1, via Deriv) ajuste le score. Les poids par actif (`WEIGHTS` dans `src/lib/intermarket.ts`) sont des valeurs de départ à valider par backtest. Les taux US 10 ans ne sont plus utilisés.
+- Ajouter un actif : `src/engine/config.ts` (liste `SYMBOLS`).
 
 ## Profils de sélectivité (`PROFILE`)
 | Profil | Seuil de score | Tendance H4/D1 | Zone d'intérêt | Espace vers l'obstacle |
@@ -27,7 +31,7 @@ Configuration :
 Les conditions fixes restent : un déclencheur, SL ≤ 3 ATR, pas de news à fort impact, séance ouverte, 1 seul trade ouvert par actif. Les IA (validation par consensus) sont le second filtre.
 
 ## Mesurer avant de régler : backtest local
-`npm install` puis `npx tsx scripts/backtest.ts` (sur ton ordinateur, avec Internet) : rejoue les règles sur ~2 ans d'historique LSE Data (clé `LSE_API_KEY` requise en variable d'environnement) et affiche, par actif et par profil, le nombre de setups par semaine, les résultats TP/SL, le R moyen et les conditions qui bloquent le plus. Options : `--symbols XAU/USD,BTC/USD`, `--profiles balanced,active`, `--synthetic` (test hors-ligne sans valeur statistique). Limites : règles seules (sans IA ni news), pas de spread, bougies H1.
+`npm install` puis `npx tsx scripts/backtest.ts` (sur ton ordinateur, avec Internet) : rejoue les règles sur ~2 ans d'historique Deriv (Node 22+, aucune clé) et affiche, par actif et par profil, le nombre de setups par semaine, les résultats TP/SL, le R moyen et les conditions qui bloquent le plus. Options : `--symbols XAU/USD,BTC/USD`, `--profiles balanced,active`, `--synthetic` (test hors-ligne sans valeur statistique). Limites : règles seules (sans IA ni news), pas de spread, bougies H1.
 
 ## Comment le moteur décide
 1. **Règles** : MM 50/200 (H1/H4/D1), structure (BOS/CHoCH), order blocks, FVG, sweeps, offre/demande, Wyckoff, figures, premium/discount, RSI. Conditions obligatoires : tendance HTF alignée, prix en zone d'intérêt, un déclencheur, SL ≤ 3 ATR, espace ≥ 2R, pas de news à fort impact (−45/+20 min), séance ouverte, **aucun trade déjà ouvert sur l'actif**, score ≥ `MIN_SCORE`. **Intermarchés (fondamental chiffré)** : le dollar (proxy EUR/USD en D1) et les taux US à 10 ans (LSE, série `US10Y`) sont mesurés sur 10 séances ; dollar et taux en hausse pèsent sur l'or et le Bitcoin, en baisse ils les soutiennent. Le biais ajuste le score de ± 6 points au plus, et les chiffres sont transmis aux IA. Si ces données manquent, le biais est neutre. Les poids par actif sont dans `src/lib/intermarket.ts` ; Admin → Signaux → « Tester les données » vérifie aussi ces deux flux.
@@ -49,7 +53,7 @@ Ton compte admin voit tous les niveaux de signaux sans abonnement.
 ## Quotas (estimations pour 2 actifs, à vérifier à l'usage)
 | Ressource | Limite gratuite | Consommation estimée / jour |
 |---|---|---|
-| LSE Data appels | 60 / minute (plan gratuit) ; quota hebdomadaire de volume très large pour des bougies | 3 appels par analyse (H1, H4, D1) + 1 par trade ouvert pour le suivi ; espacement automatique de 1,1 s entre appels |
+| Deriv appels | WebSocket public, sans clé ; limite de débit non documentée précisément | 3 requêtes par analyse (H1, H4, D1) + 1 par trade ouvert pour le suivi ; espacement automatique de 0,25 s entre requêtes |
 | Cloudflare Workers requêtes | 100 000 / jour | ~290 (cron) + visites API ; pages statiques gratuites |
 | Workers CPU (plan Free) | 10 ms / passage | **juste** : voir Workers Paid (5 $/mois) si erreur 1102 dans les logs |
 | Appels externes par passage (Free) | 50 | ≤ ~20 avec `MAX_PER_RUN = 1` |
@@ -85,7 +89,7 @@ Sur chaque signal débloqué, « Voir le graphique » ouvre un graphique en boug
 
 ## Avant la mise en production
 1. Paiements : vérifier les signatures des webhooks ; en attendant, activer les abonnements depuis l'admin.
-2. Données de marché : les données LSE ne peuvent pas être redistribuées à des tiers ; vérifier auprès de LSE si l'affichage des bougies (graphiques) aux abonnés est autorisé.
+2. Données de marché : vérifier auprès de Deriv, avant le lancement, si l'affichage des bougies (graphiques) aux abonnés est autorisé.
 3. Sécurité : rate limiting sur `/api/auth/*`, confirmation d'email, restreindre les accès à ton domaine.
 4. Valider le moteur dans la durée (quelques semaines) avec `/api/stats` et le journal d'analyse avant d'annoncer des performances. Il n'a pas été backtesté sur données réelles.
 5. Le calendrier économique utilise un flux public non officiel ; s'il tombe, le filtre news est désactivé (les IA en sont informées).

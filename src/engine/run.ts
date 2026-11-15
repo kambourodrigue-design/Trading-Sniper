@@ -28,7 +28,7 @@ export function getProfile(env: Env): Profile {
 // Un trade reste « ouvert » (et bloque l'actif) tant qu'il n'a pas atteint son résultat : SL, TP3, stop suiveur ou expiration.
 async function trackOutcomes(env: Env, now: number): Promise<boolean> {
   const rows = (await env.DB.prepare(
-    "SELECT id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, tp_reached, progress_at, created_at FROM signals WHERE outcome = 'open' AND entry IS NOT NULL AND stop_loss IS NOT NULL AND tp1 IS NOT NULL"
+    "SELECT id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, tp_reached, created_at FROM signals WHERE outcome = 'open' AND entry IS NOT NULL AND stop_loss IS NOT NULL AND tp1 IS NOT NULL"
   ).all<Sig>()).results;
   const bySymbol = new Map<string, Sig[]>();
   for (const r of rows) bySymbol.set(r.symbol, [...(bySymbol.get(r.symbol) ?? []), r]);
@@ -42,8 +42,8 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
     for (const s of sigs) {
       const r = evaluateOutcome(s, c15, now);
       if (r.outcome !== "open" || r.tp !== s.tp_reached) {
-        await env.DB.prepare("UPDATE signals SET tp_reached = ?, outcome = ?, progress_at = ?, closed_at = CASE WHEN ? = 'open' THEN NULL ELSE ? END WHERE id = ?")
-          .bind(r.tp, r.outcome, r.progressAt ?? s.progress_at ?? null, r.outcome, Math.floor(now / 1000), s.id).run();
+        await env.DB.prepare("UPDATE signals SET tp_reached = ?, outcome = ?, closed_at = CASE WHEN ? = 'open' THEN NULL ELSE ? END WHERE id = ?")
+          .bind(r.tp, r.outcome, r.outcome, Math.floor(now / 1000), s.id).run();
         changed = true;
         const msg = outcomeMessage(s, s.tp_reached, r);
         if (msg) await notify(env, msg);
@@ -54,11 +54,12 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
 }
 
 // ---------- Prompts soumis aux IA ----------
-const ts = (s: Analysis["h1"]) => `clôture ${s.close.toFixed(2)}, MM50 ${s.sma50.toFixed(2)}, MM200 ${s.sma200.toFixed(2)}, tendance ${s.trend}, RSI ${s.rsi.toFixed(0)}`;
+const nf = (x: number) => roundP(x, x); // décimales adaptées au niveau de prix (forex : 5, USD/JPY : 3, or/indices : 2)
+const ts = (s: Analysis["h1"]) => `clôture ${nf(s.close)}, MM50 ${nf(s.sma50)}, MM200 ${nf(s.sma200)}, tendance ${s.trend}, RSI ${s.rsi.toFixed(0)}`;
 
 function buildPrompt(s: SymbolCfg, an: Analysis, ev: Evaluation, macro: string, cal: CalEvent[], now: number, losses: string): string {
   const candles = an.lastCandles.map((c) => `${new Date(c.t).toISOString().slice(5, 13)}h O${c.o} H${c.h} L${c.l} C${c.c}`).join("\n");
-  return `ACTIF : ${s.symbol} (${s.label}) — prix ${an.price} — ATR H1 ${an.atr.toFixed(2)}
+  return `ACTIF : ${s.symbol} (${s.label}) — prix ${an.price} — ATR H1 ${roundP(an.atr, an.price)}
 SETUP CANDIDAT : ${ev.dir} | entrée ${ev.entry} | SL ${ev.sl} | TP1 ${ev.tps[0]} / TP2 ${ev.tps[1]} / TP3 ${ev.tps[2]} | score moteur ${ev.score}/100
 CONFLUENCES DÉTECTÉES : ${ev.reasons.join(" ; ")}
 TENDANCE : H1 (${ts(an.h1)}) | H4 (${ts(an.h4)}) | D1 (${ts(an.d1)})
@@ -74,7 +75,7 @@ const fmtC = (c: Candle[], n: number, price: number, daily = false) =>
   c.slice(-n).map((k) => `${new Date(k.t).toISOString().slice(5, daily ? 10 : 13).replace("T", " ")}${daily ? "" : "h"} O${roundP(k.o, price)} H${roundP(k.h, price)} L${roundP(k.l, price)} C${roundP(k.c, price)}`).join("\n");
 
 function buildIndependentPrompt(s: SymbolCfg, an: Analysis, best: Evaluation, h1: Candle[], h4: Candle[], d1: Candle[], macro: string, cal: CalEvent[], now: number, losses: string): string {
-  return `ACTIF : ${s.symbol} (${s.label}) — date ${new Date(now).toISOString().slice(0, 16)} UTC — PRIX ACTUEL ${an.price} — ATR H1 ${an.atr.toFixed(2)}
+  return `ACTIF : ${s.symbol} (${s.label}) — date ${new Date(now).toISOString().slice(0, 16)} UTC — PRIX ACTUEL ${an.price} — ATR H1 ${roundP(an.atr, an.price)}
 INDICATEURS : H1 (${ts(an.h1)}) | H4 (${ts(an.h4)}) | D1 (${ts(an.d1)})
 BOUGIES D1 (20 dernières) :\n${fmtC(d1, 20, an.price, true)}
 BOUGIES H4 (30 dernières) :\n${fmtC(h4, 30, an.price)}
@@ -211,7 +212,6 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
     await cacheSet(env, "trk:last", "1", 25 * 60);
     changed = await trackOutcomes(env, now).catch((e) => { console.error("suivi des résultats", e); return false; });
   }
-  if (await cacheGet(env, "data:pause")) { if (changed) await env.CACHE.delete("signals:latest"); return results; } // quota de données épuisé
   const cal = await getCalendar(env);
 
   const due: Array<{ s: SymbolCfg; last: number }> = [];
@@ -231,12 +231,11 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
     } catch (e) {
       const msg = String((e as Error).message).slice(0, 300);
       console.error("analyse", s.symbol, msg);
-      const planErr = /plan-required|market-not-in-plan|plan-ended|key-withheld|account-required|key-unknown|key-missing|LSE_API_KEY absent/i.test(msg);
-      // Plan de données insuffisant : 12 h. Panne passagère (429, blocage, réseau) : 30 min, pour ne pas marteler les fournisseurs.
+      const planErr = /InvalidSymbol|AuthorizationRequired|PermissionDenied/i.test(msg);
+      // Symbole refusé ou accès refusé : 12 h. Panne passagère (429, blocage, réseau) : 30 min, pour ne pas marteler les fournisseurs.
       await cacheSet(env, `dis:${s.symbol}`, msg, planErr ? 12 * 3600 : 1800);
       await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, 'error', NULL, 0, '[]', NULL, ?)")
         .bind(s.symbol, Math.floor(now / 1000), `actif en pause ${planErr ? "12 h" : "30 min"} — ${msg}`.slice(0, 400)).run();
-      if (/allowance-exhausted/i.test(msg)) await cacheSet(env, "data:pause", msg, 3600);
       results.push({ symbol: s.symbol, status: "error", score: 0, note: msg });
     }
   }

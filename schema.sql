@@ -46,7 +46,6 @@ CREATE TABLE IF NOT EXISTS signals (
   tp_reached INTEGER NOT NULL DEFAULT 0,
   outcome TEXT NOT NULL DEFAULT 'open', -- open | sl | tp1 | tp2 | tp3 | expired
   closed_at INTEGER,
-  progress_at INTEGER,               -- ms : début de la bougie du dernier palier (TP1/TP2) atteint
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_signals_public ON signals(user_id, status, created_at DESC);

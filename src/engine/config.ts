@@ -1,24 +1,24 @@
 export type Session = "fx" | "us" | "crypto";
-export type ProviderName = "lse" | "binance" | "kraken";
-export interface Src { p: ProviderName; market: string; id: string } // market = dossier LSE (forex, crypto, commodities…), id = symbole du catalogue LSE
+export type ProviderName = "deriv";
+export interface Src { p: ProviderName; id: string } // id = symbole Deriv (frxEURUSD…)
 export interface SymbolCfg { symbol: string; label: string; currencies: string[]; session: Session; sources: Src[] }
 
 // Actifs surveillés.  symbol = nom affiché (noms des CFD MT5) ; sources = fournisseurs de données, essayés dans l'ordre (repli automatique).
 //   fx     : forex/métaux, ouvert du dimanche 22h au vendredi 22h UTC
 //   us     : indices US → séance 9h30-16h, heure de New York
 //   crypto : 24h/24, 7j/7
-// Source de données unique : LSE Data (secret LSE_API_KEY ; plan gratuit : 60 appels/min ; bougies M15, H1, H4, D1).
-// Symboles LSE : forex « EUR_USD », crypto cotée en Tether « BTCUSDT ». L'or : plusieurs orthographes possibles selon le catalogue,
-// essayées dans l'ordre. Si aucune ne répond, Admin → Signaux → « Tester les données » affiche les symboles proches du catalogue.
+// Source de données unique : Deriv (WebSocket public, aucune clé ; bougies M15, H1, H4, D1).
+// Symboles Deriv : forex « frxEURUSD », or « frxXAUUSD », Bitcoin « cryBTCUSD », indices « OTC_DJI » (US Wall Street 30) et « OTC_NDX » (US Tech 100).
+// Si un symbole est refusé, Admin → Signaux → « Tester les données » affiche les symboles proches du catalogue Deriv.
+const dv = (id: string): Src[] => [{ p: "deriv", id }];
 export const SYMBOLS: SymbolCfg[] = [
-  { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx",
-    sources: [{ p: "lse", market: "commodities", id: "XAU/USD" }, { p: "lse", market: "forex", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAUUSD" }, { p: "lse", market: "commodities", id: "GOLD" }] },
-  { symbol: "BTC/USD", label: "Bitcoin", currencies: ["USD"], session: "crypto",
-    sources: [{ p: "kraken", market: "spot", id: "XBTUSD" }, { p: "binance", market: "spot", id: "BTCUSDT" }, { p: "lse", market: "crypto", id: "BTCUSDT" }] }, // Binance (public, temps réel, sans clé) en premier ; LSE en repli
-  // Exemples à décommenter pour ajouter du forex (même format) :
-  // { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "lse", market: "forex", id: "EUR_USD" }] },
-  // { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "GBP_JPY" }] },
-  // { symbol: "USDJPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "USD_JPY" }] },
+  { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx", sources: dv("frxXAUUSD") },
+  { symbol: "BTC/USD", label: "Bitcoin", currencies: ["USD"], session: "crypto", sources: dv("cryBTCUSD") },
+  { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: dv("frxEURUSD") },
+  { symbol: "GBP/USD", label: "Livre / Dollar", currencies: ["GBP", "USD"], session: "fx", sources: dv("frxGBPUSD") },
+  { symbol: "USD/JPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: dv("frxUSDJPY") },
+  { symbol: "US30", label: "Dow Jones (US 30)", currencies: ["USD"], session: "us", sources: dv("OTC_DJI") },
+  { symbol: "USTEC", label: "Nasdaq 100 (US Tech)", currencies: ["USD"], session: "us", sources: dv("OTC_NDX") },
 ];
 
 // Profils de sélectivité (variable PROFILE). Le profil « strict » correspond à la première version du moteur.

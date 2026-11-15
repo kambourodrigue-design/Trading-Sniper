@@ -12,12 +12,9 @@ run_worker_first = ["/api/*"]
 # --- Ressources créées AUTOMATIQUEMENT au premier déploiement (aucun identifiant à copier) ---
 [[d1_databases]]
 binding = "DB"
-database_name = "trading-sniper-db"
-database_id = "18015a10-c86b-4a34-b258-d99c8a149a67"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "af432b022599425eab8bb245d8df40bc"
 
 # --- Cron : toutes les 5 minutes (analyse à la clôture de chaque bougie H1 + suivi des TP/SL) ---
 [triggers]
@@ -36,7 +33,7 @@ AI_PREFILTER_SCORE = "30"
 
 # Secrets à créer dans le dashboard (Worker > Paramètres > Variables et secrets > type « Secret ») :
 #   JWT_SECRET, ADMIN_EMAILS
-#   données de marché : LSE_API_KEY (clé gratuite sur londonstrategicedge.com ; forex, or, crypto)
+#   données de marché : Deriv, aucune clé (facultatif : DERIV_WS_URL, DERIV_APP_ID)
 #   au moins une IA : OPENAI_API_KEY (GPT-6), DEEPSEEK_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY
 #   optionnel : ALPHAVANTAGE_API_KEY, TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram)
 #   plus tard : STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CINETPAY_API_KEY, CINETPAY_SITE_ID
