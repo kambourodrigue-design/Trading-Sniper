@@ -11,7 +11,7 @@ const LSE_URL = "https://download.londonstrategicedge.com";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Espacement minimal entre deux appels (LSE gratuit : 60 appels/minute)
-const SPACING: Record<string, number> = { lse: 1100 };
+const SPACING: Record<string, number> = { lse: 1100, binance: 120 };
 const lastCall: Record<string, number> = {};
 async function throttle(p: string): Promise<void> {
   const wait = (lastCall[p] ?? 0) + (SPACING[p] ?? 0) - Date.now();
@@ -84,6 +84,35 @@ async function lseSearch(env: Env, src: Src): Promise<string> {
   } catch { return ""; }
 }
 
+// ---------- Binance (données publiques, sans clé) ----------
+// GET /api/v3/klines : [openTime, o, h, l, c, volume, closeTime, …], 1000 bougies max par appel (pagination ci-dessous).
+// data-api.binance.vision = miroir public « données de marché » (accessible depuis plus de pays) ; api.binance.com en repli.
+const BINANCE_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
+export async function binanceCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
+  const out: Candle[] = [];
+  let start = fromMs, last = "";
+  for (let page = 0; page < 200 && start < toMs; page++) {
+    const qs = new URLSearchParams({ symbol: src.id, interval: iv, startTime: String(Math.floor(start)), endTime: String(Math.floor(toMs)), limit: "1000" });
+    let rows: unknown[][] | null = null;
+    for (const host of BINANCE_HOSTS) {
+      await throttle("binance");
+      try {
+        const res = await fetch(`${host}/api/v3/klines?${qs}`, { headers: { Accept: "application/json" } });
+        if (res.ok) { rows = (await res.json()) as unknown[][]; break; }
+        last = `Binance ${src.id} ${iv} HTTP ${res.status} ${(await res.text()).slice(0, 120)}`;
+      } catch (e) { last = `Binance ${src.id} ${iv} : ${(e as Error).message.slice(0, 120)}`; }
+    }
+    if (!rows) throw new Error(last || "Binance indisponible");
+    for (const r of rows) {
+      const t = Number(r[0]), o = +(r[1] as string), h = +(r[2] as string), l = +(r[3] as string), c = +(r[4] as string);
+      if (Number.isFinite(t) && [o, h, l, c].every(Number.isFinite)) out.push({ t, o, h, l, c });
+    }
+    if (rows.length < 1000) break;
+    start = Number(rows[rows.length - 1][0]) + 1;
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
 // ---------- Agrégation de bougies (utilisée par le backtest ; LSE fournit le H4 en natif) ----------
 export function aggregate(h1: Candle[], ms: number, now: number): Candle[] {
   const out: Candle[] = [];
@@ -101,12 +130,13 @@ export interface Bundle { h1: Candle[]; h4: Candle[]; d1: Candle[]; source: stri
 const closedOf = (c: Candle[], ms: number, now: number) => c.filter((k) => k.t + ms <= now);
 const enc = (c: Candle[]) => JSON.stringify(c.map((k) => [k.t, k.o, k.h, k.l, k.c]));
 const dec = (s: string): Candle[] => (JSON.parse(s) as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
-const usable = (env: Env, src: Src) => src.p === "lse" && !!env.LSE_API_KEY;
+const usable = (env: Env, src: Src) => src.p === "binance" || (src.p === "lse" && !!env.LSE_API_KEY);
 
 // Fenêtre demandée selon l'échelle (assez large pour les week-ends et jours fériés ; le moteur garde ensuite les dernières bougies).
 const SPAN_DAYS: Record<Iv, number> = { "15m": 4, "1h": 21, "4h": 75, "1d": 420 };
 async function rawSeries(env: Env, src: Src, iv: Iv, now: number, fromMs?: number): Promise<Candle[]> {
-  return lseCandles(env, src, iv, fromMs ?? now - SPAN_DAYS[iv] * D, now + H);
+  const from = fromMs ?? now - SPAN_DAYS[iv] * D;
+  return src.p === "binance" ? binanceCandles(src, iv, from, now + H) : lseCandles(env, src, iv, from, now + H);
 }
 
 async function bundleFrom(env: Env, s: SymbolCfg, src: Src, now: number, maxAgeMs?: number): Promise<Bundle> {

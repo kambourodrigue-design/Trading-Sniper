@@ -1,5 +1,5 @@
 export type Session = "fx" | "us" | "crypto";
-export type ProviderName = "lse";
+export type ProviderName = "lse" | "binance";
 export interface Src { p: ProviderName; market: string; id: string } // market = dossier LSE (forex, crypto, commodities…), id = symbole du catalogue LSE
 export interface SymbolCfg { symbol: string; label: string; currencies: string[]; session: Session; sources: Src[] }
 
@@ -12,9 +12,9 @@ export interface SymbolCfg { symbol: string; label: string; currencies: string[]
 // essayées dans l'ordre. Si aucune ne répond, Admin → Signaux → « Tester les données » affiche les symboles proches du catalogue.
 export const SYMBOLS: SymbolCfg[] = [
   { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx",
-    sources: [{ p: "lse", market: "forex", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAUUSD" }, { p: "lse", market: "commodities", id: "GOLD" }] },
+    sources: [{ p: "lse", market: "commodities", id: "XAU/USD" }, { p: "lse", market: "forex", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAUUSD" }, { p: "lse", market: "commodities", id: "GOLD" }] },
   { symbol: "BTC/USD", label: "Bitcoin", currencies: ["USD"], session: "crypto",
-    sources: [{ p: "lse", market: "crypto", id: "BTCUSDT" }] },
+    sources: [{ p: "binance", market: "spot", id: "BTCUSDT" }, { p: "lse", market: "crypto", id: "BTCUSDT" }] }, // Binance (public, temps réel, sans clé) en premier ; LSE en repli
   // Exemples à décommenter pour ajouter du forex (même format) :
   // { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "lse", market: "forex", id: "EUR_USD" }] },
   // { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "GBP_JPY" }] },

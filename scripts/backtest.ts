@@ -13,7 +13,7 @@ import { buildAnalysis, evaluate } from "../src/engine/analyze";
 import { isMarketOpen } from "../src/engine/sessions";
 import { evaluateOutcome, Sig } from "../src/engine/outcome";
 import { summarize } from "../src/engine/metrics";
-import { aggregate, parseLseCsv } from "../src/lib/prices";
+import { aggregate, parseLseCsv, binanceCandles } from "../src/lib/prices";
 import type { Src } from "../src/engine/config";
 import type { Candle, Dir } from "../src/engine/types";
 
@@ -33,6 +33,7 @@ const wantProfiles = (arg("profiles") ?? "strict,balanced,active").split(",");
 
 // Historique LSE Data : un seul appel par échelle (la fenêtre reste très inférieure à 100 Mo).
 async function lseHist(src: Src, interval: string, fromMs: number, toMs: number): Promise<Candle[]> {
+  if (src.p === "binance") return (await binanceCandles(src, interval as "15m" | "1h" | "4h" | "1d", fromMs, toMs)).filter((k) => k.t + (interval === "1d" ? 86_400_000 : interval === "4h" ? 14_400_000 : interval === "1h" ? 3_600_000 : 900_000) <= Date.now());
   if (interval === "15m") { // M15 : fenêtres de 60 jours (évite les exports trop gros)
     const out: Candle[] = [];
     for (let a = fromMs; a < toMs; a += 60 * D) out.push(...(await lseHist(src, "15m_chunk", a, Math.min(toMs, a + 60 * D))));

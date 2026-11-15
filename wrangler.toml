@@ -12,9 +12,12 @@ run_worker_first = ["/api/*"]
 # --- Ressources créées AUTOMATIQUEMENT au premier déploiement (aucun identifiant à copier) ---
 [[d1_databases]]
 binding = "DB"
+database_name = "trading-sniper-db"
+database_id = "18015a10-c86b-4a34-b258-d99c8a149a67"
 
 [[kv_namespaces]]
 binding = "CACHE"
+id = "af432b022599425eab8bb245d8df40bc"
 
 # --- Cron : toutes les 5 minutes (analyse à la clôture de chaque bougie H1 + suivi des TP/SL) ---
 [triggers]
