@@ -7,7 +7,8 @@
     "db:apply": "wrangler d1 execute lucide-db --file=./schema.sql",
     "db:apply:remote": "wrangler d1 execute lucide-db --file=./schema.sql --remote",
     "typecheck": "tsc --noEmit",
-    "backtest": "tsx scripts/backtest.ts"
+    "backtest": "tsx scripts/backtest.ts",
+    "test": "tsx scripts/test.ts"
   },
   "devDependencies": {
     "wrangler": "^4.45.0",

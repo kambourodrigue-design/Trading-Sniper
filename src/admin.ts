@@ -136,7 +136,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     return json({ ok: true });
   }
 
-  // --- Test des sources de données (Deriv) ---
+  // --- Test des sources de données (LSE Data) ---
   if (pathname === "/api/admin/datatest" && m === "POST") {
     const b = await req.json<{ symbol?: string }>().catch(() => ({} as { symbol?: string }));
     const cfg = SYMBOLS.find((x) => x.symbol === b.symbol) ?? SYMBOLS[0];

@@ -6,7 +6,7 @@ export const SCHEMA: string[] = [
   "CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)",
   "CREATE TABLE IF NOT EXISTS subscriptions ( id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), plan TEXT NOT NULL, status TEXT NOT NULL, provider TEXT NOT NULL, provider_ref TEXT, current_period_end INTEGER, created_at INTEGER NOT NULL )",
   "CREATE INDEX IF NOT EXISTS idx_subs_user ON subscriptions(user_id)",
-  "CREATE TABLE IF NOT EXISTS signals ( id TEXT PRIMARY KEY, symbol TEXT NOT NULL, direction TEXT NOT NULL, entry REAL, stop_loss REAL, tp1 REAL, tp2 REAL, tp3 REAL, confidence INTEGER, strategy TEXT, rr_ratio TEXT, source TEXT NOT NULL, user_id TEXT REFERENCES users(id), status TEXT NOT NULL DEFAULT 'published', timeframe TEXT, score INTEGER, reasoning TEXT, ai_votes TEXT, tp_reached INTEGER NOT NULL DEFAULT 0, outcome TEXT NOT NULL DEFAULT 'open', closed_at INTEGER, created_at INTEGER NOT NULL )",
+  "CREATE TABLE IF NOT EXISTS signals ( id TEXT PRIMARY KEY, symbol TEXT NOT NULL, direction TEXT NOT NULL, entry REAL, stop_loss REAL, tp1 REAL, tp2 REAL, tp3 REAL, confidence INTEGER, strategy TEXT, rr_ratio TEXT, source TEXT NOT NULL, user_id TEXT REFERENCES users(id), status TEXT NOT NULL DEFAULT 'published', timeframe TEXT, score INTEGER, reasoning TEXT, ai_votes TEXT, tp_reached INTEGER NOT NULL DEFAULT 0, outcome TEXT NOT NULL DEFAULT 'open', closed_at INTEGER, progress_at INTEGER, created_at INTEGER NOT NULL )",
   "CREATE INDEX IF NOT EXISTS idx_signals_public ON signals(user_id, status, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_signals_open ON signals(outcome, symbol)",
   "CREATE TABLE IF NOT EXISTS kv_cache ( k TEXT PRIMARY KEY, v TEXT NOT NULL, expires_at INTEGER NOT NULL )",
@@ -26,6 +26,7 @@ const COLUMNS: string[] = [
   "ALTER TABLE signals ADD COLUMN tp_reached INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE signals ADD COLUMN outcome TEXT NOT NULL DEFAULT 'open'",
   "ALTER TABLE signals ADD COLUMN closed_at INTEGER",
+  "ALTER TABLE signals ADD COLUMN progress_at INTEGER",
 ];
 
 let ready: Promise<void> | null = null;

@@ -4,6 +4,7 @@ import { handleAdmin } from "./admin";
 import { CFG, SYMBOLS } from "./engine/config";
 import { getBundle, chartPayload } from "./lib/prices";
 import { ensureSchema } from "./lib/schema";
+import { summarizeCounts } from "./engine/metrics";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "access-control-allow-origin": "*" } });
@@ -101,7 +102,9 @@ export default {
         const c: Record<string, number> = {};
         for (const r of rows) if (src === null || r.source === src) c[r.outcome] = (c[r.outcome] ?? 0) + r.n;
         const win = (c.tp1 ?? 0) + (c.tp2 ?? 0) + (c.tp3 ?? 0), loss = c.sl ?? 0;
-        return { open: c.open ?? 0, expired: c.expired ?? 0, reached_tp1_or_more: win, stopped_before_tp1: loss, tp1_rate: win + loss ? Math.round((100 * win) / (win + loss)) : null };
+        // tp1_rate / reached_tp1_or_more / stopped_before_tp1 : anciens champs conservés (le breakeven y compte comme gagnant).
+        // `performance` : mesure en R (breakeven séparé, espérance, profit factor), sans spread ni slippage.
+        return { open: c.open ?? 0, expired: c.expired ?? 0, reached_tp1_or_more: win, stopped_before_tp1: loss, tp1_rate: win + loss ? Math.round((100 * win) / (win + loss)) : null, performance: summarizeCounts(c) };
       };
       // auto = signaux des règles validés par les IA ; ai = analyses indépendantes des IA
       return json({ window_days: 90, ...sum(null), by_source: { auto: sum("auto"), ai: sum("ai") } });
