@@ -3,21 +3,19 @@
 Un seul projet Cloudflare : le Worker (`src/`) fournit l'API et le moteur de signaux ; le dossier `public/` contient le site
 (landing `index.html`, `dashboard.html`, `admin.html`), servi gratuitement par Cloudflare. Seules les adresses `/api/*` passent par le code.
 
-## Actifs, sources de données et séances
-| Actif | Sources (essayées dans l'ordre, repli automatique) | Séance analysée |
-|---|---|---|
-| XAU/USD | OANDA `XAU_USD` → TwelveData → Yahoo | dimanche 22h → vendredi 22h (UTC) |
-| US30 | OANDA `US30_USD` → Yahoo `^DJI` | avec OANDA : CFD ~23 h/jour ; sans OANDA : 9h30-16h New York seulement |
-| USTEC | OANDA `NAS100_USD` → Yahoo `^NDX` | idem |
-| BTC/USD | Binance → Kraken → OANDA → TwelveData → Yahoo | 24h/24, 7j/7 |
+## Actifs, source de données et séances
+Source unique : **LSE Data** (London Strategic Edge), API REST avec bougies M15, H1, H4 et D1 natives.
 
-Sources gratuites (secrets Cloudflare) :
-- **OANDA** *(recommandé : forex, or, indices)* — crée un compte **démo** gratuit sur oanda.com, puis génère un jeton API (« Gérer l'accès API ») et ajoute-le comme secret `OANDA_API_TOKEN`. Prix de CFD (proches de ceux d'un courtier MT5), H4 natif, aucune limite gênante. Sans compte démo : pas d'OANDA. Les données du compte démo peuvent avoir un léger décalage, sans conséquence pour des bougies H1. `OANDA_ENV = live` seulement si tu utilises un jeton de compte réel.
-- **TwelveData** — clé gratuite (`TWELVEDATA_API_KEY`) : forex, or, crypto ; **pas** les indices ; 800 crédits/jour.
-- **Binance / Kraken** — Bitcoin, sans clé.
-- **Yahoo** — sans clé mais non officiel : bloque souvent les serveurs ; dernier recours.
-- **Admin → Signaux → « Tester les données »** montre, source par source, ce qui répond (✔/✖ et la raison). Si une source échoue (429, 401, blocage…), la suivante prend le relais ; si toutes échouent, l'actif est mis en pause 30 min.
-- Pour une offre payante aux abonnés, vérifie les conditions d'usage de chaque fournisseur (ou utilise le flux de ton courtier via MT5).
+| Actif | Symbole LSE (marché : symbole) | Séance analysée |
+|---|---|---|
+| XAU/USD | `forex:XAU_USD`, sinon `commodities:XAU_USD`, `commodities:XAUUSD`, `commodities:GOLD` (essayés dans l'ordre) | dimanche 22h → vendredi 22h (UTC) |
+| BTC/USD | `crypto:BTCUSDT` (Bitcoin coté en Tether) | 24h/24, 7j/7 |
+
+Configuration :
+- Crée un compte sur londonstrategicedge.com, génère une clé sur la page « Data » et ajoute-la comme secret Cloudflare `LSE_API_KEY`. Plan gratuit : 60 appels/minute, forex, crypto et matières premières inclus ; la clé est envoyée dans l'en-tête `X-API-Key`.
+- Le symbole exact de l'or dans le catalogue LSE n'a pas pu être vérifié à l'écriture du code : si « Tester les données » échoue pour XAU/USD, le message affiche les symboles proches du catalogue ; corrige alors `id` et `market` dans `src/engine/config.ts`.
+- **Admin → Signaux → « Tester les données »** montre si LSE Data répond pour l'actif (✔/✖ et la raison). Si la source échoue (429, 401, symbole inconnu…), l'actif est mis en pause 30 min.
+- **Conditions d'usage LSE** : les données peuvent servir à ta recherche et à ton trading, y compris commercial, mais **pas être redistribuées ni mises à disposition de tiers**. Le bouton « Voir le graphique » (bougies affichées aux abonnés) est donc à vérifier avec LSE avant toute offre payante (londonstrategicedge.com/terms).
 - Ajouter du forex ou d'autres actifs : `src/engine/config.ts` (exemples EUR/USD, GBP/JPY, USD/JPY prêts à décommenter).
 
 ## Profils de sélectivité (`PROFILE`)
@@ -29,13 +27,13 @@ Sources gratuites (secrets Cloudflare) :
 Les conditions fixes restent : un déclencheur, SL ≤ 3 ATR, pas de news à fort impact, séance ouverte, 1 seul trade ouvert par actif. Les IA (validation par consensus) sont le second filtre.
 
 ## Mesurer avant de régler : backtest local
-`npm install` puis `npx tsx scripts/backtest.ts` (sur ton ordinateur, avec Internet) : rejoue les règles sur ~2 ans d'historique Yahoo et affiche, par actif et par profil, le nombre de setups par semaine, les résultats TP/SL, le R moyen et les conditions qui bloquent le plus. Options : `--symbols XAU/USD,US30`, `--profiles balanced,active`, `--synthetic` (test hors-ligne sans valeur statistique). Limites : règles seules (sans IA ni news), pas de spread, bougies H1.
+`npm install` puis `npx tsx scripts/backtest.ts` (sur ton ordinateur, avec Internet) : rejoue les règles sur ~2 ans d'historique LSE Data (clé `LSE_API_KEY` requise en variable d'environnement) et affiche, par actif et par profil, le nombre de setups par semaine, les résultats TP/SL, le R moyen et les conditions qui bloquent le plus. Options : `--symbols XAU/USD,BTC/USD`, `--profiles balanced,active`, `--synthetic` (test hors-ligne sans valeur statistique). Limites : règles seules (sans IA ni news), pas de spread, bougies H1.
 
 ## Comment le moteur décide
-1. **Règles** : MM 50/200 (H1/H4/D1), structure (BOS/CHoCH), order blocks, FVG, sweeps, offre/demande, Wyckoff, figures, premium/discount, RSI. Conditions obligatoires : tendance HTF alignée, prix en zone d'intérêt, un déclencheur, SL ≤ 3 ATR, espace ≥ 2R, pas de news à fort impact (−45/+20 min), séance ouverte, **aucun trade déjà ouvert sur l'actif**, score ≥ `MIN_SCORE`.
-2. **Validation IA** : DeepSeek, Gemini, Claude jugent le setup avec le contexte macro/géopolitique. Niveaux toujours calculés par les règles.
+1. **Règles** : MM 50/200 (H1/H4/D1), structure (BOS/CHoCH), order blocks, FVG, sweeps, offre/demande, Wyckoff, figures, premium/discount, RSI. Conditions obligatoires : tendance HTF alignée, prix en zone d'intérêt, un déclencheur, SL ≤ 3 ATR, espace ≥ 2R, pas de news à fort impact (−45/+20 min), séance ouverte, **aucun trade déjà ouvert sur l'actif**, score ≥ `MIN_SCORE`. **Intermarchés (fondamental chiffré)** : le dollar (proxy EUR/USD en D1) et les taux US à 10 ans (LSE, série `US10Y`) sont mesurés sur 10 séances ; dollar et taux en hausse pèsent sur l'or et le Bitcoin, en baisse ils les soutiennent. Le biais ajuste le score de ± 6 points au plus, et les chiffres sont transmis aux IA. Si ces données manquent, le biais est neutre. Les poids par actif sont dans `src/lib/intermarket.ts` ; Admin → Signaux → « Tester les données » vérifie aussi ces deux flux.
+2. **Validation IA** : GPT-6, DeepSeek, Gemini, Claude (celles dont la clé est configurée) jugent le setup avec le contexte macro/géopolitique. Niveaux toujours calculés par les règles.
 3. **Analyse indépendante** : si les règles n'ont rien publié, les IA lisent elles-mêmes les bougies et proposent leur trade ; niveaux = médiane des IA, puis garde-fous (entrée au marché, SL 0,5-3 ATR, TP croissants, R/R ≥ 1,5 sur TP2, TP3 ≤ 10 ATR). Signaux marqués `source = 'ai'`, résultats comptés à part.
-4. **Une seule IA suffit** : seules les IA qui répondent comptent (une panne est relancée une fois, puis ignorée). 1 IA → elle décide avec un seuil de confiance relevé (75 au lieu de 60/65) ; 2 → les deux d'accord ; 3 → au moins 2. Un veto bloque toujours.
+4. **Une seule IA suffit** : seules les IA qui répondent comptent (une panne est relancée une fois, puis ignorée). 1 IA → elle décide avec un seuil de confiance relevé (75 au lieu de 60/65) ; 2 → les deux d'accord ; 3 → au moins 2 ; 4 → au moins 3 (majorité stricte). Un veto bloque toujours.
 5. **1 trade à la fois par actif** : tant qu'un trade n'a pas atteint son résultat (SL, TP3, stop suiveur ou expiration à `expiryHours` = 120 h), aucun autre signal n'est émis sur cet actif. Garantie par la base de données (index unique) — même si deux analyses tournent en même temps. L'admin peut **clôturer** un trade manuellement (ni gagnant ni perdant) pour libérer l'actif.
 6. **Suivi** : TP1 → SL à l'entrée ; TP2 → SL à TP1 ; si le stop et un TP sont touchés dans la même bougie, le stop est compté en premier.
 
@@ -48,10 +46,10 @@ Chaque nouveau signal, chaque TP atteint (avec le déplacement du SL), chaque SL
 Le token est un secret : ne le partage pas. Les messages sont envoyés en « contenu protégé » (pas de transfert depuis l'application). Plans, canaux par abonnement et invitations automatiques : plus tard.
 Ton compte admin voit tous les niveaux de signaux sans abonnement.
 
-## Quotas (estimations pour 4 actifs, à vérifier à l'usage)
+## Quotas (estimations pour 2 actifs, à vérifier à l'usage)
 | Ressource | Limite gratuite | Consommation estimée / jour |
 |---|---|---|
-| TwelveData crédits | 800 / jour, 8 / minute | ~85 pour l'analyse + ≤ ~190 pour le suivi (pire cas) ; espacement automatique de 7,6 s entre appels |
+| LSE Data appels | 60 / minute (plan gratuit) ; quota hebdomadaire de volume très large pour des bougies | 3 appels par analyse (H1, H4, D1) + 1 par trade ouvert pour le suivi ; espacement automatique de 1,1 s entre appels |
 | Cloudflare Workers requêtes | 100 000 / jour | ~290 (cron) + visites API ; pages statiques gratuites |
 | Workers CPU (plan Free) | 10 ms / passage | **juste** : voir Workers Paid (5 $/mois) si erreur 1102 dans les logs |
 | Appels externes par passage (Free) | 50 | ≤ ~20 avec `MAX_PER_RUN = 1` |
@@ -67,7 +65,8 @@ Ton compte admin voit tous les niveaux de signaux sans abonnement.
 | `PROFILE` | active | `strict` / `balanced` / `active` (voir ci-dessus). `MIN_SCORE` (facultatif) remplace le seuil du profil. |
 | `AI_INDEPENDENT` | h4 | `off` / `prefilter` (score moteur ≥ `AI_PREFILTER_SCORE`) / `h4` (prefilter + à chaque clôture H4, soit 6 fois par jour et par actif) / `always` (chaque heure). |
 | `AI_PREFILTER_SCORE` | 30 | Seuil de déclenchement de l'analyse indépendante. |
-| Modèles | v4-pro / gemini-3.1-pro-preview / claude-sonnet-5-5 | Secrets/variables optionnels `DEEPSEEK_MODEL`, `GEMINI_MODEL`, `CLAUDE_MODEL`. |
+| Modèles | gpt-6-astra / v4-pro / gemini-3.1-pro-preview / claude-sonnet-5-5 | Optionnels : `OPENAI_MODEL`, `DEEPSEEK_MODEL`, `GEMINI_MODEL`, `CLAUDE_MODEL`. |
+| `OPENAI_EFFORT` | medium | Effort de raisonnement de GPT-6 : `low`, `medium`, `high`, `xhigh`, `max`. Plus haut = analyse plus poussée, mais plus lente et plus chère. |
 
 ## Routes
 | Route | Accès |
@@ -86,10 +85,16 @@ Sur chaque signal débloqué, « Voir le graphique » ouvre un graphique en boug
 
 ## Avant la mise en production
 1. Paiements : vérifier les signatures des webhooks ; en attendant, activer les abonnements depuis l'admin.
-2. Données de marché : les conditions du plan gratuit TwelveData semblent limitées à un usage interne ; vérifier auprès d'eux (offres Business) avant de vendre des abonnements. Les indices exigent un plan supérieur.
+2. Données de marché : les données LSE ne peuvent pas être redistribuées à des tiers ; vérifier auprès de LSE si l'affichage des bougies (graphiques) aux abonnés est autorisé.
 3. Sécurité : rate limiting sur `/api/auth/*`, confirmation d'email, restreindre les accès à ton domaine.
 4. Valider le moteur dans la durée (quelques semaines) avec `/api/stats` et le journal d'analyse avant d'annoncer des performances. Il n'a pas été backtesté sur données réelles.
 5. Le calendrier économique utilise un flux public non officiel ; s'il tombe, le filtre news est désactivé (les IA en sont informées).
 
 ## Graphique du dashboard
 Chaque signal débloqué a un bouton « Voir le graphique » : bougies (H1 / H4 / D1) avec les niveaux **Entry, SL, TP1, TP2, TP3** tracés et une flèche à l'émission du signal. Bibliothèque : TradingView Lightweight Charts v4.2.0 (Apache 2.0), hébergée dans `public/vendor/` ; l'attribution « TradingView Lightweight Charts™ » (lien) est affichée sous le graphique, comme l'exige la licence — garde-la. Les bougies viennent de la même source que le moteur (OANDA, etc.) : pour un service payant, vérifie que la licence de ta source autorise l'affichage à des tiers.
+
+## GPT-6 (OpenAI)
+- Secret : `OPENAI_API_KEY` (clé créée sur platform.openai.com). Modèle par défaut `gpt-6-astra` (API Responses) ; si ta clé n'y a pas accès, repli automatique sur `gpt-5.6-sol`. `OPENAI_MODEL` permet d'en choisir un autre.
+- Il participe à la **validation** des setups (avis + niveau de confiance) **et** à l'**analyse indépendante** : il lit lui-même les bougies D1/H4/H1 et le contexte macro, puis propose son propre trade (sens, SL, TP) ou « aucun trade ».
+- L'analyse propre de chaque IA est conservée : visible dans le dashboard (« Avis des IA », plans Pro/Elite et admin), dans les messages Telegram, et dans le journal de l'admin (même quand aucun signal n'est publié).
+- Coût : GPT-6 est facturé à l'usage (tarif par million de jetons, à vérifier sur openai.com) ; le raisonnement consomme des jetons de sortie. Commence par `OPENAI_EFFORT = medium`, surveille la facture la première semaine, et ajuste `AI_INDEPENDENT` (`off` / `prefilter` / `h4` / `always`) si besoin.

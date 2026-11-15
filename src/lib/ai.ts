@@ -1,4 +1,4 @@
-// Couche IA : DeepSeek, Gemini et Claude, appelés en parallèle (chaque IA n'est utilisée que si sa clé est configurée ; une seule suffit).
+// Couche IA : OpenAI (GPT-6), DeepSeek, Gemini et Claude, appelés en parallèle (chaque IA n'est utilisée que si sa clé est configurée ; une seule suffit).
 // Deux usages :
 //   1) VALIDATION d'un setup détecté par les règles (les niveaux restent ceux du moteur) ;
 //   2) ANALYSE INDÉPENDANTE : l'IA lit elle-même les bougies et propose son propre trade (niveaux validés par des garde-fous).
@@ -16,14 +16,14 @@ export const SYSTEM_PROMPT = `Tu es un analyste de trading senior (Smart Money C
 On te soumet un setup candidat détecté par un moteur de règles. Les niveaux (entrée, SL, TP) sont calculés par le moteur : ne les modifie pas et n'en invente pas.
 Ton rôle : CONFIRMER ou REJETER le setup, en tenant compte du contexte macro et géopolitique fourni.
 Réponds "NONE" si les signaux sont contradictoires, si la structure paraît fragile, si une news majeure est imminente ou si le contexte macro/géopolitique est défavorable au sens proposé.
-veto=true uniquement pour un risque macro/géopolitique majeur. reasoning : 60 mots maximum, en français.
+Les chiffres INTERMARCHÉS fournis (dollar, taux US 10 ans) sont des mesures réelles : intègre-les à ton analyse fondamentale.\nveto=true uniquement pour un risque macro/géopolitique majeur. reasoning : 60 mots maximum, en français.
 Réponds STRICTEMENT par un objet JSON : {"decision":"BUY|SELL|NONE","confidence":0-100,"macro":"supportive|neutral|adverse","veto":true|false,"reasoning":"...","risks":["..."]}`;
 
 export const INDEP_SYSTEM_PROMPT = `Tu es un trader professionnel et analyste macro (Smart Money Concepts, Wyckoff, offre/demande, price action, figures chartistes, moyennes mobiles 50/200, analyse fondamentale).
 On te donne les bougies récentes (D1, H4, H1), des indicateurs calculés et le contexte macro/géopolitique. Fais TA PROPRE analyse top-down (D1 puis H4 puis H1). Les détections automatiques fournies "à titre indicatif" ne te lient pas : tu peux les contredire.
 Propose un trade UNIQUEMENT si le setup est de haute probabilité : tendance supérieure cohérente, zone ou structure claire, confirmation, contexte fondamental non défavorable, et ratio gain/risque >= 2 sur TP2. Sinon réponds "NONE" : ne force jamais un trade.
 Niveaux : utilise uniquement des prix cohérents avec les bougies fournies. L'entrée est au marché, au prix actuel indiqué (entry = prix actuel, ou null). Le SL se place au-delà du point d'invalidation (entre 0.5 et 3 ATR du prix). TP1, TP2 et TP3 sont dans le sens du trade et croissants. N'invente aucune donnée.
-veto=true uniquement pour un risque macro/géopolitique majeur. reasoning : 80 mots maximum, en français. strategies : liste courte (ex. "SMC", "Wyckoff", "Offre/Demande", "Figure", "MM50/200", "Macro").
+Les chiffres INTERMARCHÉS fournis (dollar, taux US 10 ans) sont des mesures réelles : intègre-les à ton analyse fondamentale.\nveto=true uniquement pour un risque macro/géopolitique majeur. reasoning : 80 mots maximum, en français. strategies : liste courte (ex. "SMC", "Wyckoff", "Offre/Demande", "Figure", "MM50/200", "Macro").
 Réponds STRICTEMENT par un objet JSON : {"decision":"BUY|SELL|NONE","confidence":0-100,"entry":nombre|null,"sl":nombre|null,"tp1":nombre|null,"tp2":nombre|null,"tp3":nombre|null,"strategies":["..."],"macro":"supportive|neutral|adverse","veto":true|false,"reasoning":"...","risks":["..."]}`;
 
 const VERDICT_PROPS = {
@@ -60,6 +60,32 @@ async function callDeepSeek(env: Env, system: string, user: string, maxTokens: n
     return { provider: `deepseek:${model}`, raw: j.choices?.[0]?.message?.content ?? "" };
   }
   throw new Error(`DeepSeek: ${lastErr}`);
+}
+
+// OpenAI GPT-6 via l'API Responses (surface principale d'OpenAI). La sortie JSON est demandée par `text.format`.
+// Si le modèle demandé n'est pas accessible avec ta clé (404/403/400), on essaie le modèle de repli.
+async function callOpenAI(env: Env, system: string, user: string, maxTokens: number): Promise<Raw> {
+  const models = [env.OPENAI_MODEL || "gpt-6-astra", "gpt-5.6-sol"].filter((m, i, a) => a.indexOf(m) === i);
+  const effort = ["low", "medium", "high", "xhigh", "max"].includes(env.OPENAI_EFFORT ?? "") ? env.OPENAI_EFFORT : "medium";
+  let lastErr = "";
+  for (const model of models) {
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { "content-type": "application/json", Authorization: `Bearer ${env.OPENAI_API_KEY ?? ""}` },
+      body: JSON.stringify({
+        model, reasoning: { effort }, max_output_tokens: Math.max(maxTokens, 6000), text: { format: { type: "json_object" } },
+        input: [{ role: "system", content: system }, { role: "user", content: user }],
+      }),
+      signal: AbortSignal.timeout(200_000),
+    });
+    const j = (await res.json().catch(() => ({}))) as { status?: string; error?: { message?: string }; output?: Array<{ type: string; content?: Array<{ type: string; text?: string }> }> };
+    if (res.status === 401 || res.status === 429 || res.status >= 500) throw new Error(`OpenAI HTTP ${res.status} ${(j.error?.message ?? "").slice(0, 150)}`);
+    if (!res.ok) { lastErr = `${model} HTTP ${res.status} ${(j.error?.message ?? "").slice(0, 150)}`; continue; }
+    if (j.status === "incomplete") throw new Error(`OpenAI ${model} : réponse incomplète (limite de sortie atteinte)`);
+    const text = (j.output ?? []).filter((o) => o.type === "message").flatMap((o) => o.content ?? []).filter((c) => c.type === "output_text").map((c) => c.text ?? "").join("");
+    return { provider: `openai:${model}`, raw: text };
+  }
+  throw new Error(`OpenAI : ${lastErr}`);
 }
 
 async function callGemini(env: Env, system: string, user: string, maxTokens: number): Promise<Raw> {
@@ -99,7 +125,7 @@ async function callClaude(env: Env, system: string, user: string, schema: object
 }
 
 export function configuredAIs(env: Env): string[] {
-  return [env.DEEPSEEK_API_KEY && "deepseek", env.GEMINI_API_KEY && "gemini", env.ANTHROPIC_API_KEY && "claude"].filter(Boolean) as string[];
+  return [env.OPENAI_API_KEY && "openai", env.DEEPSEEK_API_KEY && "deepseek", env.GEMINI_API_KEY && "gemini", env.ANTHROPIC_API_KEY && "claude"].filter(Boolean) as string[];
 }
 
 // Relance une fois sur erreur transitoire (429 / 5xx / réseau) : une IA momentanément indisponible ne doit pas être écartée trop vite.
@@ -113,6 +139,7 @@ async function retry<T>(f: () => Promise<T>): Promise<T> {
 
 async function askAll(env: Env, system: string, user: string, schema: object, maxTokens: number): Promise<{ raws: Raw[]; errors: string[] }> {
   const jobs: Array<Promise<Raw>> = [];
+  if (env.OPENAI_API_KEY) jobs.push(retry(() => callOpenAI(env, system, user, maxTokens)));
   if (env.DEEPSEEK_API_KEY) jobs.push(retry(() => callDeepSeek(env, system, user, maxTokens)));
   if (env.GEMINI_API_KEY) jobs.push(retry(() => callGemini(env, system, user, maxTokens)));
   if (env.ANTHROPIC_API_KEY) jobs.push(retry(() => callClaude(env, system, user, schema, Math.min(maxTokens, 2000))));
@@ -151,13 +178,14 @@ export async function askAIs(env: Env, user: string): Promise<{ verdicts: Verdic
   return { verdicts: c.out, errors: c.errors };
 }
 
-// Consensus : 1 IA dispo → elle confirme ; 2 → les deux ; 3 → au moins 2. Aucun veto toléré.
+// Majorité requise : 1 IA dispo → elle confirme ; 2 → les deux ; 3 → au moins 2 ; 4 → au moins 3 (majorité stricte). Aucun veto toléré.
+const needOf = (n: number) => (n <= 2 ? n : Math.floor(n / 2) + 1);
 export function consensus(verdicts: Verdict[], dir: "BUY" | "SELL"): { ok: boolean; agree: Verdict[]; reason: string } {
   const n = verdicts.length;
   if (n === 0) return { ok: false, agree: [], reason: "aucune IA n'a répondu" };
   const minConf = n === 1 ? 75 : 60; // une seule IA = pas de recoupement : on exige plus de confiance
   const agree = verdicts.filter((v) => v.decision === dir && v.confidence >= minConf && v.macro !== "adverse");
-  const need = n <= 2 ? n : Math.ceil(n / 2);
+  const need = needOf(n);
   const veto = verdicts.find((v) => v.veto);
   if (veto) return { ok: false, agree, reason: `veto ${veto.provider} : ${veto.reasoning}` };
   if (agree.length < need) return { ok: false, agree, reason: `consensus insuffisant (${agree.length}/${need} requis sur ${n} IA)` };
@@ -183,7 +211,7 @@ export function independentConsensus(vs: IndepVerdict[]): { ok: boolean; dir: "B
   const minConf = n === 1 ? 75 : 65; // une seule IA = pas de recoupement : on exige plus de confiance
   const valid = (v: IndepVerdict, d: "BUY" | "SELL") => v.decision === d && v.confidence >= minConf && v.macro !== "adverse";
   const buys = vs.filter((v) => valid(v, "BUY")), sells = vs.filter((v) => valid(v, "SELL"));
-  const need = n <= 2 ? n : Math.ceil(n / 2);
+  const need = needOf(n);
   const dir: "BUY" | "SELL" = buys.length >= sells.length ? "BUY" : "SELL";
   const agree = dir === "BUY" ? buys : sells;
   if (agree.length < need) return { ok: false, dir: null, agree, reason: agree.length === 0 ? "aucun setup retenu par les IA" : `consensus insuffisant (${agree.length}/${need} requis sur ${n} IA)` };

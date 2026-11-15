@@ -38,7 +38,9 @@ export async function notify(env: Env, html: string): Promise<void> {
 export interface SigInfo {
   symbol: string; direction: string; entry: number | null; stop_loss: number | null; tp1: number | null; tp2: number | null; tp3: number | null;
   confidence?: number | null; rr_ratio?: string | null; strategy?: string | null; reasoning?: string | null; source?: string;
+  votes?: Array<{ provider: string; confidence: number; reasoning?: string }>;
 }
+const AI_NAME: Record<string, string> = { openai: "GPT-6", deepseek: "DeepSeek", gemini: "Gemini", claude: "Claude" };
 
 export function signalMessage(s: SigInfo): string {
   const origin = s.source === "ai" ? "analyse IA indépendante" : s.source === "manual" ? "signal manuel" : "règles + validation IA";
@@ -49,6 +51,7 @@ export function signalMessage(s: SigInfo): string {
   ];
   if (s.strategy) lines.push("", `Stratégie : ${esc(s.strategy)}`);
   if (s.reasoning) lines.push(`<i>${esc(s.reasoning.slice(0, 450))}</i>`);
+  if (s.votes?.length) lines.push("", "<b>Avis des IA</b>", ...s.votes.map((v) => `• ${esc(AI_NAME[v.provider] ?? v.provider)} (${v.confidence} %)${v.reasoning ? ` : ${esc(v.reasoning.slice(0, 170))}` : ""}`));
   lines.push("", `Origine : ${origin}`, "", DISCLAIMER);
   return lines.join("\n");
 }

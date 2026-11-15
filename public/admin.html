@@ -148,7 +148,7 @@
 
     <section id="sg" class="hidden">
       <div class="card">
-        <h2>Moteur IA</h2><div class="acts"><select id="run-sym" style="width:auto"><option>XAU/USD</option><option>US30</option><option>USTEC</option><option>BTC/USD</option></select><button class="btn ghost sm" id="run">Analyser maintenant</button><button class="btn ghost sm" id="tg-test">Tester Telegram</button><button class="btn ghost sm" id="data-test">Tester les données</button></div><div id="data-out" style="margin-top:8px"></div><small style="display:block;margin-top:8px;color:var(--soft)">Analyse un actif (1 à 2 min avec les IA). Un signal n’est publié que si toutes les conditions sont réunies.</small>
+        <h2>Moteur IA</h2><div class="acts"><select id="run-sym" style="width:auto"><option>XAU/USD</option><option>BTC/USD</option></select><button class="btn ghost sm" id="run">Analyser maintenant</button><button class="btn ghost sm" id="tg-test">Tester Telegram</button><button class="btn ghost sm" id="data-test">Tester les données</button></div><div id="data-out" style="margin-top:8px"></div><small style="display:block;margin-top:8px;color:var(--soft)">Analyse un actif (1 à 2 min avec les IA). Un signal n’est publié que si toutes les conditions sont réunies.</small>
       </div>
       <div class="card">
         <h2>Créer un signal manuel</h2>
@@ -247,8 +247,9 @@
       const ST = { rejected: "Rejeté (règles)", published: "Signal publié", ai_rejected: "Rejeté par les IA", ai_signal: "Signal IA indépendant", stale: "Données obsolètes", no_ai: "Aucune IA configurée", error: "Erreur" };
       $("#alist").innerHTML = a.length ? a.map((x) => {
         const failed = (x.gates || []).filter((g) => !g.ok).map((g) => esc(g.name) + " : " + esc(g.detail)).join("<br>");
+        const avis = ((x.ai && x.ai.verdicts) || []).concat((x.ai && x.ai.independent && x.ai.independent.verdicts) || []).map(function (v) { return "<small>• " + esc(String(v.provider).split(":")[0]) + " : " + esc(v.decision) + " " + esc(v.confidence) + " % — " + esc((v.reasoning || "").slice(0, 220)) + "</small>"; }).join("");
         const ai = (x.ai && x.ai.consensus ? "<small>IA (validation) : " + esc(x.ai.consensus) + (x.ai.errors && x.ai.errors.length ? " · erreurs : " + esc(x.ai.errors.join(" | ")) : "") + "</small>" : "") + (x.ai && x.ai.independent ? "<small>IA indépendante : " + esc(x.ai.independent.consensus) + (x.ai.independent.guard ? " · " + esc(x.ai.independent.guard) : "") + (x.ai.independent.errors && x.ai.independent.errors.length ? " · erreurs : " + esc(x.ai.independent.errors.join(" | ")) : "") + "</small>" : "");
-        return '<div class="item"><div><b>' + esc(x.symbol) + (x.dir ? " · " + esc(x.dir) : "") + " · score " + esc(x.score) + "</b><small>" + fmtDT(x.ts) + " · " + esc(ST[x.status] || x.status) + "</small>" + (failed ? "<small>Bloqué par : " + failed + "</small>" : (x.note ? "<small>" + esc(x.note) + "</small>" : "")) + ai + "</div></div>";
+        return '<div class="item"><div><b>' + esc(x.symbol) + (x.dir ? " · " + esc(x.dir) : "") + " · score " + esc(x.score) + "</b><small>" + fmtDT(x.ts) + " · " + esc(ST[x.status] || x.status) + "</small>" + (failed ? "<small>Bloqué par : " + failed + "</small>" : (x.note ? "<small>" + esc(x.note) + "</small>" : "")) + ai + avis + "</div></div>";
       }).join("") : '<p class="empty">Aucune analyse pour le moment (le cron s\u2019exécute toutes les 30 min).</p>';
     } catch (e) { flash(e.message); }
   }

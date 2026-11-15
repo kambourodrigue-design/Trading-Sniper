@@ -15,7 +15,7 @@ export interface Analysis {
   pd: { hi: number; lo: number; eq: number; pos: number }; eq: { highs: number[]; lows: number[] };
   pivotsH4: Pivot[]; rejection: Dir | null; lastCandles: Candle[];
 }
-export interface EvalCtx { newsBlock: string | null; marketOpen: boolean; hasOpen: boolean; p: Profile }
+export interface EvalCtx { newsBlock: string | null; marketOpen: boolean; hasOpen: boolean; p: Profile; inter?: number } // inter : biais intermarchés (−1 … +1, > 0 = favorable à une hausse de l'actif)
 
 export function tfStat(c: Candle[]): TfStat {
   const cl = c.map((x) => x.c);
@@ -149,6 +149,11 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   gate("Marché ouvert", ctx.marketOpen, ctx.marketOpen ? "ok" : "marché fermé");
   gate("Pas de signal ouvert", !ctx.hasOpen, ctx.hasOpen ? "un signal est déjà ouvert sur cet actif" : "ok");
 
+  // Intermarchés (dollar, taux US) : ajustement de score de ± 6 points au plus, dans le sens du trade.
+  if (ctx.inter) {
+    const adj = Math.round(ctx.inter * sg * 6);
+    if (adj !== 0) { score += adj; if (Math.abs(adj) >= 2) { tags.add("Intermarchés"); reasons.push(`intermarchés ${adj > 0 ? "favorables" : "défavorables"} (${adj > 0 ? "+" : ""}${adj} pts : dollar et taux US)`); } }
+  }
   score = Math.max(0, Math.min(100, Math.round(score)));
   gate(`Score ≥ ${ctx.p.minScore}`, score >= ctx.p.minScore, `score ${score}`);
   return { dir, gates, score, reasons, tags: [...tags], entry: roundP(P, P), sl: roundP(sl, P), tps, rr: `1:${CFG.tpRR[1]}`, passed: gates.every((g) => g.ok) };

@@ -4,16 +4,17 @@ declare global {
   interface Env {
     DB: D1Database;
     CACHE: KVNamespace;
-    TWELVEDATA_API_KEY?: string; // facultatif : dernier recours si Yahoo/Binance échouent
+    LSE_API_KEY?: string;        // LSE Data (London Strategic Edge) : source de données de marché (requise pour analyser)
     JWT_SECRET: string;
     ADMIN_EMAILS: string;
     // IA (au moins une clé requise ; plus il y en a, plus la validation est robuste)
+    OPENAI_API_KEY?: string;     // GPT-6 (gpt-6-astra)
+    OPENAI_MODEL?: string;       // défaut : gpt-6-astra (repli : gpt-5.6-sol)
+    OPENAI_EFFORT?: string;      // low | medium (défaut) | high | xhigh | max — plus haut = plus d'analyse, plus cher
     DEEPSEEK_API_KEY?: string;
     GEMINI_API_KEY?: string;
     ANTHROPIC_API_KEY?: string;
     // Optionnels
-    OANDA_API_TOKEN?: string;    // jeton d'un compte DÉMO OANDA (gratuit) : forex, or, indices
-    OANDA_ENV?: string;          // practice (défaut) | live
     ALPHAVANTAGE_API_KEY?: string;
     DEEPSEEK_MODEL?: string;
     GEMINI_MODEL?: string;

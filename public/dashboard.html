@@ -202,7 +202,8 @@
       : '<div class="grid">' +
         [["Entry", s.entry], ["SL", s.stop_loss], ["TP1", s.tp1], ["TP2", s.tp2]].map((x) => '<div class="box"><span>' + x[0] + "</span><b>" + (x[1] == null ? "—" : x[1]) + "</b></div>").join("") + "</div>" +
         (s.tp3 != null ? '<div class="why">TP3 : ' + s.tp3 + "</div>" : "");
-    const votes = Array.isArray(s.ai_votes) ? '<div class="why">Validé par : ' + s.ai_votes.map((v) => esc(v.provider) + " " + v.confidence + "%").join(" · ") + "</div>" : "";
+    const NAMES = { openai: "GPT-6", deepseek: "DeepSeek", gemini: "Gemini", claude: "Claude" };
+    const votes = Array.isArray(s.ai_votes) ? '<div class="why"><b>Avis des IA</b></div>' + s.ai_votes.map((v) => '<div class="why">• <b>' + esc(NAMES[v.provider] || v.provider) + "</b> (" + esc(v.confidence) + " %)" + (v.reasoning ? " : " + esc(v.reasoning) : "") + "</div>").join("") : "";
     return '<div class="signal"><div class="top"><span>' + esc(s.symbol) + " · " + esc(when) + (s.source === "ai" ? " · Analyse IA" : "") + "</span><span>Confiance " + esc(s.confidence) + "%</span></div>" +
       '<div class="pair">' + esc(s.direction) + (s.rr_ratio ? " · R/R " + esc(s.rr_ratio) : "") + ' <span style="font-size:.7rem;font-weight:600;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:99px;margin-left:6px">' + esc(OUT[s.outcome] || "En cours") + "</span></div>" +
       levels + (s.strategy ? '<div class="why">Stratégie : ' + esc(s.strategy) + "</div>" : "") +

@@ -3,6 +3,7 @@ import { runAutoSignals } from "./scheduled";
 import { tgSend, notify, signalMessage, closedMessage } from "./lib/telegram";
 import { SYMBOLS } from "./engine/config";
 import { probeSources } from "./lib/prices";
+import { probeIntermarket } from "./lib/intermarket";
 
 const PLANS = ["starter", "pro", "elite"];
 
@@ -135,11 +136,11 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     return json({ ok: true });
   }
 
-  // --- Test des sources de données (Yahoo / Binance / TwelveData) ---
+  // --- Test des sources de données (LSE Data) ---
   if (pathname === "/api/admin/datatest" && m === "POST") {
     const b = await req.json<{ symbol?: string }>().catch(() => ({} as { symbol?: string }));
     const cfg = SYMBOLS.find((x) => x.symbol === b.symbol) ?? SYMBOLS[0];
-    return json({ symbol: cfg.symbol, sources: await probeSources(env, cfg) });
+    return json({ symbol: cfg.symbol, sources: [...(await probeSources(env, cfg)), ...(await probeIntermarket(env))] });
   }
 
   // --- Test de la connexion Telegram ---

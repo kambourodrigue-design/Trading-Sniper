@@ -1,30 +1,24 @@
 export type Session = "fx" | "us" | "crypto";
-export type ProviderName = "oanda" | "twelvedata" | "binance" | "kraken" | "yahoo";
-export interface Src { p: ProviderName; id: string }
+export type ProviderName = "lse";
+export interface Src { p: ProviderName; market: string; id: string } // market = dossier LSE (forex, crypto, commodities…), id = symbole du catalogue LSE
 export interface SymbolCfg { symbol: string; label: string; currencies: string[]; session: Session; sources: Src[] }
 
 // Actifs surveillés.  symbol = nom affiché (noms des CFD MT5) ; sources = fournisseurs de données, essayés dans l'ordre (repli automatique).
-//   fx     : forex/métaux/indices CFD, ouvert du dimanche 22h au vendredi 22h UTC
-//   us     : indices US sur données « cash » (Yahoo) → séance 9h30-16h, heure de New York (utilisé seulement si OANDA n'est pas configuré)
+//   fx     : forex/métaux, ouvert du dimanche 22h au vendredi 22h UTC
+//   us     : indices US → séance 9h30-16h, heure de New York
 //   crypto : 24h/24, 7j/7
-// Sources gratuites :
-//   oanda       compte DÉMO gratuit → jeton API (secret OANDA_API_TOKEN) : forex, or, indices US30/NAS100 en CFD, H4 natif. Recommandé.
-//   twelvedata  clé gratuite (secret TWELVEDATA_API_KEY) : forex, or, crypto (pas les indices) ; 800 crédits/jour
-//   binance / kraken  Bitcoin, sans clé
-//   yahoo       sans clé mais non officiel : bloque souvent les serveurs (dernier recours)
+// Source de données unique : LSE Data (secret LSE_API_KEY ; plan gratuit : 60 appels/min ; bougies M15, H1, H4, D1).
+// Symboles LSE : forex « EUR_USD », crypto cotée en Tether « BTCUSDT ». L'or : plusieurs orthographes possibles selon le catalogue,
+// essayées dans l'ordre. Si aucune ne répond, Admin → Signaux → « Tester les données » affiche les symboles proches du catalogue.
 export const SYMBOLS: SymbolCfg[] = [
   { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx",
-    sources: [{ p: "oanda", id: "XAU_USD" }, { p: "twelvedata", id: "XAU/USD" }, { p: "yahoo", id: "XAUUSD=X" }] },
-  { symbol: "US30", label: "Dow Jones (US30)", currencies: ["USD"], session: "us",
-    sources: [{ p: "oanda", id: "US30_USD" }, { p: "yahoo", id: "^DJI" }, { p: "twelvedata", id: "DJI" }] },
-  { symbol: "USTEC", label: "Nasdaq 100 (USTEC)", currencies: ["USD"], session: "us",
-    sources: [{ p: "oanda", id: "NAS100_USD" }, { p: "yahoo", id: "^NDX" }, { p: "twelvedata", id: "NDX" }] },
+    sources: [{ p: "lse", market: "forex", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAUUSD" }, { p: "lse", market: "commodities", id: "GOLD" }] },
   { symbol: "BTC/USD", label: "Bitcoin", currencies: ["USD"], session: "crypto",
-    sources: [{ p: "binance", id: "BTCUSDT" }, { p: "kraken", id: "XBTUSD" }, { p: "oanda", id: "BTC_USD" }, { p: "twelvedata", id: "BTC/USD" }, { p: "yahoo", id: "BTC-USD" }] },
+    sources: [{ p: "lse", market: "crypto", id: "BTCUSDT" }] },
   // Exemples à décommenter pour ajouter du forex (même format) :
-  // { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "oanda", id: "EUR_USD" }, { p: "twelvedata", id: "EUR/USD" }, { p: "yahoo", id: "EURUSD=X" }] },
-  // { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "oanda", id: "GBP_JPY" }, { p: "twelvedata", id: "GBP/JPY" }, { p: "yahoo", id: "GBPJPY=X" }] },
-  // { symbol: "USDJPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: [{ p: "oanda", id: "USD_JPY" }, { p: "twelvedata", id: "USD/JPY" }, { p: "yahoo", id: "USDJPY=X" }] },
+  // { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "lse", market: "forex", id: "EUR_USD" }] },
+  // { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "GBP_JPY" }] },
+  // { symbol: "USDJPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "USD_JPY" }] },
 ];
 
 // Profils de sélectivité (variable PROFILE). Le profil « strict » correspond à la première version du moteur.
