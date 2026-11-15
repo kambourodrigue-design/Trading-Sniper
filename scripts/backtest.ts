@@ -73,6 +73,7 @@ async function run(symbol: string) {
     const now = Date.now();
     let found: [Candle[], Candle[], Candle[] | null, Candle[] | null] | null = null;
     for (const src of cfg.sources) {
+      if (src.p === "kraken") continue; // Kraken ne fournit que les 720 dernières bougies : inutilisable pour un historique de 2 ans
       try {
         found = [await lseHist(src, "1h", now - 730 * D, now), await lseHist(src, "1d", now - 1800 * D, now),
           live ? await lseHist(src, "4h", now - 760 * D, now) : null, live ? await lseHist(src, "15m", now - 730 * D, now) : null];

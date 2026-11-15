@@ -11,7 +11,7 @@ const LSE_URL = "https://download.londonstrategicedge.com";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Espacement minimal entre deux appels (LSE gratuit : 60 appels/minute)
-const SPACING: Record<string, number> = { lse: 1100, binance: 120 };
+const SPACING: Record<string, number> = { lse: 1100, binance: 120, kraken: 1100 };
 const lastCall: Record<string, number> = {};
 async function throttle(p: string): Promise<void> {
   const wait = (lastCall[p] ?? 0) + (SPACING[p] ?? 0) - Date.now();
@@ -113,6 +113,34 @@ export async function binanceCandles(src: Src, iv: Iv, fromMs: number, toMs: num
   return out.sort((a, b) => a.t - b.t);
 }
 
+// ---------- Kraken (données publiques, sans clé, BTC/USD réel) ----------
+// GET /0/public/OHLC?pair=XBTUSD&interval=<minutes>&since=<s> : 720 bougies max par appel ET seules les 720 dernières bougies de chaque échelle
+// sont disponibles (≈ 7,5 j en M15, 30 j en H1, 120 j en H4, 2 ans en D1) : suffisant pour le moteur live, pas pour le backtest.
+const KRAKEN_IV: Record<Iv, number> = { "15m": 15, "1h": 60, "4h": 240, "1d": 1440 };
+export async function krakenCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
+  const out: Candle[] = [];
+  let since = Math.floor(fromMs / 1000) - 1;
+  for (let page = 0; page < 5; page++) {
+    await throttle("kraken");
+    const res = await fetch(`https://api.kraken.com/0/public/OHLC?${new URLSearchParams({ pair: src.id, interval: String(KRAKEN_IV[iv]), since: String(since) })}`, { headers: { Accept: "application/json" } });
+    const txt = await res.text();
+    let j: { error?: string[]; result?: Record<string, unknown> };
+    try { j = JSON.parse(txt); } catch { throw new Error(`Kraken ${src.id} ${iv} HTTP ${res.status} ${txt.slice(0, 100)}`); }
+    if (!res.ok || j.error?.length) throw new Error(`Kraken ${src.id} ${iv} HTTP ${res.status} ${(j.error ?? []).join(",").slice(0, 120)}`);
+    const key = Object.keys(j.result ?? {}).find((k) => k !== "last");
+    const rows = (key ? (j.result as Record<string, unknown[][]>)[key] : []) ?? [];
+    for (const r of rows) {
+      const t = Number(r[0]) * 1000, o = +(r[1] as string), h = +(r[2] as string), l = +(r[3] as string), c = +(r[4] as string);
+      if (t <= toMs && Number.isFinite(t) && [o, h, l, c].every(Number.isFinite)) out.push({ t, o, h, l, c });
+    }
+    const next = Number((j.result as Record<string, unknown>)?.last);
+    if (!rows.length || !Number.isFinite(next) || next <= since || next * 1000 >= toMs) break;
+    since = next;
+  }
+  const seen = new Set<number>();
+  return out.filter((k) => !seen.has(k.t) && seen.add(k.t)).sort((a, b) => a.t - b.t);
+}
+
 // ---------- Agrégation de bougies (utilisée par le backtest ; LSE fournit le H4 en natif) ----------
 export function aggregate(h1: Candle[], ms: number, now: number): Candle[] {
   const out: Candle[] = [];
@@ -130,13 +158,13 @@ export interface Bundle { h1: Candle[]; h4: Candle[]; d1: Candle[]; source: stri
 const closedOf = (c: Candle[], ms: number, now: number) => c.filter((k) => k.t + ms <= now);
 const enc = (c: Candle[]) => JSON.stringify(c.map((k) => [k.t, k.o, k.h, k.l, k.c]));
 const dec = (s: string): Candle[] => (JSON.parse(s) as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
-const usable = (env: Env, src: Src) => src.p === "binance" || (src.p === "lse" && !!env.LSE_API_KEY);
+const usable = (env: Env, src: Src) => src.p === "binance" || src.p === "kraken" || (src.p === "lse" && !!env.LSE_API_KEY);
 
 // Fenêtre demandée selon l'échelle (assez large pour les week-ends et jours fériés ; le moteur garde ensuite les dernières bougies).
 const SPAN_DAYS: Record<Iv, number> = { "15m": 4, "1h": 21, "4h": 75, "1d": 420 };
 async function rawSeries(env: Env, src: Src, iv: Iv, now: number, fromMs?: number): Promise<Candle[]> {
   const from = fromMs ?? now - SPAN_DAYS[iv] * D;
-  return src.p === "binance" ? binanceCandles(src, iv, from, now + H) : lseCandles(env, src, iv, from, now + H);
+  return src.p === "kraken" ? krakenCandles(src, iv, from, now + H) : src.p === "binance" ? binanceCandles(src, iv, from, now + H) : lseCandles(env, src, iv, from, now + H);
 }
 
 async function bundleFrom(env: Env, s: SymbolCfg, src: Src, now: number, maxAgeMs?: number): Promise<Bundle> {
