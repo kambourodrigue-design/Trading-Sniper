@@ -11,7 +11,7 @@ const LSE_URL = "https://download.londonstrategicedge.com";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Espacement minimal entre deux appels (LSE gratuit : 60 appels/minute)
-const SPACING: Record<string, number> = { lse: 1100, binance: 120, kraken: 1100 };
+const SPACING: Record<string, number> = { lse: 1100, binance: 120, kraken: 1100, deriv: 0 };
 const lastCall: Record<string, number> = {};
 async function throttle(p: string): Promise<void> {
   const wait = (lastCall[p] ?? 0) + (SPACING[p] ?? 0) - Date.now();
@@ -141,6 +141,68 @@ export async function krakenCandles(src: Src, iv: Iv, fromMs: number, toMs: numb
   return out.filter((k) => !seen.has(k.t) && seen.add(k.t)).sort((a, b) => a.t - b.t);
 }
 
+// ---------- Deriv (API WebSocket publique : données de marché sans jeton) ----------
+// wss://ws.derivws.com/websockets/v3?app_id=… ; requête { ticks_history, style: "candles", granularity (s), start, end } → { candles: [{ epoch, open, high, low, close }] }.
+// Symboles : frxXAUUSD (or), cryBTCUSD (Bitcoin), BOOM1000 / CRASH1000 / R_100… (indices synthétiques). Max 5000 bougies par requête.
+// Dans un Worker, le WebSocket sortant passe par fetch() + en-tête Upgrade ; sous Node 22+ (backtest), par le WebSocket global.
+const DERIV_GRAN: Record<Iv, number> = { "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 };
+interface DerivConn { call(req: Record<string, unknown>): Promise<{ candles?: Array<{ epoch: number; open: number; high: number; low: number; close: number }> }>; close(): void }
+async function derivConnect(appId: string): Promise<DerivConn> {
+  const url = `wss://ws.derivws.com/websockets/v3?app_id=${encodeURIComponent(appId)}`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let ws: any;
+  if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== "undefined") {
+    const res = await fetch(url.replace("wss://", "https://"), { headers: { Upgrade: "websocket" } });
+    ws = (res as unknown as { webSocket?: unknown }).webSocket;
+    if (!ws) throw new Error(`Deriv : connexion WebSocket refusée (HTTP ${res.status})`);
+    ws.accept();
+  } else {
+    const WS = (globalThis as unknown as { WebSocket?: new (u: string) => unknown }).WebSocket;
+    if (!WS) throw new Error("Deriv : WebSocket indisponible (Node 22+ requis)");
+    ws = new WS(url);
+    await new Promise<void>((ok, ko) => { ws.addEventListener("open", () => ok()); ws.addEventListener("error", () => ko(new Error("Deriv : connexion impossible"))); });
+  }
+  const pending = new Map<number, { ok: (v: never) => void; ko: (e: Error) => void }>();
+  let id = 0;
+  ws.addEventListener("message", (ev: { data: unknown }) => {
+    try {
+      const j = JSON.parse(typeof ev.data === "string" ? ev.data : String(ev.data)) as { req_id?: number; error?: { code: string; message: string } };
+      const p = j.req_id !== undefined ? pending.get(j.req_id) : undefined;
+      if (!p) return;
+      pending.delete(j.req_id as number);
+      if (j.error) p.ko(new Error(`Deriv ${j.error.code} : ${j.error.message}`.slice(0, 200))); else p.ok(j as never);
+    } catch { /* message non JSON : ignoré */ }
+  });
+  ws.addEventListener("close", () => { for (const p of pending.values()) p.ko(new Error("Deriv : connexion fermée")); pending.clear(); });
+  return {
+    call: (req) => new Promise((ok, ko) => {
+      const rid = ++id;
+      const timer = setTimeout(() => { pending.delete(rid); ko(new Error("Deriv : délai dépassé (20 s)")); }, 20_000);
+      pending.set(rid, { ok: (v) => { clearTimeout(timer); ok(v); }, ko: (e) => { clearTimeout(timer); ko(e); } });
+      ws.send(JSON.stringify({ ...req, req_id: rid }));
+    }),
+    close: () => { try { ws.close(); } catch { /* déjà fermé */ } },
+  };
+}
+
+export async function derivCandles(src: Src, iv: Iv, fromMs: number, toMs: number, appId = "1089"): Promise<Candle[]> {
+  const gran = DERIV_GRAN[iv], span = gran * 4500, nowS = Math.floor(Date.now() / 1000);
+  const conn = await derivConnect(appId || "1089");
+  const out: Candle[] = [];
+  try {
+    for (let a = Math.floor(fromMs / 1000); a < toMs / 1000; a += span) {
+      const b = Math.min(Math.floor(toMs / 1000), a + span);
+      const r = await conn.call({ ticks_history: src.id, style: "candles", granularity: gran, start: a, end: b >= nowS ? "latest" : b });
+      for (const k of r.candles ?? []) {
+        const t = Number(k.epoch) * 1000, o = +k.open, h = +k.high, l = +k.low, c = +k.close;
+        if (Number.isFinite(t) && [o, h, l, c].every(Number.isFinite)) out.push({ t, o, h, l, c });
+      }
+    }
+  } finally { conn.close(); }
+  const seen = new Set<number>();
+  return out.filter((k) => !seen.has(k.t) && seen.add(k.t)).sort((a, b) => a.t - b.t);
+}
+
 // ---------- Agrégation de bougies (utilisée par le backtest ; LSE fournit le H4 en natif) ----------
 export function aggregate(h1: Candle[], ms: number, now: number): Candle[] {
   const out: Candle[] = [];
@@ -158,13 +220,13 @@ export interface Bundle { h1: Candle[]; h4: Candle[]; d1: Candle[]; source: stri
 const closedOf = (c: Candle[], ms: number, now: number) => c.filter((k) => k.t + ms <= now);
 const enc = (c: Candle[]) => JSON.stringify(c.map((k) => [k.t, k.o, k.h, k.l, k.c]));
 const dec = (s: string): Candle[] => (JSON.parse(s) as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
-const usable = (env: Env, src: Src) => src.p === "binance" || src.p === "kraken" || (src.p === "lse" && !!env.LSE_API_KEY);
+const usable = (env: Env, src: Src) => src.p === "binance" || src.p === "kraken" || src.p === "deriv" || (src.p === "lse" && !!env.LSE_API_KEY);
 
 // Fenêtre demandée selon l'échelle (assez large pour les week-ends et jours fériés ; le moteur garde ensuite les dernières bougies).
 const SPAN_DAYS: Record<Iv, number> = { "15m": 4, "1h": 21, "4h": 75, "1d": 420 };
 async function rawSeries(env: Env, src: Src, iv: Iv, now: number, fromMs?: number): Promise<Candle[]> {
   const from = fromMs ?? now - SPAN_DAYS[iv] * D;
-  return src.p === "kraken" ? krakenCandles(src, iv, from, now + H) : src.p === "binance" ? binanceCandles(src, iv, from, now + H) : lseCandles(env, src, iv, from, now + H);
+  return src.p === "deriv" ? derivCandles(src, iv, from, now + H, env.DERIV_APP_ID) : src.p === "kraken" ? krakenCandles(src, iv, from, now + H) : src.p === "binance" ? binanceCandles(src, iv, from, now + H) : lseCandles(env, src, iv, from, now + H);
 }
 
 async function bundleFrom(env: Env, s: SymbolCfg, src: Src, now: number, maxAgeMs?: number): Promise<Bundle> {

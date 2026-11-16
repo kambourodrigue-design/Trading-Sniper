@@ -15,6 +15,7 @@ declare global {
     GEMINI_API_KEY?: string;
     ANTHROPIC_API_KEY?: string;
     // Optionnels
+    DERIV_APP_ID?: string;       // app_id Deriv (défaut 1089 = application de test publique ; crée la tienne sur api.deriv.com)
     ALPHAVANTAGE_API_KEY?: string;
     DEEPSEEK_MODEL?: string;
     GEMINI_MODEL?: string;
