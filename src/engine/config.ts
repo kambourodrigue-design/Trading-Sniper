@@ -1,30 +1,32 @@
 export type Session = "fx" | "us" | "crypto";
-export type ProviderName = "lse" | "binance" | "kraken" | "deriv";
-export interface Src { p: ProviderName; market: string; id: string } // market = dossier LSE (forex, crypto, commodities…), id = symbole du catalogue LSE
+export type ProviderName = "biquote" | "binance" | "kraken";
+export interface Src { p: ProviderName; market: string; id: string }
 export interface SymbolCfg { symbol: string; label: string; currencies: string[]; session: Session; sources: Src[] }
 
-// Actifs surveillés.  symbol = nom affiché (noms des CFD MT5) ; sources = fournisseurs de données, essayés dans l'ordre (repli automatique).
-//   fx     : forex/métaux, ouvert du dimanche 22h au vendredi 22h UTC
-//   us     : indices US → séance 9h30-16h, heure de New York
-//   crypto : 24h/24, 7j/7
-// Source de données unique : LSE Data (secret LSE_API_KEY ; plan gratuit : 60 appels/min ; bougies M15, H1, H4, D1).
-// Symboles LSE : forex « EUR_USD », crypto cotée en Tether « BTCUSDT ». L'or : plusieurs orthographes possibles selon le catalogue,
-// essayées dans l'ordre. Si aucune ne répond, Admin → Signaux → « Tester les données » affiche les symboles proches du catalogue.
+// Flux principal biquote (sans clé). Binance/Kraken sont des replis uniquement pour les cryptomonnaies.
+// Les symboles biquote suivent le catalogue MT5 documenté : EURUSD, XAUUSD, BTCUSD, etc.
 export const SYMBOLS: SymbolCfg[] = [
-  { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx",
-    sources: [{ p: "deriv", market: "forex", id: "frxXAUUSD" }, { p: "lse", market: "commodities", id: "XAU/USD" }, { p: "lse", market: "forex", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAU_USD" }, { p: "lse", market: "commodities", id: "XAUUSD" }, { p: "lse", market: "commodities", id: "GOLD" }] },
-  { symbol: "BTC/USD", label: "Bitcoin", currencies: ["USD"], session: "crypto",
-    sources: [{ p: "kraken", market: "spot", id: "XBTUSD" }, { p: "deriv", market: "crypto", id: "cryBTCUSD" }, { p: "binance", market: "spot", id: "BTCUSDT" }, { p: "lse", market: "crypto", id: "BTCUSDT" }] }, // Binance (public, temps réel, sans clé) en premier ; LSE en repli
-  // Indices synthétiques Deriv (24h/24, pas de news ; ⚠ le biais intermarchés dollar/taux ne les concerne pas : ajoute-les dans WEIGHTS de lib/intermarket.ts avec {usd:0,yld:0}) :
-  // { symbol: "BOOM1000", label: "Boom 1000", currencies: [], session: "crypto", sources: [{ p: "deriv", market: "synthetic", id: "BOOM1000" }] },
-  // { symbol: "CRASH1000", label: "Crash 1000", currencies: [], session: "crypto", sources: [{ p: "deriv", market: "synthetic", id: "CRASH1000" }] },
-  // Exemples à décommenter pour ajouter du forex (même format) :
-  // { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "lse", market: "forex", id: "EUR_USD" }] },
-  // { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "GBP_JPY" }] },
-  // { symbol: "USDJPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: [{ p: "lse", market: "forex", id: "USD_JPY" }] },
+  { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx", sources: [{ p: "biquote", market: "metals", id: "XAUUSD" }] },
+  { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "EURUSD" }] },
+  { symbol: "GBP/USD", label: "Livre / Dollar", currencies: ["GBP", "USD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPUSD" }] },
+  { symbol: "USD/JPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "USDJPY" }] },
+  { symbol: "USD/CAD", label: "Dollar / Dollar canadien", currencies: ["USD", "CAD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "USDCAD" }] },
+  { symbol: "USD/CHF", label: "Dollar / Franc suisse", currencies: ["USD", "CHF"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "USDCHF" }] },
+  { symbol: "AUD/USD", label: "Dollar australien / Dollar", currencies: ["AUD", "USD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "AUDUSD" }] },
+  { symbol: "NZD/USD", label: "Dollar néo-zélandais / Dollar", currencies: ["NZD", "USD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "NZDUSD" }] },
+  { symbol: "EUR/GBP", label: "Euro / Livre", currencies: ["EUR", "GBP"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "EURGBP" }] },
+  { symbol: "EUR/JPY", label: "Euro / Yen", currencies: ["EUR", "JPY"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "EURJPY" }] },
+  { symbol: "EUR/CAD", label: "Euro / Dollar canadien", currencies: ["EUR", "CAD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "EURCAD" }] },
+  { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPJPY" }] },
+  { symbol: "GBP/CAD", label: "Livre / Dollar canadien", currencies: ["GBP", "CAD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPCAD" }] },
+  { symbol: "BTC/USD", label: "Bitcoin", currencies: ["BTC", "USD"], session: "crypto", sources: [
+    { p: "biquote", market: "crypto", id: "BTCUSD" }, { p: "kraken", market: "spot", id: "XBTUSD" }, { p: "binance", market: "spot", id: "BTCUSDT" },
+  ] },
+  { symbol: "ETH/USD", label: "Ethereum", currencies: ["ETH", "USD"], session: "crypto", sources: [
+    { p: "biquote", market: "crypto", id: "ETHUSD" }, { p: "kraken", market: "spot", id: "XETHZUSD" }, { p: "binance", market: "spot", id: "ETHUSDT" },
+  ] },
 ];
 
-// Profils de sélectivité (variable PROFILE). Le profil « strict » correspond à la première version du moteur.
 export interface Profile { name: string; minScore: number; poiTolAtr: number; poiRecentBars: number; htfD1Only: boolean; minRoomR: number }
 export const PROFILES: Record<string, Profile> = {
   strict:   { name: "strict",   minScore: 55, poiTolAtr: 0.25, poiRecentBars: 0, htfD1Only: false, minRoomR: 2.0 },
@@ -33,13 +35,13 @@ export const PROFILES: Record<string, Profile> = {
 };
 
 export const CFG = {
-  maxPerRun: 1,            // actifs analysés par passage du cron (Workers Free : 1 ; Workers Paid : 4)
-  tpRR: [1.5, 2.5, 4] as [number, number, number], // TP1/TP2/TP3 en multiples du risque
-  minRiskAtr: 0.8,         // SL au moins 0.8 ATR (élargi si plus serré)
-  maxRiskAtr: 3,           // SL au plus 3 ATR (sinon setup rejeté)
-  minRoomR: 2,             // espace libre minimal vers l'obstacle HTF, en multiples du risque
-  newsBeforeMin: 45,       // pas de signal 45 min avant une news à fort impact
-  newsAfterMin: 20,        // ... ni 20 min après
-  expiryHours: 120,        // filet de sécurité : un trade sans TP ni SL après 5 jours est clôturé « expiré »
-  starterSymbols: ["XAU/USD", "BTC/USD"], // actifs accessibles au plan Starter
+  maxPerRun: 1,
+  tpRR: [1.5, 2.5, 4] as [number, number, number],
+  minRiskAtr: 0.8,
+  maxRiskAtr: 3,
+  minRoomR: 2,
+  newsBeforeMin: 45,
+  newsAfterMin: 20,
+  expiryHours: 120,
+  starterSymbols: ["XAU/USD", "BTC/USD"],
 };

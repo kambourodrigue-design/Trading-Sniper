@@ -1,11 +1,11 @@
 {
-  "name": "lucide-backend",
+  "name": "trading-sniper-gold-ai",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:apply": "wrangler d1 execute lucide-db --file=./schema.sql",
-    "db:apply:remote": "wrangler d1 execute lucide-db --file=./schema.sql --remote",
+    "db:apply": "wrangler d1 execute trading-sniper-db --file=./schema.sql",
+    "db:apply:remote": "wrangler d1 execute trading-sniper-db --file=./schema.sql --remote",
     "typecheck": "tsc --noEmit",
     "backtest": "tsx scripts/backtest.ts",
     "test": "tsx scripts/test.ts"

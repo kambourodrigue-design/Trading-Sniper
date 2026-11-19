@@ -1,11 +1,11 @@
 import { SYMBOLS, CFG, SymbolCfg, PROFILES, Profile } from "./config";
 import { Candle, Dir, Evaluation } from "./types";
 import { Analysis, buildAnalysis, evaluate, roundP } from "./analyze";
-import { getBundle, getM15 } from "../lib/prices";
+import { getBundle, getOutcomeCandles } from "../lib/prices";
 import { isMarketOpen } from "./sessions";
 import { evaluateOutcome, Sig } from "./outcome";
-import { getCalendar, getMacroContext, newsBlock, upcomingEvents, CalEvent } from "../lib/macro";
-import { askAIs, askIndependent, configuredAIs, consensus, independentConsensus, mergeLevels } from "../lib/ai";
+import { getCalendar, getMacroContext, newsBlock, upcomingEvents, fundamentalBias, CalEvent } from "../lib/macro";
+import { askAIs, askGPT, askFundamentalSol, fundSummary, fundAlignment, FundVerdict, askIndependent, configuredAIs, consensus, independentConsensus, mergeLevels } from "../lib/ai";
 import { validateLevels } from "./independent";
 import { getIntermarket } from "../lib/intermarket";
 import { cacheGet, cacheSet, cachePurge } from "../lib/cache";
@@ -37,10 +37,10 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
     const cfg = SYMBOLS.find((x) => x.symbol === symbol);
     if (!cfg) continue;
     const oldest = Math.min(...sigs.map((x) => x.created_at)) * 1000;
-    let c15: Candle[];
-    try { c15 = await getM15(env, cfg, oldest - HOUR, now); } catch (e) { console.error("suivi", symbol, (e as Error).message); continue; }
+    let history: { candles: Candle[]; candleMs: number };
+    try { history = await getOutcomeCandles(env, cfg, oldest - HOUR, now); } catch (e) { console.error("suivi", symbol, (e as Error).message); continue; }
     for (const s of sigs) {
-      const r = evaluateOutcome(s, c15, now);
+      const r = evaluateOutcome(s, history.candles, now, history.candleMs);
       if (r.outcome !== "open" || r.tp !== s.tp_reached) {
         await env.DB.prepare("UPDATE signals SET tp_reached = ?, outcome = ?, progress_at = ?, closed_at = CASE WHEN ? = 'open' THEN NULL ELSE ? END WHERE id = ?")
           .bind(r.tp, r.outcome, r.progressAt ?? s.progress_at ?? null, r.outcome, Math.floor(now / 1000), s.id).run();
@@ -54,7 +54,7 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
 }
 
 // ---------- Prompts soumis aux IA ----------
-const ts = (s: Analysis["h1"]) => `clôture ${s.close.toFixed(2)}, MM50 ${s.sma50.toFixed(2)}, MM200 ${s.sma200.toFixed(2)}, tendance ${s.trend}, RSI ${s.rsi.toFixed(0)}`;
+const ts = (s: Analysis["h1"]) => `clôture ${s.close.toFixed(2)}, MM50 ${s.sma50.toFixed(2)}, MM${s.slowPeriod} ${s.smaSlow.toFixed(2)}, tendance ${s.trend}, RSI ${s.rsi.toFixed(0)}`;
 
 function buildPrompt(s: SymbolCfg, an: Analysis, ev: Evaluation, macro: string, cal: CalEvent[], now: number, losses: string): string {
   const candles = an.lastCandles.map((c) => `${new Date(c.t).toISOString().slice(5, 13)}h O${c.o} H${c.h} L${c.l} C${c.c}`).join("\n");
@@ -64,10 +64,23 @@ CONFLUENCES DÉTECTÉES : ${ev.reasons.join(" ; ")}
 TENDANCE : H1 (${ts(an.h1)}) | H4 (${ts(an.h4)}) | D1 (${ts(an.d1)})
 STRUCTURE H1 : ${an.structure.trend}${an.structure.event ? `, ${an.structure.event.type} ${an.structure.event.dir} il y a ${an.structure.event.barsAgo} bougies` : ""} | Wyckoff : ${an.wyckoff.phase}${an.wyckoff.event ? ` (${an.wyckoff.event})` : ""} | Position dans le range : ${Math.round(an.pd.pos * 100)} %
 FIGURES : ${an.patterns.length ? an.patterns.map((p) => `${p.name} ${p.dir}${p.confirmed ? " confirmé" : " en formation"}`).join(", ") : "aucune"}
+ICT/SMC/CRT : ${an.structure.event ? `${an.structure.event.type} ${an.structure.event.dir} @ ${an.structure.event.level}` : "pas de cassure récente"} ; BSL=${an.eq.highs.join(",") || "—"} ; SSL=${an.eq.lows.join(",") || "—"} ; CRT=${an.crt ? `${an.crt.dir} range ${an.crt.low}-${an.crt.high}, sweep ${an.crt.sweepExtreme}` : "aucun"} ; Killzone=${an.killzone.active ? an.killzone.name : "inactive"} ; dealing range ${an.pd.lo}-${an.pd.hi}, EQ=${an.pd.eq}, position=${Math.round(an.pd.pos * 100)} %.
+Zones H1 : ${an.zones.slice(-12).map(z => `${z.kind} ${z.dir} ${z.bottom}-${z.top} (${z.touches} retest(s))`).join(" ; ") || "aucune"}
 BOUGIES H1 RÉCENTES :\n${candles}
 NEWS ÉCONOMIQUES (devises ${s.currencies.join("/")}) :\n${upcomingEvents(cal, s.currencies, now)}
 CONTEXTE MACRO & GÉOPOLITIQUE :\n${macro}
 ${losses}Confirme ou rejette ce setup ${ev.dir}. Réponds uniquement en JSON.`;
+}
+
+// Prompt de la 2e couche fondamentale (GPT-6 Sol) : données macro mesurées uniquement, pas de bougies ni de niveaux.
+function buildFundPrompt(s: SymbolCfg, dir: Dir, price: number, macro: string, det: { bias: number; detail: string }, interText: string, interBias: number, cal: CalEvent[], now: number): string {
+  return `ACTIF : ${s.symbol} (${s.label}) — devises ${s.currencies.join("/")} — prix ${price} — date ${new Date(now).toISOString().slice(0, 16)} UTC
+DIRECTION PROPOSÉE PAR LE MOTEUR TECHNIQUE (information seulement : juge si le fondamental la soutient, sans chercher à la confirmer) : ${dir === "BUY" ? "ACHAT" : "VENTE"}
+PREMIÈRE COUCHE FONDAMENTALE (déterministe) : biais calendrier ${det.bias.toFixed(2)} sur −1…+1 (positif = favorable à une hausse de ${s.symbol}) ; ${det.detail}
+INTERMARCHÉS (biais ${interBias.toFixed(2)}) : ${interText}
+PUBLICATIONS ÉCONOMIQUES (devises ${s.currencies.join("/")}) :\n${upcomingEvents(cal, s.currencies, now)}
+DONNÉES MACRO MESURÉES ET ACTUALITÉS :\n${macro}
+Donne ton biais fondamental de ${s.symbol} pour les prochains jours. Réponds uniquement en JSON.`;
 }
 
 const fmtC = (c: Candle[], n: number, price: number, daily = false) =>
@@ -79,7 +92,7 @@ INDICATEURS : H1 (${ts(an.h1)}) | H4 (${ts(an.h4)}) | D1 (${ts(an.d1)})
 BOUGIES D1 (20 dernières) :\n${fmtC(d1, 20, an.price, true)}
 BOUGIES H4 (30 dernières) :\n${fmtC(h4, 30, an.price)}
 BOUGIES H1 (60 dernières) :\n${fmtC(h1, 60, an.price)}
-DÉTECTIONS AUTOMATIQUES (à titre indicatif, tu peux les contredire) : structure H1 ${an.structure.trend}${an.structure.event ? `, ${an.structure.event.type} ${an.structure.event.dir} il y a ${an.structure.event.barsAgo} bougies` : ""} ; Wyckoff ${an.wyckoff.phase}${an.wyckoff.event ? ` (${an.wyckoff.event})` : ""} ; position dans le range ${Math.round(an.pd.pos * 100)} % ; figures : ${an.patterns.length ? an.patterns.map((p) => `${p.name} ${p.dir}${p.confirmed ? " confirmé" : " en formation"}`).join(", ") : "aucune"} ; meilleur score de confluence du moteur : ${best.score}/100 (${best.dir}).
+DÉTECTIONS AUTOMATIQUES (à titre indicatif, tu peux les contredire) : structure H1 ${an.structure.trend}${an.structure.event ? `, ${an.structure.event.type} ${an.structure.event.dir} il y a ${an.structure.event.barsAgo} bougies` : ""} ; BSL ${an.eq.highs.join(",") || "—"} ; SSL ${an.eq.lows.join(",") || "—"} ; CRT ${an.crt ? `${an.crt.dir} ${an.crt.low}-${an.crt.high}` : "aucun"} ; Killzone ${an.killzone.active ? an.killzone.name : "inactive"} ; Breaker Blocks ${an.zones.filter(z => z.kind === "BREAKER").length} ; Wyckoff ${an.wyckoff.phase}${an.wyckoff.event ? ` (${an.wyckoff.event})` : ""} ; position dans le range ${Math.round(an.pd.pos * 100)} % ; figures : ${an.patterns.length ? an.patterns.map((p) => `${p.name} ${p.dir}${p.confirmed ? " confirmé" : " en formation"}`).join(", ") : "aucune"} ; meilleur score de confluence du moteur : ${best.score}/100 (${best.dir}).
 NEWS ÉCONOMIQUES (devises ${s.currencies.join("/")}) :\n${upcomingEvents(cal, s.currencies, now)}
 CONTEXTE MACRO & GÉOPOLITIQUE :\n${macro}
 ${losses}Fais ta propre analyse et propose un trade seulement s'il est de haute probabilité. Réponds uniquement en JSON.`;
@@ -137,13 +150,16 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
     await env.DB.prepare("INSERT INTO analysis_state (symbol, last_hour) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET last_hour = excluded.last_hour").bind(s.symbol, Math.floor(now / HOUR)).run();
     return { symbol: s.symbol, status: "stale", score: 0, note };
   }
-  const an = buildAnalysis(s.symbol, h1, h4, d1);
+  const an = buildAnalysis(s.symbol, h1, h4, d1, now);
   // Règle : 1 seul trade par actif, suivi jusqu'à son résultat (SL / TP / stop suiveur / expiration) avant tout nouveau signal.
   const open = await env.DB.prepare("SELECT COUNT(*) n FROM signals WHERE symbol = ? AND outcome = 'open' AND user_id IS NULL").bind(s.symbol).first<{ n: number }>();
   const inter = await getIntermarket(env, s, now);
+  const fundamental = fundamentalBias(cal.events, s.symbol, now);
+  const combinedBias = Math.max(-1, Math.min(1, 0.5 * inter.bias + 0.5 * fundamental.bias));
   const ctx = {
-    inter: inter.bias,
-    newsBlock: newsBlock(cal.events, s.currencies, now, CFG.newsBeforeMin, CFG.newsAfterMin),
+    inter: combinedBias,
+    // Fail closed : si le calendrier n’est pas disponible, aucun signal automatique n’est publié.
+    newsBlock: cal.ok ? newsBlock(cal.events, s.currencies, now, CFG.newsBeforeMin, CFG.newsAfterMin) : "calendrier économique indisponible : publication suspendue",
     marketOpen: isMarketOpen(s, now), hasOpen: (open?.n ?? 0) > 0, p: getProfile(env),
   };
   const evals = (["BUY", "SELL"] as Dir[]).map((d) => evaluate(an, d, ctx)).sort((a, b) => Number(b.passed) - Number(a.passed) || b.score - a.score);
@@ -153,9 +169,47 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
 
   // Chemin 1 : setup détecté par les règles, validé par les IA
   if (best.passed) {
-    if (configuredAIs(env).length === 0) { status = "no_ai"; note = "règles validées mais aucune clé IA configurée"; }
-    else {
-      const macro = `${await getMacroContext(env)}\n\n${inter.text}`;
+    if (env.AUTONOMOUS_ONLY === "true" || env.HYBRID_GPT === "true" || configuredAIs(env).length === 0) {
+      // Mode autonome ou hybride : les règles gardent la main ; GPT ne fournit qu'un second avis facultatif.
+      try {
+        let reasoning = `${best.reasons.join(" · ")}\nFondamental : ${fundamental.detail}\nIntermarchés : ${inter.text}\nPublication par moteur autonome ; l'avis GPT est complémentaire et ne bloque jamais le signal.`;
+        let hybridVerdict: Awaited<ReturnType<typeof askGPT>>["verdict"] = null;
+        let hybridError: string | null = null;
+        let solVerdict: FundVerdict | null = null;
+        let solError: string | null = null;
+        const useSol = env.FUNDAMENTAL_SOL === "true";
+        if (env.HYBRID_GPT === "true" && env.OPENAI_API_KEY) {
+          const baseMacro = await getMacroContext(env);
+          const macro = `${baseMacro}\n\n${inter.text}\n\n${fundamental.detail}`;
+          const losses = await recentLosses(env, s.symbol);
+          // Second avis (gpt-6-luna) sur le setup et 2e couche fondamentale (gpt-6-sol) en parallèle ; ni l'un ni l'autre ne peut bloquer le signal.
+          const [gpt, sol] = await Promise.all([
+            askGPT(env, buildPrompt(s, an, best, macro, cal.events, now, losses)),
+            useSol ? askFundamentalSol(env, buildFundPrompt(s, best.dir, an.price, baseMacro, fundamental, inter.text, inter.bias, cal.events, now)) : Promise.resolve(null),
+          ]);
+          hybridVerdict = gpt.verdict; hybridError = gpt.error;
+          if (sol) { solVerdict = sol.verdict; solError = sol.error; }
+          if (hybridVerdict) reasoning += `\nSecond avis GPT (${hybridVerdict.decision}, confiance ${hybridVerdict.confidence}/100) : ${hybridVerdict.reasoning}`;
+          else reasoning += `\nAvis GPT indisponible : ${hybridError ?? "erreur inconnue"}. Le moteur autonome reste prioritaire.`;
+          if (solVerdict) reasoning += `\nAnalyse fondamentale GPT-6 Sol (confiance ${solVerdict.confidence}/100) : ${fundSummary(solVerdict, best.dir)}`;
+          else if (useSol) reasoning += `\nAnalyse fondamentale Sol indisponible : ${solError ?? "erreur inconnue"}. Le moteur autonome reste prioritaire.`;
+        }
+        const votes: Array<Record<string, unknown>> = [];
+        if (hybridVerdict) votes.push({ provider: "openai", decision: hybridVerdict.decision, confidence: hybridVerdict.confidence, macro: hybridVerdict.macro, reasoning: hybridVerdict.reasoning, risks: hybridVerdict.risks });
+        if (solVerdict) votes.push({ provider: "openai-sol", layer: "fondamental", bias: solVerdict.bias, alignment: fundAlignment(best.dir, solVerdict.bias), confidence: solVerdict.confidence, drivers: solVerdict.drivers, risks: solVerdict.risks, data_gaps: solVerdict.gaps, reasoning: fundSummary(solVerdict, best.dir) });
+        await env.DB.prepare(
+          `INSERT INTO signals (id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy, rr_ratio, source, user_id, status, timeframe, score, reasoning, ai_votes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'auto', NULL, 'published', 'H1', ?, ?, ?, ?)`
+        ).bind(newId(), s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], best.score, best.tags.join(" + "), best.rr,
+          best.score, reasoning, JSON.stringify(votes), Math.floor(now / 1000)).run();
+        status = "published"; note = (hybridVerdict ? `moteur autonome + second avis GPT (${hybridVerdict.decision})` : hybridError ? `moteur autonome ; GPT indisponible (${hybridError})` : "setup validé par le moteur autonome gratuit") + (solVerdict ? ` + fondamental Sol (${solVerdict.bias}, ${fundAlignment(best.dir, solVerdict.bias)})` : useSol && solError ? ` ; Sol indisponible (${solError})` : "");
+        await notify(env, signalMessage({ votes: [...(hybridVerdict ? [{ provider: "openai", confidence: hybridVerdict.confidence, reasoning: `${hybridVerdict.decision} — ${hybridVerdict.reasoning}` }] : []), ...(solVerdict ? [{ provider: "openai-sol", confidence: solVerdict.confidence, reasoning: fundSummary(solVerdict, best.dir) }] : [])], symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: best.score, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning, source: "auto" }));
+      } catch (e) {
+        if (!isUnique(e)) throw e;
+        status = "rejected"; note = "un trade est déjà ouvert sur cet actif";
+      }
+    } else {
+      const macro = `${await getMacroContext(env)}\n\n${inter.text}\n\n${fundamental.detail}`;
       const { verdicts, errors } = await askAIs(env, buildPrompt(s, an, best, macro, cal.events, now, await recentLosses(env, s.symbol)));
       const cons = consensus(verdicts, best.dir);
       aiLog = { verdicts, errors, consensus: cons.reason };
@@ -186,7 +240,7 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
   const mode = (env.AI_INDEPENDENT || "h4").toLowerCase();
   const pre = Number(env.AI_PREFILTER_SCORE) || 30;
   const h4Close = Math.floor(now / HOUR) % 4 === 0;
-  if (mode !== "off" && configuredAIs(env).length > 0 && ctx.marketOpen && !ctx.hasOpen && ctx.newsBlock === null
+  if (env.AUTONOMOUS_ONLY !== "true" && mode !== "off" && configuredAIs(env).length > 0 && ctx.marketOpen && !ctx.hasOpen && ctx.newsBlock === null
       && status !== "published" && status !== "ai_rejected" && (mode === "always" || best.score >= pre || (mode === "h4" && h4Close))) {
     const ind = await independentAnalysis(env, s, an, best, h1, h4, d1, cal.events, now, inter.text);
     aiLog = { ...(aiLog ?? {}), independent: ind.log };
@@ -233,7 +287,7 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
     } catch (e) {
       const msg = String((e as Error).message).slice(0, 300);
       console.error("analyse", s.symbol, msg);
-      const planErr = /plan-required|market-not-in-plan|plan-ended|key-withheld|account-required|key-unknown|key-missing|LSE_API_KEY absent/i.test(msg);
+      const planErr = /plan-required|market-not-in-plan|plan-ended|key-withheld|account-required|key-unknown|key-missing|source de données indisponible/i.test(msg);
       // Plan de données insuffisant : 12 h. Panne passagère (429, blocage, réseau) : 30 min, pour ne pas marteler les fournisseurs.
       await cacheSet(env, `dis:${s.symbol}`, msg, planErr ? 12 * 3600 : 1800);
       await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, 'error', NULL, 0, '[]', NULL, ?)")

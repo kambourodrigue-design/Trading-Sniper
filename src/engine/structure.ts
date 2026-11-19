@@ -47,11 +47,17 @@ export function marketStructure(c: Candle[], piv: Pivot[], w = 3, recent = 12): 
     const ph = [...known].reverse().find((p) => p.isHigh);
     const pl = [...known].reverse().find((p) => !p.isHigh);
     if (ph && c[k].c > ph.price && !brokeBetween(c, ph.i + 1, k - 1, ph.price, true)) {
-      event = { type: prevTrend === "down" ? "CHoCH" : "BOS", dir: "BUY", level: ph.price, barsAgo: c.length - 1 - k };
+      const reversal = prevTrend === "down";
+      const avgRange = c.slice(Math.max(0, k - 14), k + 1).reduce((sum, x) => sum + (x.h - x.l), 0) / Math.max(1, c.slice(Math.max(0, k - 14), k + 1).length);
+      const displacement = c[k].c - c[k].o >= 0.65 * avgRange;
+      event = { type: reversal ? (displacement ? "MSS" : "CHoCH") : "BOS", dir: "BUY", level: ph.price, barsAgo: c.length - 1 - k };
       break;
     }
     if (pl && c[k].c < pl.price && !brokeBetween(c, pl.i + 1, k - 1, pl.price, false)) {
-      event = { type: prevTrend === "up" ? "CHoCH" : "BOS", dir: "SELL", level: pl.price, barsAgo: c.length - 1 - k };
+      const reversal = prevTrend === "up";
+      const avgRange = c.slice(Math.max(0, k - 14), k + 1).reduce((sum, x) => sum + (x.h - x.l), 0) / Math.max(1, c.slice(Math.max(0, k - 14), k + 1).length);
+      const displacement = c[k].o - c[k].c >= 0.65 * avgRange;
+      event = { type: reversal ? (displacement ? "MSS" : "CHoCH") : "BOS", dir: "SELL", level: pl.price, barsAgo: c.length - 1 - k };
       break;
     }
   }

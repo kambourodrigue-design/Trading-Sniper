@@ -63,10 +63,11 @@ async function callDeepSeek(env: Env, system: string, user: string, maxTokens: n
 }
 
 // OpenAI GPT-6 via l'API Responses (surface principale d'OpenAI). La sortie JSON est demandée par `text.format`.
-// Si le modèle demandé n'est pas accessible avec ta clé (404/403/400), on essaie le modèle de repli.
-async function callOpenAI(env: Env, system: string, user: string, maxTokens: number): Promise<Raw> {
-  const models = [env.OPENAI_MODEL || "gpt-6-astra", "gpt-5.6-sol"].filter((m, i, a) => a.indexOf(m) === i);
-  const effort = ["low", "medium", "high", "xhigh", "max"].includes(env.OPENAI_EFFORT ?? "") ? env.OPENAI_EFFORT : "medium";
+// Modèle par défaut : gpt-6-luna (second avis) ; OPENAI_MODEL permet d'en choisir un autre. La couche fondamentale utilise gpt-6-sol (OPENAI_SOL_MODEL).
+async function callOpenAI(env: Env, system: string, user: string, maxTokens: number, opts: { model?: string; effort?: string } = {}): Promise<Raw> {
+  const models = [opts.model || env.OPENAI_MODEL || "gpt-6-luna"]; // gpt-6-luna : modèle GPT-6 le plus économique (0,10 $ / 1M tokens en entrée, 0,50 $ en sortie)
+  const wanted = opts.effort ?? env.OPENAI_EFFORT ?? "";
+  const effort = ["low", "medium", "high", "xhigh", "max"].includes(wanted) ? wanted : "medium";
   let lastErr = "";
   for (const model of models) {
     const res = await fetch("https://api.openai.com/v1/responses", {
@@ -176,6 +177,60 @@ export async function askAIs(env: Env, user: string): Promise<{ verdicts: Verdic
   const { raws, errors } = await askAll(env, SYSTEM_PROMPT, user, VERDICT_SCHEMA, 4000);
   const c = collect(raws, errors, toVerdict);
   return { verdicts: c.out, errors: c.errors };
+}
+
+// Couche hybride : GPT seul fournit un second avis, sans jamais bloquer le moteur autonome.
+export async function askGPT(env: Env, user: string): Promise<{ verdict: Verdict | null; error: string | null }> {
+  if (!env.OPENAI_API_KEY) return { verdict: null, error: "clé OpenAI absente" };
+  try {
+    const raw = await retry(() => callOpenAI(env, SYSTEM_PROMPT, user, 2500));
+    return { verdict: toVerdict(raw.provider, parseObj(raw.provider, raw.raw)), error: null };
+  } catch (e) {
+    return { verdict: null, error: String((e as Error).message ?? e).slice(0, 220) };
+  }
+}
+
+// ---------- 3) Deuxième couche d'analyse FONDAMENTALE : GPT-6 Sol ----------
+// Lit uniquement les données macro mesurées (taux directeurs, Treasuries, TIPS, COT, pétrole, VIX, dollar, scores autonomes, calendrier, actualités)
+// et rend un biais fondamental de l'actif. Pas de graphiques, pas de niveaux, pas de veto : le moteur autonome garde la décision finale.
+export interface FundVerdict {
+  provider: string; bias: "bullish" | "bearish" | "neutral"; confidence: number;
+  drivers: string[]; risks: string[]; gaps: string[]; reasoning: string;
+}
+export const FUND_SYSTEM_PROMPT = `Tu es un analyste macro-fondamental senior (forex, or, crypto). Tu es la DEUXIÈME couche d'analyse fondamentale d'un moteur de signaux : une première couche déterministe a déjà calculé des scores.
+Ta mission : (1) lire les DONNÉES MESURÉES fournies (taux directeurs BIS, courbe des Treasuries, rendement réel TIPS, positionnement COT, pétrole, VIX, indice dollar, scores macro autonomes, surprises du calendrier, actualités) ; (2) en déduire le biais fondamental de l'actif pour les prochains jours ; (3) citer les 2 à 4 facteurs déterminants, les risques d'événement à venir et les données manquantes.
+Règles : n'invente aucun chiffre ni événement absent des données ; si les données sont insuffisantes ou contradictoires, réponds "neutral" avec une confiance basse. Le COT est hebdomadaire et les taux BIS sont des dates d'effet : ce ne sont pas des données intraday. Tu n'analyses pas les graphiques et ne proposes pas de niveaux. La direction proposée par le moteur technique est une simple information : juge si le fondamental la soutient, sans chercher à la confirmer.
+"bullish" = hausse attendue de l'actif tel qu'écrit (pour EUR/USD : hausse de EUR/USD). confidence = fiabilité de TON biais (0-100), pas une probabilité de gain. reasoning : 120 mots maximum, en français.
+Réponds STRICTEMENT par un objet JSON : {"bias":"bullish|bearish|neutral","confidence":0-100,"drivers":["..."],"risks":["..."],"data_gaps":["..."],"reasoning":"..."}`;
+
+export function toFundVerdict(provider: string, j: Record<string, unknown>): FundVerdict {
+  const b = String(j.bias ?? "neutral").toLowerCase();
+  const list = (v: unknown, n: number) => (Array.isArray(v) ? v.map((x) => String(x).slice(0, 200)).slice(0, n) : []);
+  return {
+    provider, bias: b === "bullish" || b === "bearish" ? b : "neutral",
+    confidence: Math.max(0, Math.min(100, Math.round(toNum(j.confidence) ?? 0))),
+    drivers: list(j.drivers, 4), risks: list(j.risks, 3), gaps: list(j.data_gaps, 3), reasoning: String(j.reasoning ?? "").slice(0, 900),
+  };
+}
+// Alignement du biais fondamental avec la direction du moteur technique (calculé ici, pas laissé au modèle).
+export function fundAlignment(dir: "BUY" | "SELL", bias: FundVerdict["bias"]): "aligned" | "against" | "neutral" {
+  if (bias === "neutral") return "neutral";
+  return (dir === "BUY") === (bias === "bullish") ? "aligned" : "against";
+}
+export function fundSummary(v: FundVerdict, dir: "BUY" | "SELL"): string {
+  const side = dir === "BUY" ? "l'achat" : "la vente";
+  const al = { aligned: `aligné avec ${side}`, against: `contraire à ${side}`, neutral: `neutre face à ${side}` }[fundAlignment(dir, v.bias)];
+  const bias = { bullish: "haussier", bearish: "baissier", neutral: "neutre" }[v.bias];
+  return `Biais fondamental ${bias} (${al}).${v.drivers.length ? ` Facteurs : ${v.drivers.join(" ; ")}.` : ""}${v.reasoning ? ` ${v.reasoning}` : ""}`;
+}
+export async function askFundamentalSol(env: Env, user: string): Promise<{ verdict: FundVerdict | null; error: string | null }> {
+  if (!env.OPENAI_API_KEY) return { verdict: null, error: "clé OpenAI absente" };
+  try {
+    const raw = await retry(() => callOpenAI(env, FUND_SYSTEM_PROMPT, user, 6000, { model: env.OPENAI_SOL_MODEL || "gpt-6-sol", effort: env.OPENAI_SOL_EFFORT || "medium" }));
+    return { verdict: toFundVerdict(raw.provider, parseObj(raw.provider, raw.raw)), error: null };
+  } catch (e) {
+    return { verdict: null, error: String((e as Error).message ?? e).slice(0, 220) };
+  }
 }
 
 // Majorité requise : 1 IA dispo → elle confirme ; 2 → les deux ; 3 → au moins 2 ; 4 → au moins 3 (majorité stricte). Aucun veto toléré.

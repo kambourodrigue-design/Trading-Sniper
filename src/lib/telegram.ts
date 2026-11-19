@@ -40,7 +40,7 @@ export interface SigInfo {
   confidence?: number | null; rr_ratio?: string | null; strategy?: string | null; reasoning?: string | null; source?: string;
   votes?: Array<{ provider: string; confidence: number; reasoning?: string }>;
 }
-const AI_NAME: Record<string, string> = { openai: "GPT-6", deepseek: "DeepSeek", gemini: "Gemini", claude: "Claude" };
+const AI_NAME: Record<string, string> = { openai: "GPT-6", "openai-sol": "GPT-6 Sol (fondamental)", deepseek: "DeepSeek", gemini: "Gemini", claude: "Claude" };
 
 export function signalMessage(s: SigInfo): string {
   const origin = s.source === "ai" ? "analyse IA indépendante" : s.source === "manual" ? "signal manuel" : "règles + validation IA";

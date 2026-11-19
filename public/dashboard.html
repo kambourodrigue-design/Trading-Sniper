@@ -154,7 +154,7 @@
     <section class="card">
       <div class="row"><h2 style="margin:0">Mon compte</h2><span class="plan-badge" id="plan-badge">Aucun abonnement actif</span></div>
       <p style="color:var(--ink-soft); font-size:.85rem; margin-top:8px" id="account-email"></p>
-      <p style="color:var(--ink-soft); font-size:.82rem; margin-top:10px">Starter : signaux XAU/USD et BTC/USD. Pro et Elite : tous les actifs, explication détaillée et avis des IA. Le paiement (Stripe / Mobile Money) sera branché ici une fois les webhooks activés ; en attendant, l'administrateur peut activer ton abonnement.</p>
+      <p style="color:var(--ink-soft); font-size:.82rem; margin-top:10px">Starter : signaux XAU/USD et BTC/USD. Pro et Elite : tous les actifs et justification détaillée des analyses macroéconomiques et techniques. Le paiement (Stripe / Mobile Money) sera branché ici une fois les webhooks activés ; en attendant, l'administrateur peut activer ton abonnement.</p>
     </section>
 
     <section class="card hidden" id="chart-card">
@@ -202,7 +202,7 @@
       : '<div class="grid">' +
         [["Entry", s.entry], ["SL", s.stop_loss], ["TP1", s.tp1], ["TP2", s.tp2]].map((x) => '<div class="box"><span>' + x[0] + "</span><b>" + (x[1] == null ? "—" : x[1]) + "</b></div>").join("") + "</div>" +
         (s.tp3 != null ? '<div class="why">TP3 : ' + s.tp3 + "</div>" : "");
-    const NAMES = { openai: "GPT-6", deepseek: "DeepSeek", gemini: "Gemini", claude: "Claude" };
+    const NAMES = { openai: "GPT-6", "openai-sol": "GPT-6 Sol (fondamental)", deepseek: "DeepSeek", gemini: "Gemini", claude: "Claude" };
     const votes = Array.isArray(s.ai_votes) ? '<div class="why"><b>Avis des IA</b></div>' + s.ai_votes.map((v) => '<div class="why">• <b>' + esc(NAMES[v.provider] || v.provider) + "</b> (" + esc(v.confidence) + " %)" + (v.reasoning ? " : " + esc(v.reasoning) : "") + "</div>").join("") : "";
     return '<div class="signal"><div class="top"><span>' + esc(s.symbol) + " · " + esc(when) + (s.source === "ai" ? " · Analyse IA" : "") + "</span><span>Confiance " + esc(s.confidence) + "%</span></div>" +
       '<div class="pair">' + esc(s.direction) + (s.rr_ratio ? " · R/R " + esc(s.rr_ratio) : "") + ' <span style="font-size:.7rem;font-weight:600;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:99px;margin-left:6px">' + esc(OUT[s.outcome] || "En cours") + "</span></div>" +

@@ -1,6 +1,6 @@
-name = "lucide-backend"
+name = "trading-sniper"
 main = "src/index.ts"
-compatibility_date = "2026-09-01"
+compatibility_date = "2026-11-19"
 compatibility_flags = ["nodejs_compat"]
 
 # --- Site (landing, dashboard, admin) servi par le même Worker : dossier public/ ---
@@ -9,7 +9,7 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./public"
 run_worker_first = ["/api/*"]
 
-# --- Ressources créées AUTOMATIQUEMENT au premier déploiement (aucun identifiant à copier) ---
+# --- Ressources de PRODUCTION existantes : identifiants conservés à l’identique ---
 [[d1_databases]]
 binding = "DB"
 database_name = "trading-sniper-db"
@@ -19,9 +19,9 @@ database_id = "18015a10-c86b-4a34-b258-d99c8a149a67"
 binding = "CACHE"
 id = "af432b022599425eab8bb245d8df40bc"
 
-# --- Cron : toutes les 5 minutes (analyse à la clôture de chaque bougie H1 + suivi des TP/SL) ---
+# --- Cron : toutes les 2 minutes ; un actif par passage, rotation des 15 marchés sur ~30 minutes ---
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["*/2 * * * *"]
 
 # Journaux visibles dans le dashboard Cloudflare (utile pour diagnostiquer)
 [observability]
@@ -30,13 +30,20 @@ enabled = true
 # Réglages (modifiables sans toucher au code)
 [vars]
 MAX_PER_RUN = "1"              # actifs analysés par passage : "1" sur Workers Free (limite CPU 10 ms) ; "4" sur Workers Paid
-PROFILE = "active"             # sélectivité des règles : "strict" (très peu de signaux), "balanced" ou "active" (le plus de candidats ; les IA servent ensuite de second filtre)
-AI_INDEPENDENT = "h4"          # analyse indépendante des IA : "off", "prefilter", "h4" (à chaque clôture H4 + si score >= AI_PREFILTER_SCORE) ou "always" (chaque heure)
+PROFILE = "active"             # sélectivité des règles : strict, balanced ou active (profil actuel conservé)
+AI_INDEPENDENT = "off"          # désactivé : GPT ne génère pas de signaux indépendants
 AI_PREFILTER_SCORE = "30"
+AUTONOMOUS_ONLY = "false"
+HYBRID_GPT = "true"
+OPENAI_MODEL = "gpt-6-luna"       # second avis GPT sur le setup : modèle GPT-6 le plus économique
+FUNDAMENTAL_SOL = "true"          # 2e couche d'analyse fondamentale par GPT-6 Sol (appelée seulement quand un signal est publié)
+OPENAI_SOL_MODEL = "gpt-6-sol"    # modèle de la couche fondamentale (la doc OpenAI signale aussi un GPT-6.1 Sol plus récent : vérifie son identifiant avant de l'utiliser)
+OPENAI_SOL_EFFORT = "medium"      # effort de raisonnement de Sol : low, medium, high, xhigh ou max (plus haut = plus cher)
 
 # Secrets à créer dans le dashboard (Worker > Paramètres > Variables et secrets > type « Secret ») :
 #   JWT_SECRET, ADMIN_EMAILS
-#   données de marché : LSE_API_KEY (clé gratuite sur londonstrategicedge.com ; forex, or, crypto)
-#   au moins une IA : OPENAI_API_KEY (GPT-6), DEEPSEEK_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY
-#   optionnel : ALPHAVANTAGE_API_KEY, TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram)
+#   Données marché : biquote (sans clé) ; replis crypto : Kraken et Binance (sans clé).
+#   OPENAI_API_KEY (Secret) pour le second avis GPT (gpt-6-luna) et la couche fondamentale (gpt-6-sol).
+#   HYBRID_GPT=true : GPT enrichit les signaux autonomes, mais ne peut ni les bloquer ni modifier leurs niveaux (Luna = second avis ; Sol = analyse fondamentale).
+#   optionnel : TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram)
 #   plus tard : STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CINETPAY_API_KEY, CINETPAY_SITE_ID

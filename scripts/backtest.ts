@@ -1,10 +1,9 @@
-// Backtest des RÈGLES du moteur (sans IA) sur l'historique LSE Data : à lancer sur TON ordinateur (Node 18+, connexion Internet).
-//   Prérequis : variable d'environnement LSE_API_KEY (ex. : LSE_API_KEY=xxxx npx tsx scripts/backtest.ts).
+// Backtest des règles du moteur sans IA. Les API gratuites ont des historiques limités : le test dépend de la profondeur réellement retournée par le fournisseur.
 //   npm install
-//   npx tsx scripts/backtest.ts                                  # 2 actifs, 3 profils
+//   npx tsx scripts/backtest.ts                                  # 15 actifs, 3 profils
 //   npx tsx scripts/backtest.ts --symbols XAU/USD --profiles balanced,active
 //   npx tsx scripts/backtest.ts --synthetic                      # test hors-ligne sur données simulées (sans valeur statistique)
-//   Options : --cost-atr 0.04 (coût/trade) · --split 0.6 (walk-forward réglage/test) · --no-live (H4 agrégé + sorties H1)
+//   Options : --cost-atr 0.04 (coût/trade) · --split 0.6 (walk-forward réglage/test) · --live (sorties M15, fenêtre courte)
 // Mesure, pour chaque profil : combien de setups le moteur aurait validés, leur répartition de résultats et ce qui bloque le plus.
 // Hypothèses : décision à la clôture de chaque bougie H1 ; entrée au prix de clôture ; TP/SL testés sur bougies H1 (stop compté en premier si doute) ;
 // 1 seul trade ouvert par actif jusqu'à son résultat (ou 120 h) ; pas de spread, pas de news, pas d'IA.
@@ -13,7 +12,7 @@ import { buildAnalysis, evaluate } from "../src/engine/analyze";
 import { isMarketOpen } from "../src/engine/sessions";
 import { evaluateOutcome, Sig } from "../src/engine/outcome";
 import { summarize } from "../src/engine/metrics";
-import { aggregate, parseLseCsv, binanceCandles, derivCandles } from "../src/lib/prices";
+import { aggregate, biquoteCandles, binanceCandles, krakenCandles } from "../src/lib/prices";
 import type { Src } from "../src/engine/config";
 import type { Candle, Dir } from "../src/engine/types";
 
@@ -23,31 +22,19 @@ const synthetic = process.argv.includes("--synthetic");
 const wantSymbols = (arg("symbols") ?? SYMBOLS.map((s) => s.symbol).join(",")).split(",");
 // Coût d'exécution (spread + slippage) par trade, en fraction d'ATR H1 (défaut 0,04 ; --cost-atr 0 pour l'ignorer). Converti en R pour chaque trade.
 const costAtr = Number(arg("cost-atr") ?? 0.04);
-// Alignement sur le live (activés par défaut hors --synthetic ; --no-live pour revenir à l'ancien mode H1/agrégé) :
-//   - H4 natif LSE (comme le moteur) au lieu d'un H4 reconstruit depuis le H1 ;
-//   - sorties TP/SL rejouées en M15 (comme le suivi live) au lieu de H1.
+// Mode de sortie optionnel : H1 par défaut pour couvrir toute la fenêtre historique disponible ; M15 avec --live.
+//   - H4 natif biquote (comme le moteur) au lieu d'un H4 reconstruit depuis le H1 ;
+//   - --live : sorties TP/SL rejouées en M15 (fenêtre courte) au lieu de H1.
 // Walk-forward : --split 0.6 sépare l'historique en 2 périodes (réglage / test hors échantillon) et affiche les métriques de chacune.
-const live = !synthetic && !process.argv.includes("--no-live");
+const live = !synthetic && process.argv.includes("--live");
 const split = Number(arg("split") ?? 0.6);
 const wantProfiles = (arg("profiles") ?? "strict,balanced,active").split(",");
 
-// Historique LSE Data : un seul appel par échelle (la fenêtre reste très inférieure à 100 Mo).
-async function lseHist(src: Src, interval: string, fromMs: number, toMs: number): Promise<Candle[]> {
-  if (src.p === "deriv") return (await derivCandles(src, interval as "15m" | "1h" | "4h" | "1d", fromMs, toMs, process.env.DERIV_APP_ID)).filter((k) => k.t + (interval === "1d" ? 86_400_000 : interval === "4h" ? 14_400_000 : interval === "1h" ? 3_600_000 : 900_000) <= Date.now());
-  if (src.p === "binance") return (await binanceCandles(src, interval as "15m" | "1h" | "4h" | "1d", fromMs, toMs)).filter((k) => k.t + (interval === "1d" ? 86_400_000 : interval === "4h" ? 14_400_000 : interval === "1h" ? 3_600_000 : 900_000) <= Date.now());
-  if (interval === "15m") { // M15 : fenêtres de 60 jours (évite les exports trop gros)
-    const out: Candle[] = [];
-    for (let a = fromMs; a < toMs; a += 60 * D) out.push(...(await lseHist(src, "15m_chunk", a, Math.min(toMs, a + 60 * D))));
-    return out;
-  }
-  if (interval === "15m_chunk") interval = "15m";
-  const key = process.env.LSE_API_KEY;
-  if (!key) throw new Error("LSE_API_KEY absent (variable d'environnement)");
-  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-  const qs = new URLSearchParams({ market: src.market, symbol: src.id, data: "candles", timeframe: interval, from: day(fromMs), to: day(toMs), format: "csv", adjusted: "0" });
-  const res = await fetch(`https://download.londonstrategicedge.com/v3/export?${qs}`, { headers: { "X-API-Key": key } });
-  if (!res.ok) throw new Error(`LSE ${src.market}/${src.id} ${interval} HTTP ${res.status} ${(await res.text()).slice(0, 150)}`);
-  return parseLseCsv(await res.text());
+// Télécharge l’historique disponible. biquote expose une fenêtre glissante limitée ; ce test évalue uniquement les bougies réellement disponibles.
+async function providerHist(src: Src, interval: "15m" | "1h" | "4h" | "1d", fromMs: number, toMs: number): Promise<Candle[]> {
+  if (src.p === "biquote") return biquoteCandles(src, interval, fromMs, toMs);
+  if (src.p === "kraken") return krakenCandles(src, interval, fromMs, toMs);
+  return binanceCandles(src, interval, fromMs, toMs);
 }
 
 function synth(n: number): Candle[] {
@@ -74,27 +61,30 @@ async function run(symbol: string) {
     const now = Date.now();
     let found: [Candle[], Candle[], Candle[] | null, Candle[] | null] | null = null;
     for (const src of cfg.sources) {
-      if (src.p === "kraken") continue; // Kraken ne fournit que les 720 dernières bougies : inutilisable pour un historique de 2 ans
       try {
-        found = [await lseHist(src, "1h", now - 730 * D, now), await lseHist(src, "1d", now - 1800 * D, now),
-          live ? await lseHist(src, "4h", now - 760 * D, now) : null, live ? await lseHist(src, "15m", now - 730 * D, now) : null];
+        const h1 = await providerHist(src, "1h", now - 730 * D, now);
+        const d1 = await providerHist(src, "1d", now - 1800 * D, now);
+        const h4 = live ? await providerHist(src, "4h", now - 760 * D, now) : null;
+        const m15 = live ? await providerHist(src, "15m", now - 730 * D, now) : null;
+        if (h1.length < 105 || d1.length < 205 || (live && (h4?.length ?? 0) < 105)) throw new Error(`historique trop court : H1 ${h1.length}/105, H4 ${h4?.length ?? 0}/105, D1 ${d1.length}/205`);
+        found = [h1, d1, h4, m15];
         break;
-      } catch (e) { console.log(`\n  ${(e as Error).message}`); }
+      } catch (e) { console.log(`\n  ${src.p}: ${(e as Error).message}`); }
     }
-    if (!found) { console.log(`${symbol} : aucune source LSE ne répond`); return; }
+    if (!found) { console.log(`${symbol} : aucune source ne fournit assez d’historique. Essaie --synthetic pour vérifier le moteur sans données réelles.`); return; }
     [h1All, d1All, h4Native, m15All] = found;
     console.log(`${h1All.length} bougies H1, ${d1All.length} D1${h4Native ? `, ${h4Native.length} H4 natives` : ""}${m15All ? `, ${m15All.length} M15` : ""}`);
   }
   const rows: Record<string, Row> = {}, busy: Record<string, number> = {};
   for (const p of wantProfiles) { rows[p] = { n: 0, res: {}, seq: [], blockers: {}, evals: 0 }; busy[p] = 0; }
   let firstT = 0, lastT = 0, bars = 0;
-  for (let i = 400; i < h1All.length - 1; i++) {
+  for (let i = 104; i < h1All.length - 1; i++) {
     const tClose = h1All[i].t + H;
     if (!isMarketOpen(cfg, tClose)) continue;
-    const h1 = h1All.slice(i - 319, i + 1);
+    const h1 = h1All.slice(Math.max(0, i - 167), i + 1);
     const h4 = h4Native ? h4Native.filter((k) => k.t + 4 * H <= tClose).slice(-260) : aggregate(h1All.slice(Math.max(0, i - 1300), i + 1), 4 * H, tClose).slice(-260);
     const d1 = d1All.filter((k) => k.t + D <= tClose).slice(-260);
-    if (h4.length < 210 || d1.length < 210) continue;
+    if (h4.length < 105 || d1.length < 205) continue;
     if (!firstT) firstT = tClose; lastT = tClose; bars++;
     const an = buildAnalysis(symbol, h1, h4, d1);
     for (const pn of wantProfiles) {
