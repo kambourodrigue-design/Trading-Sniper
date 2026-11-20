@@ -60,6 +60,22 @@ export function buildAnalysis(symbol: string, h1: Candle[], h4: Candle[], d1: Ca
 
 export const roundP = (x: number, ref: number) => Number(x.toFixed(ref >= 10 ? (ref >= 1000 ? 2 : 3) : 5));
 
+/** Choisit l'invalidation structurelle valide la plus proche du prix, puis ajoute un buffer ATR.
+ * Les zones du mauvais côté du prix sont ignorées ; le sweep n'élargit le stop que s'il est cohérent.
+ */
+export function structuralStop(price: number, atrNow: number, dir: Dir, zones: Zone[], sweep: Sweep | undefined) {
+  const buy = dir === "BUY";
+  const levels = zones
+    .filter((z) => z.dir === dir)
+    .map((z) => buy ? z.bottom : z.top)
+    .filter((level) => Number.isFinite(level) && (buy ? level < price : level > price));
+  const nearest = levels.length ? (buy ? Math.max(...levels) : Math.min(...levels)) : (buy ? price - 1.2 * atrNow : price + 1.2 * atrNow);
+  const validSweep = sweep && (buy ? sweep.wick < price : sweep.wick > price) ? sweep.wick : null;
+  const invalidation = validSweep === null ? nearest : (buy ? Math.min(nearest, validSweep) : Math.max(nearest, validSweep));
+  const sl = buy ? invalidation - 0.25 * atrNow : invalidation + 0.25 * atrNow;
+  return { sl, riskAtr: Math.abs(price - sl) / atrNow, reference: invalidation };
+}
+
 // Évalue un sens (BUY/SELL) : conditions obligatoires (gates) + score de confluence.
 export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   const buy = dir === "BUY", sg = buy ? 1 : -1, A = an.atr, P = an.price;
@@ -111,12 +127,12 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   // 4. Déclencheurs
   const sweep = an.sweeps.find((s) => s.dir === dir);
   if (sweep) { score += 10; tags.add("SMC"); reasons.push(`liquidity sweep ${buy ? "des creux" : "des sommets"} ${roundP(sweep.level, P)} (il y a ${sweep.barsAgo} bougies)`); }
-  const bsl = an.eq.highs.length ? Math.min(...an.eq.highs.map(x => Math.abs(x - P))) : Infinity;
-  const ssl = an.eq.lows.length ? Math.min(...an.eq.lows.map(x => Math.abs(x - P))) : Infinity;
-  if (Number.isFinite(bsl) || Number.isFinite(ssl)) {
+  const bslLevel = an.eq.highs.length ? [...an.eq.highs].sort((x, y) => Math.abs(x - P) - Math.abs(y - P))[0] : null;
+  const sslLevel = an.eq.lows.length ? [...an.eq.lows].sort((x, y) => Math.abs(x - P) - Math.abs(y - P))[0] : null;
+  if (bslLevel !== null || sslLevel !== null) {
     tags.add("BSL/SSL");
-    if (Number.isFinite(bsl)) reasons.push(`BSL (buy-side liquidity) : égalités de sommets vers ${roundP(an.eq.highs[0], P)}`);
-    if (Number.isFinite(ssl)) reasons.push(`SSL (sell-side liquidity) : égalités de creux vers ${roundP(an.eq.lows[0], P)}`);
+    if (bslLevel !== null) reasons.push(`BSL (buy-side liquidity) : égalités de sommets les plus proches vers ${roundP(bslLevel, P)}`);
+    if (sslLevel !== null) reasons.push(`SSL (sell-side liquidity) : égalités de creux les plus proches vers ${roundP(sslLevel, P)}`);
   }
   const wy = an.wyckoff.bias === dir ? an.wyckoff : null;
   if (wy) { score += 8; tags.add("Wyckoff"); reasons.push(`Wyckoff : ${wy.event} (${wy.phase})`); }
@@ -140,12 +156,10 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
 
   // 6. Niveaux : SL structurel, TP en multiples de R
   const allPoi = [...poi, ...htfPoi];
-  const zoneEdge = allPoi.length ? (buy ? Math.min(...allPoi.map((z) => z.bottom)) : Math.max(...allPoi.map((z) => z.top))) : (buy ? P - 1.2 * A : P + 1.2 * A);
-  const edge = sweep ? (buy ? Math.min(zoneEdge, sweep.wick) : Math.max(zoneEdge, sweep.wick)) : zoneEdge;
-  let sl = buy ? edge - 0.25 * A : edge + 0.25 * A;
-  let risk = Math.abs(P - sl);
-  if (risk < CFG.minRiskAtr * A) { risk = CFG.minRiskAtr * A; sl = P - sg * risk; }
-  gate("Risque / SL", risk <= CFG.maxRiskAtr * A, `SL à ${(risk / A).toFixed(2)} ATR (max ${CFG.maxRiskAtr})`);
+  const stop = structuralStop(P, A, dir, allPoi, sweep);
+  const sl = roundP(stop.sl, P);
+  const risk = Math.abs(P - sl);
+  gate("Risque / SL", stop.riskAtr <= CFG.maxRiskAtr, `SL structurel à ${stop.riskAtr.toFixed(2)} ATR (max ${CFG.maxRiskAtr}) ; buffer 0,25 ATR ; aucune extension artificielle à 0,8 ATR`);
   const tps = CFG.tpRR.map((r) => roundP(P + sg * risk * r, P)) as [number, number, number];
 
   // 7. Espace libre vers l'obstacle (pivots H4 + zones opposées)

@@ -11,6 +11,9 @@ export const SCHEMA: string[] = [
   "CREATE INDEX IF NOT EXISTS idx_signals_open ON signals(outcome, symbol)",
   "CREATE TABLE IF NOT EXISTS kv_cache ( k TEXT PRIMARY KEY, v TEXT NOT NULL, expires_at INTEGER NOT NULL )",
   "CREATE TABLE IF NOT EXISTS analysis_state ( symbol TEXT PRIMARY KEY, last_hour INTEGER NOT NULL )",
+  "CREATE TABLE IF NOT EXISTS backtest_candles ( symbol TEXT NOT NULL, timeframe TEXT NOT NULL, month TEXT NOT NULL, bars TEXT NOT NULL, count INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(symbol, timeframe, month) )",
+  "CREATE TABLE IF NOT EXISTS backtest_events ( source_id TEXT PRIMARY KEY, event_series_id TEXT, title TEXT NOT NULL, country TEXT NOT NULL, event_time INTEGER NOT NULL, impact TEXT NOT NULL, forecast TEXT, actual TEXT, previous TEXT, revised_previous TEXT, time_mode TEXT, source TEXT NOT NULL, captured_at INTEGER NOT NULL )",
+  "CREATE INDEX IF NOT EXISTS idx_backtest_events_time ON backtest_events(event_time, country)",
   "CREATE TABLE IF NOT EXISTS analysis_log ( id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, ts INTEGER NOT NULL, status TEXT NOT NULL, dir TEXT, score INTEGER, gates TEXT, ai TEXT, note TEXT )",
   "CREATE INDEX IF NOT EXISTS idx_log_symbol_ts ON analysis_log(symbol, ts DESC)",
   "CREATE UNIQUE INDEX IF NOT EXISTS uniq_open_per_symbol ON signals(symbol) WHERE outcome = 'open' AND user_id IS NULL"

@@ -8,8 +8,19 @@ const BIQUOTE_URL = "https://biquote.io";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const SPACING: Record<string, number> = { biquote: 250, binance: 150, kraken: 1_100 };
 const lastCall: Record<string, number> = {};
+const cooldownUntil: Record<string, number> = {};
+function assertProviderReady(provider: string): void {
+  const until = cooldownUntil[provider] ?? 0;
+  if (until > Date.now()) throw new Error(`${provider} en temporisation après erreur précédente (${Math.ceil((until - Date.now()) / 1000)} s)`);
+}
+function noteProviderFailure(provider: string, error: unknown): void {
+  const msg = String((error as Error)?.message ?? error);
+  const ms = /HTTP 451/.test(msg) ? 6 * 3600_000 : /HTTP 429/.test(msg) ? 60_000 : /HTTP 5\d\d/.test(msg) ? 30_000 : 0;
+  if (ms) cooldownUntil[provider] = Date.now() + ms;
+}
 
 async function throttle(provider: string): Promise<void> {
+  assertProviderReady(provider);
   const wait = (lastCall[provider] ?? 0) + (SPACING[provider] ?? 0) - Date.now();
   if (wait > 0) await sleep(wait);
   lastCall[provider] = Date.now();
@@ -148,7 +159,7 @@ export async function getBundle(env: Env, symbol: SymbolCfg, now: number, maxAge
       const last = bundle.h1[bundle.h1.length - 1]?.t ?? 0;
       if (maxAgeMs !== undefined && (!last || now - last > maxAgeMs)) throw new Error("dernière bougie H1 trop ancienne");
       return bundle;
-    } catch (error) { errors.push(`${src.p}/${src.id}: ${(error as Error).message}`); }
+    } catch (error) { noteProviderFailure(src.p, error); errors.push(`${src.p}/${src.id}: ${(error as Error).message}`); }
   }
   throw new Error(`Aucune source ne fournit assez de données : ${errors.join(" | ")}`);
 }
@@ -164,7 +175,7 @@ export async function getOutcomeCandles(env: Env, symbol: SymbolCfg, fromMs: num
       const bars = closedOf(await rawSeries(src, iv, now, fromMs), duration, now);
       if (!bars.length) throw new Error(`aucune bougie ${iv} clôturée`);
       return { candles: bars, candleMs: duration };
-    } catch (error) { errors.push(`${src.p}: ${(error as Error).message}`); }
+    } catch (error) { noteProviderFailure(src.p, error); errors.push(`${src.p}: ${(error as Error).message}`); }
   }
   throw new Error(`Données de suivi indisponibles : ${errors.join(" | ")}`);
 }
@@ -177,7 +188,7 @@ export async function probeSources(_env: Env, symbol: SymbolCfg, now = Date.now(
       if (!bars.length) throw new Error("aucune bougie H1 clôturée");
       const required = src.p === "biquote" ? 105 : 105;
       out.push({ provider: src.p, id: src.id, ok: true, detail: `${bars.length} bougies H1 ; dernière clôture il y a ${Math.round((now - bars[bars.length - 1].t) / 60_000)} min${bars.length < required ? ` ; historique insuffisant pour MM100 (${required} requis)` : ""}` });
-    } catch (error) { out.push({ provider: src.p, id: src.id, ok: false, detail: (error as Error).message.slice(0, 180) }); }
+    } catch (error) { noteProviderFailure(src.p, error); out.push({ provider: src.p, id: src.id, ok: false, detail: (error as Error).message.slice(0, 180) }); }
   }
   return out;
 }

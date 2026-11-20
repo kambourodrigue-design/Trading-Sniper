@@ -5,7 +5,7 @@ import { getBundle, getOutcomeCandles } from "../lib/prices";
 import { isMarketOpen } from "./sessions";
 import { evaluateOutcome, Sig } from "./outcome";
 import { getCalendar, getMacroContext, newsBlock, upcomingEvents, fundamentalBias, CalEvent } from "../lib/macro";
-import { askAIs, askGPT, askFundamentalSol, fundSummary, fundAlignment, FundVerdict, askIndependent, configuredAIs, consensus, independentConsensus, mergeLevels } from "../lib/ai";
+import { askAIs, askSecondOpinion, askIndependent, configuredAIs, consensus, independentConsensus, mergeLevels } from "../lib/ai";
 import { validateLevels } from "./independent";
 import { getIntermarket } from "../lib/intermarket";
 import { cacheGet, cacheSet, cachePurge } from "../lib/cache";
@@ -20,9 +20,33 @@ const isUnique = (e: unknown) => /UNIQUE constraint/i.test(String((e as Error)?.
 export { isMarketOpen, evaluateOutcome };
 
 export function getProfile(env: Env): Profile {
-  const p = PROFILES[(env.PROFILE ?? "active").toLowerCase()] ?? PROFILES.active;
+  const p = PROFILES[(env.PROFILE ?? "adaptive").toLowerCase()] ?? PROFILES.adaptive;
   const ms = Number(env.MIN_SCORE);
-  return Number.isFinite(ms) && ms > 0 ? { ...p, minScore: ms } : p; // MIN_SCORE (facultatif) remplace le seuil du profil
+  return Number.isFinite(ms) && ms > 0 ? { ...p, minScore: ms } : p;
+}
+
+/** Profil recalculé par direction : l'adaptativité ne peut jamais lever les filtres
+ * de news, marché ouvert, signal déjà ouvert ou risque maximal. */
+export function adaptiveProfile(an: Analysis, dir: Dir, base: Profile = PROFILES.adaptive): Profile {
+  if (base.name !== "adaptive") return base;
+  const wanted = dir === "BUY" ? "up" : "down";
+  const opposite = dir === "BUY" ? "down" : "up";
+  const h4 = an.h4.trend, d1 = an.d1.trend;
+  const bothAligned = h4 === wanted && d1 === wanted;
+  const h4Aligned = h4 === wanted && d1 !== opposite;
+  const bothMixed = h4 === "mixed" && d1 === "mixed";
+  // Ratio ATR H1 / (ATR H4 ramené à une heure) : mesure simple du régime de volatilité.
+  const volRatio = an.h4.atr > 0 ? an.atr / (an.h4.atr / 2) : 1;
+  const highVol = volRatio > 1.45, lowVol = volRatio < 0.70;
+  let next: Profile;
+  if (bothAligned) next = { ...base, minScore: Math.max(base.minScore, 46), poiTolAtr: 0.60, poiRecentBars: 3, htfD1Only: true, minRoomR: 1.4 };
+  else if (h4Aligned) next = { ...base, minScore: Math.max(base.minScore, 51), poiTolAtr: 0.50, poiRecentBars: 2, htfD1Only: true, minRoomR: 1.6 };
+  else if (bothMixed) next = { ...base, minScore: Math.max(base.minScore, 57), poiTolAtr: 0.35, poiRecentBars: 1, htfD1Only: false, minRoomR: 1.8 };
+  else next = { ...base, minScore: Math.max(base.minScore, 64), poiTolAtr: 0.25, poiRecentBars: 0, htfD1Only: false, minRoomR: 2.0 };
+  // Volatilité extrême : plus de marge et de confluence exigées. Marché très calme : légère prudence.
+  if (highVol) return { ...next, minScore: Math.min(90, next.minScore + 4), minRoomR: next.minRoomR + 0.2 };
+  if (lowVol) return { ...next, minScore: Math.min(90, next.minScore + 2), minRoomR: next.minRoomR + 0.1 };
+  return next;
 }
 
 // Un trade reste « ouvert » (et bloque l'actif) tant qu'il n'a pas atteint son résultat : SL, TP3, stop suiveur ou expiration.
@@ -70,17 +94,6 @@ BOUGIES H1 RÉCENTES :\n${candles}
 NEWS ÉCONOMIQUES (devises ${s.currencies.join("/")}) :\n${upcomingEvents(cal, s.currencies, now)}
 CONTEXTE MACRO & GÉOPOLITIQUE :\n${macro}
 ${losses}Confirme ou rejette ce setup ${ev.dir}. Réponds uniquement en JSON.`;
-}
-
-// Prompt de la 2e couche fondamentale (GPT-6 Sol) : données macro mesurées uniquement, pas de bougies ni de niveaux.
-function buildFundPrompt(s: SymbolCfg, dir: Dir, price: number, macro: string, det: { bias: number; detail: string }, interText: string, interBias: number, cal: CalEvent[], now: number): string {
-  return `ACTIF : ${s.symbol} (${s.label}) — devises ${s.currencies.join("/")} — prix ${price} — date ${new Date(now).toISOString().slice(0, 16)} UTC
-DIRECTION PROPOSÉE PAR LE MOTEUR TECHNIQUE (information seulement : juge si le fondamental la soutient, sans chercher à la confirmer) : ${dir === "BUY" ? "ACHAT" : "VENTE"}
-PREMIÈRE COUCHE FONDAMENTALE (déterministe) : biais calendrier ${det.bias.toFixed(2)} sur −1…+1 (positif = favorable à une hausse de ${s.symbol}) ; ${det.detail}
-INTERMARCHÉS (biais ${interBias.toFixed(2)}) : ${interText}
-PUBLICATIONS ÉCONOMIQUES (devises ${s.currencies.join("/")}) :\n${upcomingEvents(cal, s.currencies, now)}
-DONNÉES MACRO MESURÉES ET ACTUALITÉS :\n${macro}
-Donne ton biais fondamental de ${s.symbol} pour les prochains jours. Réponds uniquement en JSON.`;
 }
 
 const fmtC = (c: Candle[], n: number, price: number, daily = false) =>
@@ -162,7 +175,8 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
     newsBlock: cal.ok ? newsBlock(cal.events, s.currencies, now, CFG.newsBeforeMin, CFG.newsAfterMin) : "calendrier économique indisponible : publication suspendue",
     marketOpen: isMarketOpen(s, now), hasOpen: (open?.n ?? 0) > 0, p: getProfile(env),
   };
-  const evals = (["BUY", "SELL"] as Dir[]).map((d) => evaluate(an, d, ctx)).sort((a, b) => Number(b.passed) - Number(a.passed) || b.score - a.score);
+  const baseProfile = getProfile(env);
+  const evals = (["BUY", "SELL"] as Dir[]).map((d) => evaluate(an, d, { ...ctx, p: adaptiveProfile(an, d, baseProfile) })).sort((a, b) => Number(b.passed) - Number(a.passed) || b.score - a.score);
   const best = evals[0];
   let status = "rejected", note = best.gates.filter((g) => !g.ok).map((g) => g.name).join(", ") || "—";
   let aiLog: Record<string, unknown> | null = null;
@@ -170,40 +184,25 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
   // Chemin 1 : setup détecté par les règles, validé par les IA
   if (best.passed) {
     if (env.AUTONOMOUS_ONLY === "true" || env.HYBRID_GPT === "true" || configuredAIs(env).length === 0) {
-      // Mode autonome ou hybride : les règles gardent la main ; GPT ne fournit qu'un second avis facultatif.
+      // Mode autonome ou hybride : les règles gardent la main ; l’IA configurée ne fournit qu’un second avis facultatif.
       try {
-        let reasoning = `${best.reasons.join(" · ")}\nFondamental : ${fundamental.detail}\nIntermarchés : ${inter.text}\nPublication par moteur autonome ; l'avis GPT est complémentaire et ne bloque jamais le signal.`;
-        let hybridVerdict: Awaited<ReturnType<typeof askGPT>>["verdict"] = null;
+        let reasoning = `${best.reasons.join(" · ")}\nFondamental : ${fundamental.detail}\nIntermarchés : ${inter.text}\nPublication par moteur autonome ; le second avis IA est complémentaire et ne bloque jamais le signal.`;
+        let hybridVerdict: Awaited<ReturnType<typeof askSecondOpinion>>["verdict"] = null;
         let hybridError: string | null = null;
-        let solVerdict: FundVerdict | null = null;
-        let solError: string | null = null;
-        const useSol = env.FUNDAMENTAL_SOL === "true";
-        if (env.HYBRID_GPT === "true" && env.OPENAI_API_KEY) {
-          const baseMacro = await getMacroContext(env);
-          const macro = `${baseMacro}\n\n${inter.text}\n\n${fundamental.detail}`;
-          const losses = await recentLosses(env, s.symbol);
-          // Second avis (gpt-6-luna) sur le setup et 2e couche fondamentale (gpt-6-sol) en parallèle ; ni l'un ni l'autre ne peut bloquer le signal.
-          const [gpt, sol] = await Promise.all([
-            askGPT(env, buildPrompt(s, an, best, macro, cal.events, now, losses)),
-            useSol ? askFundamentalSol(env, buildFundPrompt(s, best.dir, an.price, baseMacro, fundamental, inter.text, inter.bias, cal.events, now)) : Promise.resolve(null),
-          ]);
+        if (env.HYBRID_GPT === "true" && (env.OPENAI_API_KEY || env.DEEPSEEK_API_KEY)) {
+          const macro = `${await getMacroContext(env)}\n\n${inter.text}\n\n${fundamental.detail}`;
+          const gpt = await askSecondOpinion(env, buildPrompt(s, an, best, macro, cal.events, now, await recentLosses(env, s.symbol)));
           hybridVerdict = gpt.verdict; hybridError = gpt.error;
-          if (sol) { solVerdict = sol.verdict; solError = sol.error; }
-          if (hybridVerdict) reasoning += `\nSecond avis GPT (${hybridVerdict.decision}, confiance ${hybridVerdict.confidence}/100) : ${hybridVerdict.reasoning}`;
-          else reasoning += `\nAvis GPT indisponible : ${hybridError ?? "erreur inconnue"}. Le moteur autonome reste prioritaire.`;
-          if (solVerdict) reasoning += `\nAnalyse fondamentale GPT-6 Sol (confiance ${solVerdict.confidence}/100) : ${fundSummary(solVerdict, best.dir)}`;
-          else if (useSol) reasoning += `\nAnalyse fondamentale Sol indisponible : ${solError ?? "erreur inconnue"}. Le moteur autonome reste prioritaire.`;
+          if (hybridVerdict) reasoning += `\nSecond avis IA (${hybridVerdict.provider.split(":")[0]} : ${hybridVerdict.decision}, confiance ${hybridVerdict.confidence}/100) : ${hybridVerdict.reasoning}`;
+          else reasoning += `\nAvis IA indisponible : ${hybridError ?? "erreur inconnue"}. Le moteur autonome reste prioritaire.`;
         }
-        const votes: Array<Record<string, unknown>> = [];
-        if (hybridVerdict) votes.push({ provider: "openai", decision: hybridVerdict.decision, confidence: hybridVerdict.confidence, macro: hybridVerdict.macro, reasoning: hybridVerdict.reasoning, risks: hybridVerdict.risks });
-        if (solVerdict) votes.push({ provider: "openai-sol", layer: "fondamental", bias: solVerdict.bias, alignment: fundAlignment(best.dir, solVerdict.bias), confidence: solVerdict.confidence, drivers: solVerdict.drivers, risks: solVerdict.risks, data_gaps: solVerdict.gaps, reasoning: fundSummary(solVerdict, best.dir) });
         await env.DB.prepare(
           `INSERT INTO signals (id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy, rr_ratio, source, user_id, status, timeframe, score, reasoning, ai_votes, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'auto', NULL, 'published', 'H1', ?, ?, ?, ?)`
         ).bind(newId(), s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], best.score, best.tags.join(" + "), best.rr,
-          best.score, reasoning, JSON.stringify(votes), Math.floor(now / 1000)).run();
-        status = "published"; note = (hybridVerdict ? `moteur autonome + second avis GPT (${hybridVerdict.decision})` : hybridError ? `moteur autonome ; GPT indisponible (${hybridError})` : "setup validé par le moteur autonome gratuit") + (solVerdict ? ` + fondamental Sol (${solVerdict.bias}, ${fundAlignment(best.dir, solVerdict.bias)})` : useSol && solError ? ` ; Sol indisponible (${solError})` : "");
-        await notify(env, signalMessage({ votes: [...(hybridVerdict ? [{ provider: "openai", confidence: hybridVerdict.confidence, reasoning: `${hybridVerdict.decision} — ${hybridVerdict.reasoning}` }] : []), ...(solVerdict ? [{ provider: "openai-sol", confidence: solVerdict.confidence, reasoning: fundSummary(solVerdict, best.dir) }] : [])], symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: best.score, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning, source: "auto" }));
+          best.score, reasoning, JSON.stringify(hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], decision: hybridVerdict.decision, confidence: hybridVerdict.confidence, macro: hybridVerdict.macro, reasoning: hybridVerdict.reasoning, risks: hybridVerdict.risks }] : []), Math.floor(now / 1000)).run();
+        status = "published"; note = hybridVerdict ? `moteur autonome + second avis IA (${hybridVerdict.provider.split(":")[0]} : ${hybridVerdict.decision})` : hybridError ? `moteur autonome ; second avis IA indisponible (${hybridError})` : "setup validé par le moteur autonome gratuit";
+        await notify(env, signalMessage({ votes: hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], confidence: hybridVerdict.confidence, reasoning: `${hybridVerdict.decision} — ${hybridVerdict.reasoning}` }] : [], symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: best.score, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning, source: "auto" }));
       } catch (e) {
         if (!isUnique(e)) throw e;
         status = "rejected"; note = "un trade est déjà ouvert sur cet actif";

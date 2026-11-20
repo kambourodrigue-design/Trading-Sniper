@@ -1,9 +1,18 @@
 import { bearerToken, getUser, isAdminEmail, newId } from "./lib/auth";
 import { runAutoSignals } from "./scheduled";
 import { tgSend, notify, signalMessage, closedMessage } from "./lib/telegram";
-import { SYMBOLS } from "./engine/config";
+import { SYMBOLS, PROFILES, CFG } from "./engine/config";
+import type { Src } from "./engine/config";
+import { buildAnalysis, evaluate } from "./engine/analyze";
+import { adaptiveProfile } from "./engine/run";
+import { isMarketOpen } from "./engine/sessions";
+import { evaluateOutcome, Sig } from "./engine/outcome";
+import { summarize } from "./engine/metrics";
+import { biquoteCandles, binanceCandles, krakenCandles } from "./lib/prices";
+import type { Candle, Dir } from "./engine/types";
 import { probeSources } from "./lib/prices";
 import { probeIntermarket } from "./lib/intermarket";
+import { fundamentalBias, newsBlock, type CalEvent } from "./lib/macro";
 
 const PLANS = ["starter", "pro", "elite"];
 
@@ -134,6 +143,143 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     await env.DB.prepare("DELETE FROM signals WHERE id = ?").bind(one[1]).run();
     await env.CACHE.delete("signals:latest");
     return json({ ok: true });
+  }
+
+  // --- Calendrier historique gratuit : archive BiQuote glissante (~90 jours), sans promesse de couverture 2 ans ---
+  if (pathname === "/api/admin/backtest/news" && m === "GET") {
+    const rows = await env.DB.prepare("SELECT COUNT(*) AS count, MIN(event_time) AS first_event, MAX(event_time) AS last_event, SUM(CASE WHEN forecast IS NOT NULL AND actual IS NOT NULL THEN 1 ELSE 0 END) AS with_surprise FROM backtest_events").first<{count:number;first_event:number|null;last_event:number|null;with_surprise:number}>();
+    return json({ source: "BiQuote public calendar", coverage: "rolling_about_90_days", ...rows, limitation: "Source gratuite glissante d'environ 90 jours ; elle ne fournit pas un historique complet de deux ans ni les premières valeurs/révisions point-in-time garanties." });
+  }
+  if (pathname === "/api/admin/backtest/news/sync" && m === "POST") {
+    const to = new Date(); const from = new Date(Date.now() - 89 * 86400000);
+    const iso = (d:Date) => d.toISOString().slice(0,10);
+    const url = `https://biquote.io/api/calendar?from=${iso(from)}&to=${iso(to)}&limit=500&countries=US,EU,GB,JP,CA,CH,AU,NZ&importance=medium`;
+    let upstream: Response;
+    try { upstream = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15000) }); }
+    catch { return err("Calendrier gratuit BiQuote inaccessible. Réessaie plus tard.", 503); }
+    if (!upstream.ok) return err(`BiQuote a répondu HTTP ${upstream.status}.`, 503);
+    const payload = await upstream.json() as Array<{id?:string;eventId?:string;time?:string;currency?:string;countryCode?:string;name?:string;importance?:string;actual?:string|number|null;forecast?:string|number|null;previous?:string|number|null;revisedPrevious?:string|number|null;timeMode?:string;source?:string}>;
+    if (!Array.isArray(payload)) return err("Format du calendrier BiQuote non reconnu.", 502);
+    let saved = 0;
+    for (const e of payload.slice(0,500)) {
+      const t = Date.parse(String(e.time ?? "")); const country = String(e.currency ?? e.countryCode ?? "").toUpperCase();
+      if (!e.id || !Number.isFinite(t) || !country || !e.name) continue;
+      await env.DB.prepare(`INSERT INTO backtest_events(source_id,event_series_id,title,country,event_time,impact,forecast,actual,previous,revised_previous,time_mode,source,captured_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET title=excluded.title,country=excluded.country,event_time=excluded.event_time,impact=excluded.impact,forecast=excluded.forecast,actual=excluded.actual,previous=excluded.previous,revised_previous=excluded.revised_previous,time_mode=excluded.time_mode,captured_at=excluded.captured_at`)
+        .bind(String(e.id), e.eventId ?? null, String(e.name).slice(0,180), country, t, String(e.importance ?? "unknown"), e.forecast == null ? null : String(e.forecast), e.actual == null ? null : String(e.actual), e.previous == null ? null : String(e.previous), e.revisedPrevious == null ? null : String(e.revisedPrevious), String(e.timeMode ?? "unknown"), String(e.source ?? "biquote"), now).run();
+      saved++;
+    }
+    return json({ ok:true, source:"BiQuote public calendar", received:payload.length, saved, from:iso(from), to:iso(to), coverage:"rolling_about_90_days", warning:"Import gratuit limité à la fenêtre glissante du fournisseur ; ne reconstitue pas les deux années précédentes." });
+  }
+  if (pathname === "/api/admin/backtest/news/events" && m === "GET") {
+    const rows = await env.DB.prepare("SELECT source_id AS id,title,country,event_time AS t,impact,forecast,actual,previous,revised_previous AS revisedPrevious,time_mode AS timeMode,source FROM backtest_events ORDER BY event_time").all();
+    return json({ events: rows.results, source:"BiQuote public calendar", coverage:"rolling_about_90_days", warning:"Les annonces absentes de l'archive gratuite ne sont pas reconstituées." });
+  }
+
+  // --- Historique backtest : import CSV découpé et stocké dans D1 (aucun R2 requis) ---
+  if (pathname === "/api/admin/backtest/data" && m === "GET") {
+    const symbol = String(new URL(req.url).searchParams.get("symbol") ?? "XAU/USD").toUpperCase();
+    const rows = await env.DB.prepare("SELECT timeframe, MIN(month) AS first_month, MAX(month) AS last_month, SUM(count) AS bars FROM backtest_candles WHERE symbol = ? GROUP BY timeframe ORDER BY timeframe").bind(symbol).all<{timeframe:string;first_month:string;last_month:string;bars:number}>();
+    return json({ symbol, history: rows.results });
+  }
+  if (pathname === "/api/admin/backtest/data" && m === "POST") {
+    const b = await req.json<{symbol?:string;timeframe?:string;bars?:Array<{t:number;o:number;h:number;l:number;c:number}>}>();
+    const symbol = String(b.symbol ?? "").toUpperCase(), timeframe = String(b.timeframe ?? "").toUpperCase();
+    if (!SYMBOLS.some(x => x.symbol === symbol)) return err("Marché non reconnu.");
+    if (!["1H","4H","1D"].includes(timeframe)) return err("Timeframe accepté : 1H, 4H ou 1D.");
+    if (!Array.isArray(b.bars) || !b.bars.length || b.bars.length > 5000) return err("Envoie entre 1 et 5 000 bougies par lot.");
+    const valid = b.bars.filter(x => Number.isFinite(x.t) && x.t > 0 && [x.o,x.h,x.l,x.c].every(Number.isFinite) && x.h >= Math.max(x.o,x.c,x.l) && x.l <= Math.min(x.o,x.c));
+    if (valid.length !== b.bars.length) return err("Certaines bougies OHLC sont invalides.");
+    const groups = new Map<string, typeof valid>();
+    for (const bar of valid) { const month = new Date(bar.t).toISOString().slice(0,7); const a = groups.get(month) ?? []; a.push(bar); groups.set(month,a); }
+    for (const [month, incoming] of groups) {
+      const old = await env.DB.prepare("SELECT bars FROM backtest_candles WHERE symbol = ? AND timeframe = ? AND month = ?").bind(symbol,timeframe,month).first<{bars:string}>();
+      const map = new Map<number, typeof valid[number]>();
+      if (old?.bars) for (const x of JSON.parse(old.bars) as typeof valid) map.set(x.t,x);
+      for (const x of incoming) map.set(x.t,x);
+      const merged = [...map.values()].sort((a,b)=>a.t-b.t);
+      await env.DB.prepare("INSERT INTO backtest_candles(symbol,timeframe,month,bars,count,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(symbol,timeframe,month) DO UPDATE SET bars=excluded.bars,count=excluded.count,updated_at=excluded.updated_at").bind(symbol,timeframe,month,JSON.stringify(merged),merged.length,now).run();
+    }
+    return json({ok:true,symbol,timeframe,imported:valid.length,months:groups.size});
+  }
+
+  // --- Backtest historique admin : un actif par requête pour limiter le temps CPU Worker ---
+  if (pathname === "/api/admin/backtest" && m === "POST") {
+    const b = await req.json<{ symbol?: string; profile?: string; days?: number; costAtr?: number; mode?: string; events?: Array<{ title?: string; country?: string; t?: number | string; impact?: string; forecast?: string; actual?: string; previous?: string; confidence?: string }> }>().catch(() => ({} as { symbol?: string; profile?: string; days?: number; costAtr?: number; mode?: string; events?: Array<{ title?: string; country?: string; t?: number | string; impact?: string; forecast?: string; actual?: string; previous?: string; confidence?: string }> }));
+    const cfg = SYMBOLS.find((x) => x.symbol === String(b.symbol ?? "XAU/USD").toUpperCase());
+    const profileName = String(b.profile ?? "adaptive");
+    if (!cfg) return err("Actif inconnu.");
+    if (!PROFILES[profileName]) return err("Profil invalide.");
+    const days = Math.max(3, Math.min(730, Math.floor(Number(b.days ?? 7))));
+    const costAtr = Math.max(0, Math.min(0.2, Number(b.costAtr ?? 0.04)));
+    const mode = ["technical", "news_filter", "fundamental"].includes(String(b.mode)) ? String(b.mode) : "technical";
+    const rawEvents = Array.isArray(b.events) ? b.events.slice(0, 2000) : [];
+    const events: CalEvent[] = rawEvents.map((e) => ({
+      title: String(e.title ?? "Publication économique").slice(0, 180),
+      country: String(e.country ?? "").toUpperCase().slice(0, 3),
+      t: typeof e.t === "string" ? Date.parse(e.t) : Number(e.t),
+      impact: String(e.impact ?? "High").toLowerCase() === "high" ? "High" : String(e.impact ?? "").toLowerCase() === "medium" ? "Medium" : "Low",
+      forecast: e.forecast == null ? undefined : String(e.forecast), actual: e.actual == null ? undefined : String(e.actual),
+      previous: e.previous == null ? undefined : String(e.previous), confidence: e.confidence,
+    })).filter((e) => !!e.country && Number.isFinite(e.t) && e.t > 0 && ["High", "Medium", "Low"].includes(e.impact));
+    if (mode !== "technical" && !events.length) return err("Ajoute un historique d'annonces économiques valide pour activer le filtre fondamental.");
+    const H = 3600000, D = 86400000, nowMs = Date.now();
+    let h1: Candle[] = [], h4: Candle[] = [], d1: Candle[] = [], source = "";
+    const from = nowMs - days * D;
+    const fetcher = async (src: Src, iv: "1h" | "4h" | "1d", start: number) => src.p === "biquote" ? biquoteCandles(src, iv, start, nowMs) : src.p === "kraken" ? krakenCandles(src, iv, start, nowMs) : binanceCandles(src, iv, start, nowMs);
+    // Priorité aux données historiques importées par l'administrateur (D1), sans dépendance à R2.
+    const stored = await env.DB.prepare("SELECT timeframe, bars FROM backtest_candles WHERE symbol = ? AND month >= ? ORDER BY month").bind(cfg.symbol, new Date(nowMs - Math.max(days, 730) * D).toISOString().slice(0,7)).all<{timeframe:string;bars:string}>();
+    const unpack = (tf:string) => stored.results.filter(x=>x.timeframe===tf).flatMap(x=>JSON.parse(x.bars) as Candle[]).sort((a,b)=>a.t-b.t);
+    const ih1=unpack("1H"), ih4=unpack("4H"), id1=unpack("1D");
+    if (ih1.length >= 105 && ih4.length >= 105 && id1.length >= 205) { h1=ih1; h4=ih4; d1=id1; source="D1 importé"; }
+    else {
+      for (const src of cfg.sources) {
+        try {
+          const [a, c, d] = await Promise.all([fetcher(src, "1h", nowMs - 180 * H), fetcher(src, "4h", nowMs - 220 * 4 * H), fetcher(src, "1d", nowMs - 500 * D)]);
+          if (a.length < 105 || c.length < 105 || d.length < 205) throw new Error(`Historique insuffisant (H1 ${a.length}, H4 ${c.length}, D1 ${d.length})`);
+          h1 = a; h4 = c; d1 = d; source = src.p; break;
+        } catch { /* essayer la source suivante */ }
+      }
+    }
+    if (!source) return err("Aucune source ne fournit assez de bougies H1/H4/D1 pour ce test. Importe les historiques 1H, 4H et 1D en CSV.", 503);
+    if (days > 7 && source !== "D1 importé") return err("Deux ans d'historique ne sont pas disponibles chez le fournisseur live. Importe les CSV H1, H4 et D1 pour ce marché avant de lancer un test long.", 422);
+    if (source === "D1 importé") {
+      const minSpan = (days - 3) * D;
+      const spans = { H1: h1.length ? h1[h1.length-1].t-h1[0].t : 0, H4: h4.length ? h4[h4.length-1].t-h4[0].t : 0, D1: d1.length ? d1[d1.length-1].t-d1[0].t : 0 };
+      const missing = Object.entries(spans).filter(([,span]) => span < minSpan).map(([tf]) => tf);
+      if (missing.length) return err(`Historique importé incomplet sur ${missing.join(", ")} : chaque timeframe doit couvrir environ ${days} jours. Importe les fichiers manquants.`, 422);
+    }
+    const seq: Array<{ t: number; outcome: string; costR: number }> = [];
+    let busyUntil = 0, decisions = 0, setups = 0, firstEval = 0, lastEval = 0, newsBlocked = 0, macroRejected = 0;
+    const startMs = Math.max(from, h1[104].t + H);
+    for (let i = 104; i < h1.length - 1; i++) {
+      const t = h1[i].t + H;
+      if (t < startMs || !isMarketOpen(cfg, t)) continue;
+      const hh = h4.filter((x) => x.t + 4 * H <= t).slice(-260);
+      const dd = d1.filter((x) => x.t + D <= t).slice(-260);
+      if (hh.length < 105 || dd.length < 205) continue;
+      decisions++; if (!firstEval) firstEval = t; lastEval = t;
+      const an = buildAnalysis(cfg.symbol, h1.slice(Math.max(0, i - 167), i + 1), hh, dd);
+      const open = t < busyUntil;
+      const currencies = cfg.currencies;
+      const blocked = mode !== "technical" ? newsBlock(events, currencies, t, CFG.newsBeforeMin, CFG.newsAfterMin) : null;
+      if (blocked) { newsBlocked++; continue; }
+      const macro = mode === "fundamental" ? fundamentalBias(events, cfg.symbol, t) : { bias: 0, detail: "" };
+      const evals = (["BUY", "SELL"] as Dir[]).map((dir) => evaluate(an, dir, { newsBlock: null, marketOpen: true, hasOpen: open, p: profileName === "adaptive" ? adaptiveProfile(an, dir, PROFILES.adaptive) : PROFILES[profileName] })).sort((x, y) => Number(y.passed) - Number(x.passed) || y.score - x.score);
+      const best = evals[0];
+      if (!best?.passed) continue;
+      if (mode === "fundamental" && Math.abs(macro.bias) >= 0.2 && ((macro.bias > 0 && best.dir !== "BUY") || (macro.bias < 0 && best.dir !== "SELL"))) { macroRejected++; continue; }
+      const sig: Sig = { id: "bt", symbol: cfg.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], tp_reached: 0, created_at: t / 1000 };
+      const horizon = t + CFG.expiryHours * H;
+      const future = h1.filter((x) => x.t >= t && x.t < Math.min(horizon, nowMs - H));
+      const out = evaluateOutcome(sig, future, nowMs / 1, H);
+      busyUntil = out.at ? out.at + H : Math.min(horizon, nowMs);
+      setups++;
+      const risk = Math.abs(best.entry - best.sl) || 1e-9;
+      seq.push({ t, outcome: out.outcome, costR: (costAtr * an.atr) / risk });
+    }
+    const metrics = summarize(seq);
+    return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé. Ce test ne reproduit pas les révisions de données ni l’exécution IA." });
   }
 
   // --- Test des sources de données (biquote / Kraken / Binance) ---

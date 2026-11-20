@@ -124,6 +124,7 @@
       <div class="tab on" data-t="ov">Aperçu</div>
       <div class="tab" data-t="us">Utilisateurs</div>
       <div class="tab" data-t="sg">Signaux</div>
+      <div class="tab" data-t="bt">Backtest</div>
     </div>
 
     <section id="ov"><div class="stats" id="stats"></div><div class="card" style="margin-top:16px"><h2>Dernières analyses du moteur</h2><div id="alist"></div></div></section>
@@ -143,6 +144,36 @@
       <div class="card">
         <input type="text" id="uq" placeholder="Rechercher par email…">
         <div id="ulist" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+    <section id="bt" class="hidden">
+      <div class="card">
+        <h2>Backtest historique du moteur</h2>
+        <p style="color:var(--soft);font-size:.85rem">Rejoue les règles sur des bougies historiques réellement fournies par les sources. Un actif par lancement. La profondeur affichée dépend des limites du fournisseur et du temps de chauffe des indicateurs.</p>
+        <div class="cols">
+          <div><label>Marché</label><select id="bt-symbol"><option>XAU/USD</option><option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option><option>USD/CAD</option><option>USD/CHF</option><option>AUD/USD</option><option>NZD/USD</option><option>EUR/GBP</option><option>EUR/JPY</option><option>EUR/CAD</option><option>GBP/JPY</option><option>GBP/CAD</option><option>BTC/USD</option><option>ETH/USD</option></select></div>
+          <div><label>Profil</label><select id="bt-profile"><option value="adaptive" selected>Adaptatif</option><option value="strict">Strict</option><option value="balanced">Équilibré</option><option value="active">Actif</option></select></div>
+          <div><label>Fenêtre analysée</label><select id="bt-days"><option value="3">3 derniers jours</option><option value="7">7 derniers jours</option><option value="30">30 derniers jours</option><option value="90">90 derniers jours</option><option value="180">180 derniers jours</option><option value="365">1 an</option><option value="730" selected>2 ans</option></select></div>
+          <div><label>Coût estimé (ATR)</label><input id="bt-cost" type="number" min="0" max="0.2" step="0.01" value="0.04"></div>
+          <div><label>Mode d'analyse</label><select id="bt-mode"><option value="technical">A — Technique seul</option><option value="news_filter">B — Technique + filtre annonces</option><option value="fundamental">C — Technique + annonces + surprise macro</option></select></div>
+        </div>
+        <details open style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Importer les prix historiques (CSV) — stockage D1 gratuit</summary>
+          <p style="color:var(--soft);font-size:.82rem">Importe séparément les bougies 1H, 4H et 1D du marché sélectionné. Format CSV requis : timestamp,open,high,low,close. Timestamp en millisecondes UTC ou date ISO UTC. Les fichiers sont envoyés par lots et stockés dans ta base D1 existante ; aucun R2 n'est nécessaire. Commence par H1, puis H4 et D1.</p>
+          <div class="cols"><div><label>Timeframe du fichier</label><select id="bt-import-tf"><option value="1H">1 heure (H1)</option><option value="4H">4 heures (H4)</option><option value="1D">1 jour (D1)</option></select></div><div><label>Fichier CSV OHLC</label><input id="bt-price-file" type="file" accept=".csv,text/csv"></div></div>
+          <button class="btn ghost" id="bt-import" type="button" style="width:100%;margin-top:8px">Importer l'historique dans D1</button><div id="bt-import-status" style="margin-top:8px;color:var(--soft);font-size:.82rem"></div>
+          <div id="bt-data-status" style="margin-top:8px;color:var(--soft);font-size:.82rem"></div>
+        </details>
+        <details style="margin-top:14px" open><summary style="cursor:pointer;font-weight:600">Annonces économiques — sources gratuites uniquement</summary>
+          <p style="color:#b7791f;font-size:.84rem"><b>Limite importante :</b> le calendrier public BiQuote annonce une fenêtre glissante d'environ 90 jours. Il ne fournit pas deux ans d'annonces complètes. Les prévisions/valeurs réelles peuvent manquer et les historiques point-in-time/révisions ne sont pas garantis. Les périodes non couvertes seront signalées ; aucune donnée ne sera inventée.</p>
+          <button class="btn ghost" id="bt-news-sync" type="button" style="width:100%;margin:8px 0">Synchroniser les annonces gratuites disponibles</button><div id="bt-news-status" style="font-size:.82rem;color:var(--soft)">Archive locale non synchronisée.</div>
+          <p style="color:var(--soft);font-size:.82rem">Tu peux aussi importer un JSON externe. Les annonces synchronisées sont stockées dans D1.</p>
+          <input id="bt-events-file" type="file" accept=".json,application/json" style="margin:8px 0">
+          <textarea id="bt-events" rows="7" style="width:100%;font:12px monospace" placeholder='[{"title":"US CPI y/y","country":"USD","t":"2026-10-15T12:30:00Z","impact":"High","forecast":"3.1","actual":"3.0"}]'></textarea>
+          <small style="color:var(--soft)">Champs : title, country (USD/EUR/GBP/JPY/CAD/CHF/AUD/NZD), t (date ISO UTC ou timestamp millisecondes), impact (High/Medium/Low), forecast, actual, previous.</small>
+        </details>
+        <button class="btn" id="bt-run" style="width:100%;margin-top:14px">Lancer le backtest</button>
+        <div id="bt-result" style="margin-top:14px"></div>
       </div>
     </section>
 
@@ -237,9 +268,57 @@
 
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on")); t.classList.add("on");
-    ["ov", "us", "sg"].forEach((id) => $("#" + id).classList.toggle("hidden", id !== t.dataset.t));
+    ["ov", "us", "sg", "bt"].forEach((id) => $("#" + id).classList.toggle("hidden", id !== t.dataset.t));
     if (t.dataset.t === "ov") loadStats(); if (t.dataset.t === "us") loadUsers(); if (t.dataset.t === "sg") loadSignals();
   }));
+
+  function parsePriceCsv(raw) {
+    const lines = raw.replace(/^\uFEFF/, "").split(/\r?\n/).filter(x => x.trim());
+    if (lines.length < 2) throw new Error("CSV vide ou sans lignes de données.");
+    const delim = lines[0].includes(";") ? ";" : ",";
+    const headers = lines[0].split(delim).map(x => x.trim().toLowerCase().replace(/["']/g,""));
+    const find = names => headers.findIndex(h => names.includes(h));
+    const ti=find(["timestamp","time","date","datetime","open_time"]), oi=find(["open","o"]), hi=find(["high","h"]), li=find(["low","l"]), ci=find(["close","c"]);
+    if ([ti,oi,hi,li,ci].some(x=>x<0)) throw new Error("Colonnes requises : timestamp,open,high,low,close.");
+    const bars=[];
+    for (let i=1;i<lines.length;i++) { const a=lines[i].split(delim).map(x=>x.trim().replace(/^"|"$/g,"")); let t=Number(a[ti]); if (!Number.isFinite(t)) t=Date.parse(a[ti]); else if (t<1e12) t*=1000; const o=Number(a[oi]),h=Number(a[hi]),l=Number(a[li]),c=Number(a[ci]); if ([t,o,h,l,c].every(Number.isFinite)&&h>=Math.max(o,c,l)&&l<=Math.min(o,c)) bars.push({t:Math.floor(t),o,h,l,c}); }
+    const map=new Map(); bars.forEach(b=>map.set(b.t,b)); return [...map.values()].sort((a,b)=>a.t-b.t);
+  }
+  async function refreshBtDataStatus() { try { const r=await api("/api/admin/backtest/data?symbol="+encodeURIComponent($("#bt-symbol").value)); $("#bt-data-status").textContent = r.history.length ? "Historique D1 : "+r.history.map(x=>x.timeframe+" — "+x.bars+" bougies ("+x.first_month+" → "+x.last_month+")").join(" | ") : "Aucun historique importé dans D1 pour ce marché."; } catch(e) { $("#bt-data-status").textContent=e.message; } }
+  $("#bt-symbol").addEventListener("change", refreshBtDataStatus);
+  $(".tab[data-t=bt]").addEventListener("click", refreshBtDataStatus);
+  $("#bt-import").onclick = async () => { const f=$("#bt-price-file").files[0], out=$("#bt-import-status"), btn=$("#bt-import"); if(!f) return alert("Choisis un fichier CSV."); btn.disabled=true; out.textContent="Lecture du fichier…"; try { const bars=parsePriceCsv(await f.text()); if(!bars.length) throw new Error("Aucune bougie OHLC valide trouvée."); let sent=0; for(let i=0;i<bars.length;i+=3000) { const batch=bars.slice(i,i+3000); await api("/api/admin/backtest/data",{method:"POST",body:JSON.stringify({symbol:$("#bt-symbol").value,timeframe:$("#bt-import-tf").value,bars:batch})}); sent+=batch.length; out.textContent="Import en cours : "+sent+" / "+bars.length+" bougies…"; } out.textContent="Import terminé : "+sent+" bougies "+$("#bt-import-tf").value+" enregistrées."; await refreshBtDataStatus(); } catch(e) { out.textContent="Erreur : "+e.message; } finally { btn.disabled=false; } };
+
+  async function loadFreeNews() { try { const [meta,data]=await Promise.all([api("/api/admin/backtest/news"),api("/api/admin/backtest/news/events")]); const ev=data.events||[]; $("#bt-events").value=JSON.stringify(ev.map(e=>({title:e.title,country:e.country,t:e.t,impact:String(e.impact).toLowerCase()==="high"?"High":String(e.impact).toLowerCase()==="medium"?"Medium":"Low",forecast:e.forecast,actual:e.actual,previous:e.previous,confidence:"free_calendar"})),null,2); $("#bt-news-status").textContent=`${meta.count||0} événements stockés · ${meta.first_event?new Date(meta.first_event).toLocaleDateString("fr-FR"):"—"} → ${meta.last_event?new Date(meta.last_event).toLocaleDateString("fr-FR"):"—"} · ${meta.with_surprise||0} avec prévision + réel. Couverture gratuite glissante ≈90 jours, pas 2 ans.`; } catch(e) { $("#bt-news-status").textContent="Archive indisponible : "+e.message; } }
+  $("#bt-news-sync").onclick=async()=>{const b=$("#bt-news-sync"),o=$("#bt-news-status");b.disabled=true;o.textContent="Récupération du calendrier gratuit…";try{const r=await api("/api/admin/backtest/news/sync",{method:"POST",body:"{}"});o.textContent=`Synchronisation terminée : ${r.saved} événements sauvegardés (${r.from} → ${r.to}). Limite : environ 90 jours, pas 2 ans.`;await loadFreeNews();}catch(e){o.textContent="Erreur : "+e.message;}finally{b.disabled=false;}};
+  loadFreeNews();
+
+  $("#bt-events-file").addEventListener("change", async (ev) => {
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+    try { const raw = await file.text(); const parsed = JSON.parse(raw); if (!Array.isArray(parsed)) throw new Error("Le fichier doit contenir une liste JSON."); $("#bt-events").value = JSON.stringify(parsed, null, 2); }
+    catch (e) { alert("Fichier d'annonces invalide : " + e.message); }
+  });
+
+  $("#bt-run").onclick = async () => {
+    const button = $("#bt-run"), out = $("#bt-result");
+    button.disabled = true; button.textContent = "Backtest en cours…"; out.innerHTML = '<p class="empty">Récupération des bougies et simulation. Cela peut prendre quelques instants.</p>';
+    try {
+      let events = [];
+      if (["news_filter", "fundamental"].includes($("#bt-mode").value)) {
+        try { events = JSON.parse($("#bt-events").value || "[]"); if (!Array.isArray(events)) throw new Error("Le JSON doit être une liste d'annonces."); }
+        catch (e) { throw new Error("Format JSON des annonces invalide : " + e.message); }
+      }
+      const r = await api("/api/admin/backtest", { method: "POST", body: JSON.stringify({ symbol: $("#bt-symbol").value, profile: $("#bt-profile").value, days: Number($("#bt-days").value), costAtr: Number($("#bt-cost").value), mode: $("#bt-mode").value, events }) });
+      const m = r.metrics;
+      const val = (v, suffix="") => v == null ? "—" : v + suffix;
+      out.innerHTML = '<div class="stats">' + [
+        ["Trades clôturés", m.trades], ["Win rate", val(m.win_rate, "%")], ["Profit factor", val(m.profit_factor)], ["Espérance", val(m.expectancy_r, " R")], ["R net", val(m.total_r, " R")], ["Drawdown max", val(m.max_drawdown_r, " R")]
+      ].map(x => '<div class="stat"><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('') + '</div>' +
+      '<p style="color:var(--soft);font-size:.82rem;margin:12px 0">'+esc(r.symbol)+' · '+esc(r.profile)+' · source '+esc(r.source)+' · fenêtre réellement parcourue : '+esc(r.coverage_start ? new Date(r.coverage_start).toLocaleString('fr-FR') : '—')+' → '+esc(r.coverage_end ? new Date(r.coverage_end).toLocaleString('fr-FR') : '—')+' · '+esc(r.decisions)+' décisions · '+esc(r.setups)+' setups · coût '+esc(r.cost_atr)+' ATR</p>' +
+      '<h3>Historique des trades détectés</h3>' + (r.trades.length ? '<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Résultat</th><th>Coût (R)</th></tr></thead><tbody>'+r.trades.map(t=>'<tr><td>'+esc(new Date(t.date).toLocaleString("fr-FR"))+'</td><td>'+esc(t.result)+'</td><td>'+esc(t.cost_r)+'</td></tr>').join('')+'</tbody></table></div>' : '<p class="empty">Aucun setup validé sur cette fenêtre.</p>') + '<p style="color:var(--soft);font-size:.78rem;margin-top:12px">'+esc(r.note)+'</p>';
+    } catch (e) { out.innerHTML = '<p class="empty">'+esc(e.message)+'</p>'; }
+    finally { button.disabled = false; button.textContent = "Lancer le backtest"; }
+  };
 
   async function loadAnalysis() {
     try {

@@ -7,21 +7,18 @@ declare global {
     JWT_SECRET: string;
     ADMIN_EMAILS: string;
     AUTONOMOUS_ONLY?: string;    // true : mode autonome strict ; false : autorise la couche IA hybride
-    HYBRID_GPT?: string;       // true : GPT donne un second avis sans bloquer la publication autonome
+    HYBRID_GPT?: string;       // true : OpenAI (prioritaire) ou DeepSeek donne un second avis sans bloquer le moteur autonome
     // IA facultatives : le moteur de règles et le filtre macro fonctionnent sans clé IA payante.
     OPENAI_API_KEY?: string;
-    OPENAI_MODEL?: string;
-    OPENAI_EFFORT?: string;
-    FUNDAMENTAL_SOL?: string;  // true : GPT-6 Sol ajoute une 2e couche d'analyse fondamentale aux signaux publiés
-    OPENAI_SOL_MODEL?: string; // défaut : gpt-6-sol
-    OPENAI_SOL_EFFORT?: string; // low, medium (défaut), high, xhigh, max
+    OPENAI_MODEL?: string; // par défaut : gpt-6-luna (second avis économique, si clé OpenAI configurée)
+    OPENAI_EFFORT?: string; // medium par défaut : meilleur équilibre analyse/latence/coût
     DEEPSEEK_API_KEY?: string;
     GEMINI_API_KEY?: string;
     ANTHROPIC_API_KEY?: string;
     DEEPSEEK_MODEL?: string;
     GEMINI_MODEL?: string;
     CLAUDE_MODEL?: string;
-    PROFILE?: string;
+    PROFILE?: string; // strict | balanced | active | adaptive
     MIN_SCORE?: string;
     MAX_PER_RUN?: string;
     AI_INDEPENDENT?: string;

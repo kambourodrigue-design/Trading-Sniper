@@ -44,20 +44,13 @@ Les limites d’historique biquote documentées sont 168 bougies H1, 180 H4 et 5
 
 ## Moteur fondamental autonome
 
-## Mode hybride autonome + GPT
+## Mode hybride autonome + second avis IA
 
-La configuration livrée active `HYBRID_GPT=true`, `AUTONOMOUS_ONLY=false` et `AI_INDEPENDENT=off`. Le moteur de règles conserve la décision de publication et les niveaux (entrée/SL/TP). Si `OPENAI_API_KEY` est configurée, GPT apporte un second avis macro/technique enregistré avec le signal. Cet avis ne peut ni bloquer le signal autonome, ni modifier ses niveaux. Si l’API est absente, en erreur ou indisponible, le moteur autonome continue seul.
+La configuration livrée active `HYBRID_GPT=true`, `AUTONOMOUS_ONLY=false` et `AI_INDEPENDENT=off`. Le moteur de règles conserve la décision de publication et les niveaux (entrée/SL/TP). Si `OPENAI_API_KEY` est configurée, GPT-6 Luna apporte le second avis ; sinon, si `DEEPSEEK_API_KEY` est configurée, DeepSeek est utilisé. L'avis est enregistré avec le signal, mais ne peut ni bloquer le signal autonome ni modifier ses niveaux. Sans clé IA ou si l'API échoue, le moteur autonome continue seul.
 
-Dans Cloudflare Worker > Settings > Variables and Secrets, ajoute `OPENAI_API_KEY` comme **Secret**. `OPENAI_MODEL` peut être défini comme variable simple avec l’identifiant exact d’un modèle disponible dans ton compte API (valeur par défaut : `gpt-6-luna`, le modèle GPT-6 le plus économique ; déjà déclarée dans `wrangler.toml`). L’abonnement ChatGPT ne comprend pas les crédits API.
+Dans Cloudflare Worker > Settings > Variables and Secrets, `OPENAI_API_KEY` et `DEEPSEEK_API_KEY` sont des **Secrets facultatifs**. Si les deux sont présents, OpenAI est prioritaire. `OPENAI_MODEL=gpt-6-luna` et `OPENAI_EFFORT=medium` sont déjà définis dans `wrangler.toml`. Le tarif API est distinct de l'abonnement ChatGPT ; vérifie le solde et les tarifs de ton compte avant activation.
 
-`AI_INDEPENDENT=off` empêche GPT de générer des trades indépendants. Les autres fournisseurs IA ne sont pas nécessaires pour ce mode.
-
-### Deuxième couche d'analyse fondamentale : GPT-6 Sol
-Quand un signal est publié, deux appels OpenAI partent **en parallèle** avec la même clé `OPENAI_API_KEY` :
-- **GPT-6 Luna** (`OPENAI_MODEL`) : second avis sur le setup complet (technique + macro).
-- **GPT-6 Sol** (`OPENAI_SOL_MODEL`, activé par `FUNDAMENTAL_SOL=true`) : analyse **uniquement fondamentale**. Il reçoit les données macro mesurées (taux directeurs BIS, Treasuries, TIPS, COT, pétrole, VIX, indice dollar, scores macro autonomes, surprises du calendrier, actualités GDELT, intermarchés), sans bougies ni niveaux, et rend un biais haussier / baissier / neutre avec ses facteurs, ses risques et les données manquantes. L'alignement avec la direction du moteur est calculé par le code (aligné / contraire / neutre).
-- Le résultat de Sol est enregistré dans `ai_votes` (fournisseur `openai-sol`), ajouté au raisonnement du signal, au dashboard et à Telegram. **Il ne bloque jamais le signal et ne modifie aucun niveau.** S'il échoue, le signal est publié avec la mention « Sol indisponible ».
-- Coût indicatif (tarifs OpenAI : Sol 2 $ / 10 $ par million de tokens en entrée / sortie, Luna 0,10 $ / 0,50 $) : un appel Sol coûte de l'ordre de quelques centimes, et il n'a lieu que pour les signaux effectivement publiés. `OPENAI_SOL_EFFORT` règle le niveau de raisonnement ; `FUNDAMENTAL_SOL=false` désactive la couche.
+`AI_INDEPENDENT=off` empêche une IA de générer des trades indépendants. Le second avis reste consultatif : l'autonomie et les niveaux calculés par les règles sont prioritaires.
 
 Le moteur gratuit utilise :
 
@@ -106,3 +99,10 @@ Ces détections sont des règles quantitatives opérationnelles, pas une reprodu
 ### Macro data enrichment status
 
 The autonomous macro context now includes BIS policy rates, US Treasury yields, CFTC TFF positioning, FRED daily WTI/Brent/VIX/broad-dollar and US-yield series, plus an optional Stooq DX-futures CSV attempt. FRED and BIS data are cached; market series are daily observations, not 15-minute live quotes. `DTWEXBGS` is a broad trade-weighted USD proxy, not the ICE DXY. The score currently reports data coverage and is a prototype pending historical calibration/backtesting; do not use it as a standalone execution trigger.
+
+### Profil adaptatif
+`PROFILE=adaptive` ajuste le seuil de score et l'espace minimal vers l'obstacle selon l'alignement H4/D1 et un proxy de volatilité ATR H1/H4. Les filtres de sécurité restent stricts. Les seuils sont des heuristiques de départ et doivent être validés par backtest hors échantillon avant toute utilisation en réel.
+
+## Backtest dans le panneau administrateur
+
+Un onglet **Backtest** est disponible dans `public/admin.html`. Il appelle `POST /api/admin/backtest` (authentification administrateur), teste un seul actif par lancement, et affiche les métriques en R ainsi que les trades détectés. La profondeur dépend des bougies réellement renvoyées par la source; la fenêtre d'analyse demandée est limitée à 3 ou 7 jours, avec l'historique H1/H4/D1 requis pour initialiser les indicateurs. Le profil adaptatif réutilise `adaptiveProfile()` du moteur. Les coûts sont une hypothèse exprimée en fraction d'ATR, pas un spread mesuré. Le backtest ne simule pas les annonces macroéconomiques ni la couche IA.

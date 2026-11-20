@@ -59,10 +59,28 @@ Aucune migration D1 n’a été ajoutée et aucun déploiement Cloudflare n’a 
 - Aucun changement des bindings D1/KV, du schéma SQL, de `wrangler.toml`, des secrets ou des réglages de déploiement. Aucun déploiement effectué.
 - Ajout d'un test unitaire du rendu du score, de l'indicateur de couverture et des biais relatifs. L'exécution de la suite complète reste bloquée dans l'environnement actuel car `tsx` et les types Cloudflare ne sont pas installés.
 
+## Mode adaptatif (préparation hors production)
+- Le profil par défaut passe à `adaptive` : seuils recalculés séparément pour BUY et SELL selon l'alignement H4/D1.
+- Le régime de volatilité est estimé par le ratio ATR H1 / (ATR H4 / 2). Une volatilité élevée augmente le score minimal et l'espace libre exigé ; une volatilité très faible ajoute une marge de prudence.
+- Les règles de sécurité (calendrier indisponible, news à fort impact, marché fermé, signal déjà ouvert, risque SL maximal) restent obligatoires.
+- Les fournisseurs crypto ont une temporisation locale après HTTP 429 (60 s), HTTP 5xx (30 s) et HTTP 451 (6 h), afin d'éviter de marteler une source temporairement limitée ou géo-bloquée et de laisser essayer les replis.
+- Aucun fournisseur Deriv ou LSE n'est configuré dans `src/engine/config.ts`; le code de cette archive utilise BiQuote et, pour les cryptos uniquement, Kraken puis Binance.
+- Tests unitaires ajoutés pour les seuils adaptatifs. Les valeurs sont heuristiques initiales, pas calibrées ni validées par backtest.
+- `wrangler.toml` sélectionne `PROFILE = "adaptive"`. Aucun déploiement ni migration D1 effectué.
 
-## Modèle Luna et couche fondamentale GPT-6 Sol (19/11/2026)
-- Modèle par défaut du second avis GPT : `gpt-6-luna` (le plus économique de la famille GPT-6) ; `OPENAI_MODEL = "gpt-6-luna"` est déclaré dans `wrangler.toml`. L'ancien défaut `gpt-6` est abandonné.
-- Nouvelle 2e couche d'analyse fondamentale : `askFundamentalSol` (`src/lib/ai.ts`) appelle `gpt-6-sol` (variable `OPENAI_SOL_MODEL`, effort `OPENAI_SOL_EFFORT`, interrupteur `FUNDAMENTAL_SOL`). Elle ne lit que les données macro mesurées (aucune bougie, aucun niveau) et rend un biais haussier/baissier/neutre, ses facteurs, ses risques et les données manquantes.
-- Appelée seulement pour les signaux publiés, en parallèle du second avis Luna. Sans veto et sans effet sur les niveaux ; résultat stocké dans `ai_votes` (`openai-sol`), dans le raisonnement, sur Telegram et dans le dashboard. En cas d'échec, publication normale avec la mention « Sol indisponible ».
-- L'alignement du biais de Sol avec la direction du moteur (aligné / contraire / neutre) est calculé par le code, pas par le modèle.
-- Aucune migration D1 ; aucun identifiant D1/KV modifié ; aucun déploiement effectué.
+
+## Couche GPT-6 Luna — effort de raisonnement moyen
+- `OPENAI_EFFORT` passe de `low` à `medium` dans la configuration de staging.
+- La valeur de repli du code est également `medium` si la variable est absente ou invalide.
+- Le modèle reste `gpt-6-luna`; le deuxième avis IA reste consultatif et ne modifie pas les niveaux du moteur autonome.
+- Aucun changement D1/KV et aucun déploiement.
+
+
+## Correctifs de staging — 20 novembre 2026
+
+- SL : sélection de la zone d’invalidation valide la plus proche du prix ; les zones situées du mauvais côté du prix sont ignorées. La mèche d’un sweep n’est prise en compte que si elle se trouve du côté cohérent. Le buffer reste de 0,25 ATR. Suppression de l’élargissement automatique à 0,8 ATR qui pouvait agrandir inutilement le stop. Le plafond de 3 ATR reste un filtre de rejet, non une promesse de performance.
+- Liquidité : BSL et SSL affichent maintenant le niveau le plus proche du prix, au lieu d’afficher le premier élément d’une liste différente de celle utilisée pour la distance.
+- IA hybride : OpenAI reste prioritaire si `OPENAI_API_KEY` existe ; à défaut, `DEEPSEEK_API_KEY` peut fournir le second avis. Sans l’une de ces clés, le moteur autonome continue sans avis IA. Les niveaux et la décision de publication restent contrôlés par le moteur de règles.
+- Tests ajoutés : sélection du SL BUY/SELL, exclusion des zones invalides et traitement du sweep.
+- Validation locale : 20 tests unitaires réussis ; vérification TypeScript réussie avec déclarations temporaires Cloudflare minimales. Les types Cloudflare officiels n’ont pas pu être installés dans cet environnement. Le backtest synthétique a commencé mais n’a pas été terminé ; ses données simulées ne permettent de toute façon aucune conclusion de rentabilité. Aucun backtest historique réel n’a été exécuté.
+- Aucun déploiement et aucune modification des identifiants D1/KV.

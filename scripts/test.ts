@@ -3,16 +3,17 @@ import { evaluateOutcome, Sig } from "../src/engine/outcome";
 import { summarize, rOf } from "../src/engine/metrics";
 import { fundamentalBias, macroScoreText } from "../src/lib/macro";
 import { SYMBOLS } from "../src/engine/config";
-import { tfStat } from "../src/engine/analyze";
+import { tfStat, structuralStop } from "../src/engine/analyze";
+import { adaptiveProfile } from "../src/engine/run";
+import { PROFILES } from "../src/engine/config";
 import { detectCRT, getKillzone, detectBreakerBlocks } from "../src/engine/ictcrt";
-import { toFundVerdict, fundAlignment, fundSummary } from "../src/lib/ai";
 
 const M = 900_000, t0 = 1_700_000_000_000;
 const k = (i: number, l: number, h: number) => ({ t: t0 + i * M, o: 0, c: 0, l, h });
 const base: Sig = { id: "x", symbol: "S", direction: "BUY", entry: 100, stop_loss: 98, tp1: 101.5, tp2: 102.5, tp3: 104, tp_reached: 0, created_at: t0 / 1000 };
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const assert = {
-  strictEqual: (a: unknown, b: unknown) => { if (a !== b) throw new Error(`attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`); },
+  strictEqual: (a: unknown, b: unknown) => { if (typeof a === "number" && typeof b === "number" ? Math.abs(a - b) > 1e-9 : a !== b) throw new Error(`attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`); },
   deepStrictEqual: (a: unknown, b: unknown) => { if (!same(a, b)) throw new Error(`attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`); },
 };
 let n = 0; const t = (name: string, f: () => void) => { f(); n++; console.log(`ok  ${name}`); };
@@ -71,6 +72,47 @@ t("score macro : couverture affichée, différentiels et biais marchés produits
   assert.strictEqual(score.includes("non encore calibré par backtest"), true);
 });
 
+
+t("profil adaptatif : assouplit uniquement quand H4 et D1 sont alignés", () => {
+  const aligned = { atr: 1, h4: { trend: "down", atr: 2 }, d1: { trend: "down" } } as any;
+  const conflict = { atr: 1, h4: { trend: "up", atr: 2 }, d1: { trend: "down" } } as any;
+  const a = adaptiveProfile(aligned, "SELL", PROFILES.adaptive);
+  const c = adaptiveProfile(conflict, "BUY", PROFILES.adaptive);
+  assert.strictEqual(a.minScore, 46);
+  assert.strictEqual(a.minRoomR, 1.4);
+  assert.strictEqual(c.minScore, 64);
+  assert.strictEqual(c.minRoomR, 2.0);
+  const volatile = adaptiveProfile({ ...aligned, atr: 2 } as any, "SELL", PROFILES.adaptive);
+  assert.strictEqual(volatile.minScore, 50);
+  assert.strictEqual(volatile.minRoomR, 1.6);
+});
+
+
+t("SL BUY : retient la zone de demande valide la plus proche et ignore les zones au-dessus du prix", () => {
+  const zones = [
+    { kind: "OB", dir: "BUY", bottom: 96, top: 98, i: 1, t: 1, touches: 0, tf: "H1" },
+    { kind: "FVG", dir: "BUY", bottom: 99, top: 101, i: 2, t: 2, touches: 0, tf: "H1" },
+    { kind: "SD", dir: "BUY", bottom: 103, top: 104, i: 3, t: 3, touches: 0, tf: "H4" },
+  ] as any;
+  const r = structuralStop(100, 2, "BUY", zones, undefined);
+  assert.strictEqual(r.sl, 98.5);
+  assert.strictEqual(r.riskAtr, 0.75);
+});
+t("SL SELL : retient la zone d'offre valide la plus proche", () => {
+  const zones = [
+    { kind: "OB", dir: "SELL", bottom: 102, top: 104, i: 1, t: 1, touches: 0, tf: "H1" },
+    { kind: "FVG", dir: "SELL", bottom: 99, top: 101, i: 2, t: 2, touches: 0, tf: "H1" },
+  ] as any;
+  const r = structuralStop(100, 2, "SELL", zones, undefined);
+  assert.strictEqual(r.sl, 101.5);
+  assert.strictEqual(r.riskAtr, 0.75);
+});
+t("SL BUY : un sweep cohérent sous le prix protège la mèche", () => {
+  const zones = [{ kind: "OB", dir: "BUY", bottom: 98, top: 99, i: 1, t: 1, touches: 0, tf: "H1" }] as any;
+  const r = structuralStop(100, 1, "BUY", zones, { dir: "BUY", level: 97, wick: 96.5, barsAgo: 0 });
+  assert.strictEqual(r.sl, 96.25);
+});
+
 t("CRT : sweep du low de la bougie de référence puis réintégration", () => {
   const bars = [
     { t: 0, o: 103, h: 105, l: 102, c: 104 },
@@ -100,17 +142,5 @@ t("MM100 sur H1/H4 et MM200 sur D1 sont paramétrables séparément", () => {
   const bars = Array.from({ length: 210 }, (_, i) => ({ t: t0 + i * M, o: 100 + i, h: 102 + i, l: 99 + i, c: 101 + i }));
   assert.strictEqual(tfStat(bars, 100).slowPeriod, 100);
   assert.strictEqual(tfStat(bars, 200).slowPeriod, 200);
-});
-t("Sol fondamental : lecture tolérante du JSON (biais invalide → neutre, confiance bornée, listes tronquées)", () => {
-  const v = toFundVerdict("openai:gpt-6-sol", { bias: "HAUSSIER?", confidence: 250, drivers: ["a", "b", "c", "d", "e"], risks: "x", data_gaps: ["g"], reasoning: "ok" });
-  assert.deepStrictEqual([v.bias, v.confidence, v.drivers.length, v.risks.length, v.gaps.length], ["neutral", 100, 4, 0, 1]);
-  assert.strictEqual(toFundVerdict("p", { bias: "Bullish", confidence: "70" }).bias, "bullish");
-});
-t("Sol fondamental : alignement calculé par le code selon la direction du moteur", () => {
-  assert.deepStrictEqual([fundAlignment("BUY", "bullish"), fundAlignment("BUY", "bearish"), fundAlignment("SELL", "bearish"), fundAlignment("SELL", "bullish"), fundAlignment("BUY", "neutral")], ["aligned", "against", "aligned", "against", "neutral"]);
-});
-t("Sol fondamental : résumé en français avec biais, alignement et facteurs", () => {
-  const v = toFundVerdict("p", { bias: "bearish", confidence: 60, drivers: ["taux réels en hausse"], reasoning: "Dollar soutenu." });
-  assert.strictEqual(fundSummary(v, "BUY"), "Biais fondamental baissier (contraire à l'achat). Facteurs : taux réels en hausse. Dollar soutenu.");
 });
 console.log(`\n${n} tests réussis`);

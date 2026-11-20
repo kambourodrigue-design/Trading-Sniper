@@ -32,12 +32,13 @@ export const PROFILES: Record<string, Profile> = {
   strict:   { name: "strict",   minScore: 55, poiTolAtr: 0.25, poiRecentBars: 0, htfD1Only: false, minRoomR: 2.0 },
   balanced: { name: "balanced", minScore: 45, poiTolAtr: 0.5,  poiRecentBars: 3, htfD1Only: true,  minRoomR: 1.5 },
   active:   { name: "active",   minScore: 38, poiTolAtr: 0.75, poiRecentBars: 5, htfD1Only: true,  minRoomR: 1.2 },
+  // Valeurs de base ; le profil adaptatif est recalculé pour chaque direction dans run.ts.
+  adaptive: { name: "adaptive", minScore: 46, poiTolAtr: 0.45, poiRecentBars: 2, htfD1Only: false, minRoomR: 1.8 },
 };
 
 export const CFG = {
   maxPerRun: 1,
   tpRR: [1.5, 2.5, 4] as [number, number, number],
-  minRiskAtr: 0.8,
   maxRiskAtr: 3,
   minRoomR: 2,
   newsBeforeMin: 45,
