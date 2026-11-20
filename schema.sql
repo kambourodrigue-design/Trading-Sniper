@@ -81,7 +81,3 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_open_per_symbol ON signals(symbol) WHERE 
 
 -- Historique backtest importé par l’administrateur (stockage D1 sans R2)
 CREATE TABLE IF NOT EXISTS backtest_candles ( symbol TEXT NOT NULL, timeframe TEXT NOT NULL, month TEXT NOT NULL, bars TEXT NOT NULL, count INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(symbol, timeframe, month) );
-
--- Annonces historiques gratuites capturées depuis BiQuote (fenêtre glissante du fournisseur).
-CREATE TABLE IF NOT EXISTS backtest_events ( source_id TEXT PRIMARY KEY, event_series_id TEXT, title TEXT NOT NULL, country TEXT NOT NULL, event_time INTEGER NOT NULL, impact TEXT NOT NULL, forecast TEXT, actual TEXT, previous TEXT, revised_previous TEXT, time_mode TEXT, source TEXT NOT NULL, captured_at INTEGER NOT NULL );
-CREATE INDEX IF NOT EXISTS idx_backtest_events_time ON backtest_events(event_time, country);

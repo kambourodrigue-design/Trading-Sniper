@@ -1,6 +1,7 @@
 // Backtest des règles du moteur sans IA. Les API gratuites ont des historiques limités : le test dépend de la profondeur réellement retournée par le fournisseur.
 //   npm install
-//   npx tsx scripts/backtest.ts                                  # 15 actifs, 3 profils
+//   npx tsx scripts/backtest.ts                                  # 15 actifs, 4 profils ; lit ./historical d'abord
+//   npx tsx scripts/backtest.ts --history-dir ./historical --live # sorties M15 si M15/H4 locaux suffisants
 //   npx tsx scripts/backtest.ts --symbols XAU/USD --profiles balanced,active
 //   npx tsx scripts/backtest.ts --synthetic                      # test hors-ligne sur données simulées (sans valeur statistique)
 //   Options : --cost-atr 0.04 (coût/trade) · --split 0.6 (walk-forward réglage/test) · --live (sorties M15, fenêtre courte)
@@ -11,7 +12,7 @@ import { SYMBOLS, PROFILES, CFG } from "../src/engine/config";
 import { buildAnalysis, evaluate } from "../src/engine/analyze";
 import { isMarketOpen } from "../src/engine/sessions";
 import { evaluateOutcome, Sig } from "../src/engine/outcome";
-import { summarize } from "../src/engine/metrics";
+import { summarize, rOf } from "../src/engine/metrics";
 import { aggregate, biquoteCandles, binanceCandles, krakenCandles } from "../src/lib/prices";
 import type { Src } from "../src/engine/config";
 import type { Candle, Dir } from "../src/engine/types";
@@ -28,13 +29,43 @@ const costAtr = Number(arg("cost-atr") ?? 0.04);
 // Walk-forward : --split 0.6 sépare l'historique en 2 périodes (réglage / test hors échantillon) et affiche les métriques de chacune.
 const live = !synthetic && process.argv.includes("--live");
 const split = Number(arg("split") ?? 0.6);
-const wantProfiles = (arg("profiles") ?? "strict,balanced,active").split(",");
+const wantProfiles = (arg("profiles") ?? "strict,balanced,active,adaptive").split(",");
+const outputDir = arg("out") ?? "./backtest-results";
+const historyDir = arg("history-dir") ?? "./historical";
+const reportRows: Array<Record<string, unknown>> = [];
+const tradeRows: Array<Record<string, unknown>> = [];
 
 // Télécharge l’historique disponible. biquote expose une fenêtre glissante limitée ; ce test évalue uniquement les bougies réellement disponibles.
 async function providerHist(src: Src, interval: "15m" | "1h" | "4h" | "1d", fromMs: number, toMs: number): Promise<Candle[]> {
   if (src.p === "biquote") return biquoteCandles(src, interval, fromMs, toMs);
   if (src.p === "kraken") return krakenCandles(src, interval, fromMs, toMs);
   return binanceCandles(src, interval, fromMs, toMs);
+}
+
+async function localCandles(symbol: string, timeframe: "M15" | "H1" | "H4" | "D1"): Promise<Candle[] | null> {
+  const fs = await import("node:fs/promises");
+  const fileSymbol = symbol.replace("/", "").replace("BTCUSD", "BTCUSDT").replace("ETHUSD", "ETHUSDT");
+  const path = `${historyDir.replace(/[\\/]$/, "")}/${fileSymbol}/${timeframe}.csv`;
+  let raw: string;
+  try { raw = await fs.readFile(path, "utf8"); } catch { return null; }
+  const lines = raw.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines.shift()!.replace(/^\uFEFF/, "").toLowerCase().split(",").map(x => x.trim());
+  const ix = (name: string) => headers.indexOf(name);
+  const ti = ix("timestamp"), oi = ix("open"), hi = ix("high"), li = ix("low"), ci = ix("close");
+  if ([ti, oi, hi, li, ci].some(x => x < 0)) throw new Error(`CSV local invalide ${path}: en-têtes timestamp,open,high,low,close requis`);
+  const out: Candle[] = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const a = line.split(",");
+    let t = Number(a[ti]);
+    if (!Number.isFinite(t)) t = Date.parse(a[ti]);
+    else if (t < 1e12) t *= 1000;
+    const o = Number(a[oi]), h = Number(a[hi]), l = Number(a[li]), c = Number(a[ci]);
+    if (Number.isFinite(t) && [o,h,l,c].every(Number.isFinite) && h >= Math.max(o,c,l) && l <= Math.min(o,c)) out.push({ t, o, h, l, c });
+  }
+  out.sort((a,b) => a.t-b.t);
+  return out.filter((x,i) => i === 0 || x.t !== out[i-1].t);
 }
 
 function synth(n: number): Candle[] {
@@ -49,31 +80,45 @@ function synth(n: number): Candle[] {
   return out;
 }
 
-interface Row { n: number; res: Record<string, number>; seq: Array<{ t: number; outcome: string; costR: number }>; blockers: Record<string, number>; evals: number }
+interface Row { n: number; res: Record<string, number>; seq: Array<{ t: number; outcome: string; costR: number; direction?: string; entry?: number; stop_loss?: number; tp1?: number; tp2?: number; tp3?: number; exit?: number }>; blockers: Record<string, number>; evals: number }
 
 async function run(symbol: string) {
   const cfg = SYMBOLS.find((s) => s.symbol === symbol);
   if (!cfg) { console.log(`Actif inconnu : ${symbol}`); return; }
   let h1All: Candle[], d1All: Candle[], h4Native: Candle[] | null = null, m15All: Candle[] | null = null;
+  let historySource: "local" | "provider" | "synthetic" = synthetic ? "synthetic" : "provider";
   if (synthetic) { h1All = synth(24 * 700); d1All = aggregate(h1All, D, Infinity); }
   else {
-    process.stdout.write(`${symbol} : téléchargement de l'historique… `);
+    process.stdout.write(`${symbol} : lecture historique local… `);
     const now = Date.now();
     let found: [Candle[], Candle[], Candle[] | null, Candle[] | null] | null = null;
-    for (const src of cfg.sources) {
+    try {
+      const [lh1, ld1, lh4, lm15] = await Promise.all([
+        localCandles(symbol, "H1"), localCandles(symbol, "D1"), localCandles(symbol, "H4"), live ? localCandles(symbol, "M15") : Promise.resolve(null)
+      ]);
+      if (lh1 && ld1 && lh1.length >= 105 && ld1.length >= 205 && (!live || ((lh4?.length ?? 0) >= 105 && (lm15?.length ?? 0) >= 500))) {
+        found = [lh1, ld1, lh4, lm15];
+        historySource = "local";
+        console.log(`historique local ${historyDir}`);
+      } else if (lh1 || ld1 || lh4 || lm15) {
+        console.log(`historique local incomplet (H1 ${lh1?.length ?? 0}, H4 ${lh4?.length ?? 0}, D1 ${ld1?.length ?? 0}, M15 ${lm15?.length ?? 0})`);
+      }
+    } catch (e) { console.log(`erreur CSV local: ${(e as Error).message}`); }
+    if (!found) process.stdout.write(`${symbol} : téléchargement fournisseur… `);
+    for (const src of (found ? [] : cfg.sources)) {
       try {
         const h1 = await providerHist(src, "1h", now - 730 * D, now);
         const d1 = await providerHist(src, "1d", now - 1800 * D, now);
         const h4 = live ? await providerHist(src, "4h", now - 760 * D, now) : null;
         const m15 = live ? await providerHist(src, "15m", now - 730 * D, now) : null;
-        if (h1.length < 105 || d1.length < 205 || (live && (h4?.length ?? 0) < 105)) throw new Error(`historique trop court : H1 ${h1.length}/105, H4 ${h4?.length ?? 0}/105, D1 ${d1.length}/205`);
+        if (h1.length < 105 || d1.length < 205 || (live && ((h4?.length ?? 0) < 105 || (m15?.length ?? 0) < 500))) throw new Error(`historique trop court : H1 ${h1.length}/105, H4 ${h4?.length ?? 0}/105, D1 ${d1.length}/205, M15 ${m15?.length ?? 0}/500`);
         found = [h1, d1, h4, m15];
         break;
       } catch (e) { console.log(`\n  ${src.p}: ${(e as Error).message}`); }
     }
     if (!found) { console.log(`${symbol} : aucune source ne fournit assez d’historique. Essaie --synthetic pour vérifier le moteur sans données réelles.`); return; }
     [h1All, d1All, h4Native, m15All] = found;
-    console.log(`${h1All.length} bougies H1, ${d1All.length} D1${h4Native ? `, ${h4Native.length} H4 natives` : ""}${m15All ? `, ${m15All.length} M15` : ""}`);
+    console.log(`${h1All.length} bougies H1, ${d1All.length} D1${h4Native ? `, ${h4Native.length} H4` : ""}${m15All ? `, ${m15All.length} M15` : ""}`);
   }
   const rows: Record<string, Row> = {}, busy: Record<string, number> = {};
   for (const p of wantProfiles) { rows[p] = { n: 0, res: {}, seq: [], blockers: {}, evals: 0 }; busy[p] = 0; }
@@ -102,7 +147,7 @@ async function run(symbol: string) {
       busy[pn] = o.at ? o.at + cMs : horizon;
       row.n++; row.res[o.outcome] = (row.res[o.outcome] ?? 0) + 1;
       const risk = Math.abs(best.entry - best.sl) || 1e-9;
-      row.seq.push({ t: tClose, outcome: o.outcome, costR: (costAtr * an.atr) / risk }); // résultats chronologiques (la règle « 1 trade à la fois » les rend séquentiels)
+      row.seq.push({ t: tClose, outcome: o.outcome, costR: (costAtr * an.atr) / risk, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], exit: o.at }); // résultats chronologiques (la règle « 1 trade à la fois » les rend séquentiels)
     }
   }
   const weeks = Math.max(1, (lastT - firstT) / (7 * D)) * (cfg.session === "us" ? 1 : 1);
@@ -110,6 +155,17 @@ async function run(symbol: string) {
   for (const pn of wantProfiles) {
     const r = rows[pn]; if (!r) continue;
     const m = summarize(r.seq), gross = summarize(r.seq.map((t) => ({ outcome: t.outcome })));
+    for (const trade of r.seq) tradeRows.push({ symbol, profile: pn, timestamp: trade.t, direction: trade.direction, entry: trade.entry, stop_loss: trade.stop_loss, tp1: trade.tp1, tp2: trade.tp2, tp3: trade.tp3, exit_timestamp: trade.exit, outcome: trade.outcome, costR: trade.costR });
+    let equity = 0;
+    const equity_curve = r.seq.filter(t => ["sl","tp1","tp2","tp3"].includes(t.outcome)).map(t => { equity = Math.round((equity + rOf(t.outcome, t.costR)) * 100) / 100; return { timestamp: t.t, equity_r: equity, outcome: t.outcome }; });
+    const splitAt = firstT + (lastT - firstT) * split;
+    const walkForward = split > 0 && split < 1 ? {
+      split_ratio: split,
+      calibration: summarize(r.seq.filter(x => x.t < splitAt)),
+      out_of_sample: summarize(r.seq.filter(x => x.t >= splitAt)),
+      split_timestamp: splitAt
+    } : null;
+    reportRows.push({ symbol, profile: pn, decisions: bars, setups: r.n, weeks: Number(weeks.toFixed(2)), ...m, gross_expectancy_r: gross.expectancy_r, cost_atr: costAtr, split: split, walk_forward: walkForward, source_mode: historySource, exit_timeframe: live ? "M15" : "H1", equity_curve });
     const top = Object.entries(r.blockers).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${Math.round((100 * v) / Math.max(1, r.evals))} %`).join(", ");
     const f = (x: number | null, d = 2) => (x === null ? "—" : x.toFixed(d));
     console.log(`[${pn.padEnd(8)}] setups : ${String(r.n).padStart(3)} (${(r.n / weeks).toFixed(2)}/semaine) | clos ${m.trades} : ${m.wins} gagnants (R>0), ${m.breakeven} breakeven, ${m.losses} SL, ${m.unresolved} expirés`);
@@ -123,4 +179,19 @@ async function run(symbol: string) {
   }
 }
 
-(async () => { for (const s of wantSymbols) { try { await run(s.trim()); } catch (e) { console.log(`${s} : ${(e as Error).message}`); } } })();
+(async () => {
+  for (const s of wantSymbols) { try { await run(s.trim()); } catch (e) { console.log(`${s} : ${(e as Error).message}`); } }
+  if (reportRows.length) {
+    const fs = await import("node:fs/promises");
+    await fs.mkdir(outputDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    await fs.writeFile(`${outputDir}/summary-${stamp}.json`, JSON.stringify({ generated_at: new Date().toISOString(), synthetic, symbols_requested: wantSymbols, profiles: wantProfiles, assumptions: { entry: "H1 close", stop_first_on_ambiguous_bar: true, one_trade_per_market: true, expiry_hours: CFG.expiryHours, spread_and_slippage: `costAtr=${costAtr} ATR`, fundamental_events: "not included unless separately supplied", AI: "not included" }, results: reportRows }, null, 2));
+    const cols = Object.keys(reportRows[0]);
+    const csv = [cols.join(","), ...reportRows.map(row => cols.map(k => { const v = row[k]; const x = v == null ? "" : String(v); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; }).join(","))].join("\n");
+    await fs.writeFile(`${outputDir}/summary-${stamp}.csv`, csv);
+    const tradeCols = ["symbol","profile","timestamp","direction","entry","stop_loss","tp1","tp2","tp3","exit_timestamp","outcome","costR"];
+    const tradeCsv = [tradeCols.join(","), ...tradeRows.map(row => tradeCols.map(k => { const v = row[k]; const x = v == null ? "" : String(v); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; }).join(","))].join("\n");
+    await fs.writeFile(`${outputDir}/trades-${stamp}.csv`, tradeCsv);
+    console.log(`\nRapports exportés dans ${outputDir} (résumé JSON/CSV + trades CSV pour Replay).`);
+  } else console.log("\nAucun résultat exportable : données insuffisantes ou aucun actif traité.");
+})();

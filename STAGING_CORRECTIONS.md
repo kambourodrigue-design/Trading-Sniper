@@ -41,3 +41,10 @@ Cette archive contient des correctifs préparés pour essai. Elle n'a pas été 
 - Le résultat expose le nombre d'événements chargés, de décisions bloquées et de rejets directionnels macro.
 - Limite majeure : aucune archive historique d'annonces n'est fournie automatiquement par ShowMyTrades dans le code actuel (son endpoint est un calendrier glissant de 7 jours). Les modes B/C exigent donc un fichier historique externe vérifié. Ne pas présenter ce backtest comme un replay macro complet tant que cette archive n'est pas alimentée.
 - Le backtest Worker demeure borné à 3–7 jours et utilise les bougies disponibles. Ce n'est pas encore une validation longue durée.
+
+## Revue complémentaire — historique local et walk-forward (20 novembre 2026)
+- Le backtest local lit désormais en priorité les fichiers `./historical/<SYMBOL>/H1.csv`, `H4.csv`, `D1.csv` et, avec `--live`, `M15.csv` produits par le téléchargeur. Dossier personnalisable avec `--history-dir`.
+- En mode `--live`, M15 doit contenir au moins 500 bougies et H4 au moins 105 ; un jeu insuffisant n'est pas utilisé silencieusement comme si les sorties M15 avaient été testées.
+- Le rapport JSON exporte les métriques séparées de calibration et de test hors échantillon dans `walk_forward`; la page de rapport les affiche également.
+- Tests exécutés après correction : 4 tests Python du téléchargeur réussis ; transpilation TypeScript sans diagnostic de syntaxe pour `scripts/backtest.ts` ; scripts JavaScript des pages Replay et Rapport validés par `node --check` ; archive ZIP vérifiée.
+- Limite restante : l'installation npm a expiré dans cet environnement. Le `tsc --noEmit` complet ne peut pas être validé car `@cloudflare/workers-types` n'est pas installé. Aucun backtest sur deux ans n'a été exécuté ici.

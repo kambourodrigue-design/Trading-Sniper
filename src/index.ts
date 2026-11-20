@@ -5,6 +5,7 @@ import { CFG, SYMBOLS } from "./engine/config";
 import { getBundle, chartPayload } from "./lib/prices";
 import { ensureSchema } from "./lib/schema";
 import { summarizeCounts } from "./engine/metrics";
+import { sendDailySummary } from "./lib/telegram";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "access-control-allow-origin": "*" } });
@@ -118,6 +119,10 @@ export default {
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(ensureSchema(env).then(() => runAutoSignals(env)));
+    ctx.waitUntil(ensureSchema(env).then(async () => {
+      try { await runAutoSignals(env); }
+      catch (e) { console.error("scheduled engine", e); }
+      await sendDailySummary(env, Date.now());
+    }));
   },
 };

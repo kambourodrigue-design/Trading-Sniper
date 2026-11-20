@@ -145,37 +145,6 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     return json({ ok: true });
   }
 
-  // --- Calendrier historique gratuit : archive BiQuote glissante (~90 jours), sans promesse de couverture 2 ans ---
-  if (pathname === "/api/admin/backtest/news" && m === "GET") {
-    const rows = await env.DB.prepare("SELECT COUNT(*) AS count, MIN(event_time) AS first_event, MAX(event_time) AS last_event, SUM(CASE WHEN forecast IS NOT NULL AND actual IS NOT NULL THEN 1 ELSE 0 END) AS with_surprise FROM backtest_events").first<{count:number;first_event:number|null;last_event:number|null;with_surprise:number}>();
-    return json({ source: "BiQuote public calendar", coverage: "rolling_about_90_days", ...rows, limitation: "Source gratuite glissante d'environ 90 jours ; elle ne fournit pas un historique complet de deux ans ni les premières valeurs/révisions point-in-time garanties." });
-  }
-  if (pathname === "/api/admin/backtest/news/sync" && m === "POST") {
-    const to = new Date(); const from = new Date(Date.now() - 89 * 86400000);
-    const iso = (d:Date) => d.toISOString().slice(0,10);
-    const url = `https://biquote.io/api/calendar?from=${iso(from)}&to=${iso(to)}&limit=500&countries=US,EU,GB,JP,CA,CH,AU,NZ&importance=medium`;
-    let upstream: Response;
-    try { upstream = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15000) }); }
-    catch { return err("Calendrier gratuit BiQuote inaccessible. Réessaie plus tard.", 503); }
-    if (!upstream.ok) return err(`BiQuote a répondu HTTP ${upstream.status}.`, 503);
-    const payload = await upstream.json() as Array<{id?:string;eventId?:string;time?:string;currency?:string;countryCode?:string;name?:string;importance?:string;actual?:string|number|null;forecast?:string|number|null;previous?:string|number|null;revisedPrevious?:string|number|null;timeMode?:string;source?:string}>;
-    if (!Array.isArray(payload)) return err("Format du calendrier BiQuote non reconnu.", 502);
-    let saved = 0;
-    for (const e of payload.slice(0,500)) {
-      const t = Date.parse(String(e.time ?? "")); const country = String(e.currency ?? e.countryCode ?? "").toUpperCase();
-      if (!e.id || !Number.isFinite(t) || !country || !e.name) continue;
-      await env.DB.prepare(`INSERT INTO backtest_events(source_id,event_series_id,title,country,event_time,impact,forecast,actual,previous,revised_previous,time_mode,source,captured_at)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET title=excluded.title,country=excluded.country,event_time=excluded.event_time,impact=excluded.impact,forecast=excluded.forecast,actual=excluded.actual,previous=excluded.previous,revised_previous=excluded.revised_previous,time_mode=excluded.time_mode,captured_at=excluded.captured_at`)
-        .bind(String(e.id), e.eventId ?? null, String(e.name).slice(0,180), country, t, String(e.importance ?? "unknown"), e.forecast == null ? null : String(e.forecast), e.actual == null ? null : String(e.actual), e.previous == null ? null : String(e.previous), e.revisedPrevious == null ? null : String(e.revisedPrevious), String(e.timeMode ?? "unknown"), String(e.source ?? "biquote"), now).run();
-      saved++;
-    }
-    return json({ ok:true, source:"BiQuote public calendar", received:payload.length, saved, from:iso(from), to:iso(to), coverage:"rolling_about_90_days", warning:"Import gratuit limité à la fenêtre glissante du fournisseur ; ne reconstitue pas les deux années précédentes." });
-  }
-  if (pathname === "/api/admin/backtest/news/events" && m === "GET") {
-    const rows = await env.DB.prepare("SELECT source_id AS id,title,country,event_time AS t,impact,forecast,actual,previous,revised_previous AS revisedPrevious,time_mode AS timeMode,source FROM backtest_events ORDER BY event_time").all();
-    return json({ events: rows.results, source:"BiQuote public calendar", coverage:"rolling_about_90_days", warning:"Les annonces absentes de l'archive gratuite ne sont pas reconstituées." });
-  }
-
   // --- Historique backtest : import CSV découpé et stocké dans D1 (aucun R2 requis) ---
   if (pathname === "/api/admin/backtest/data" && m === "GET") {
     const symbol = String(new URL(req.url).searchParams.get("symbol") ?? "XAU/USD").toUpperCase();

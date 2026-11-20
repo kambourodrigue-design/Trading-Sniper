@@ -149,7 +149,7 @@
 
     <section id="bt" class="hidden">
       <div class="card">
-        <h2>Backtest historique du moteur</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Backtest historique du moteur</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" href="/backtest-replay.html" target="_blank" rel="noopener">Ouvrir Replay M1/M5/M15 ↗</a><a class="btn ghost sm" href="/backtest-report.html" target="_blank" rel="noopener">Rapport local ↗</a></div></div>
         <p style="color:var(--soft);font-size:.85rem">Rejoue les règles sur des bougies historiques réellement fournies par les sources. Un actif par lancement. La profondeur affichée dépend des limites du fournisseur et du temps de chauffe des indicateurs.</p>
         <div class="cols">
           <div><label>Marché</label><select id="bt-symbol"><option>XAU/USD</option><option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option><option>USD/CAD</option><option>USD/CHF</option><option>AUD/USD</option><option>NZD/USD</option><option>EUR/GBP</option><option>EUR/JPY</option><option>EUR/CAD</option><option>GBP/JPY</option><option>GBP/CAD</option><option>BTC/USD</option><option>ETH/USD</option></select></div>
@@ -164,10 +164,8 @@
           <button class="btn ghost" id="bt-import" type="button" style="width:100%;margin-top:8px">Importer l'historique dans D1</button><div id="bt-import-status" style="margin-top:8px;color:var(--soft);font-size:.82rem"></div>
           <div id="bt-data-status" style="margin-top:8px;color:var(--soft);font-size:.82rem"></div>
         </details>
-        <details style="margin-top:14px" open><summary style="cursor:pointer;font-weight:600">Annonces économiques — sources gratuites uniquement</summary>
-          <p style="color:#b7791f;font-size:.84rem"><b>Limite importante :</b> le calendrier public BiQuote annonce une fenêtre glissante d'environ 90 jours. Il ne fournit pas deux ans d'annonces complètes. Les prévisions/valeurs réelles peuvent manquer et les historiques point-in-time/révisions ne sont pas garantis. Les périodes non couvertes seront signalées ; aucune donnée ne sera inventée.</p>
-          <button class="btn ghost" id="bt-news-sync" type="button" style="width:100%;margin:8px 0">Synchroniser les annonces gratuites disponibles</button><div id="bt-news-status" style="font-size:.82rem;color:var(--soft)">Archive locale non synchronisée.</div>
-          <p style="color:var(--soft);font-size:.82rem">Tu peux aussi importer un JSON externe. Les annonces synchronisées sont stockées dans D1.</p>
+        <details style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Importer les annonces économiques historiques (JSON)</summary>
+          <p style="color:var(--soft);font-size:.82rem">Obligatoire pour les modes B et C. Fournis les événements horodatés en UTC, avec devise, impact, prévision et valeur réelle si disponibles. Le moteur n'invente aucune annonce manquante.</p>
           <input id="bt-events-file" type="file" accept=".json,application/json" style="margin:8px 0">
           <textarea id="bt-events" rows="7" style="width:100%;font:12px monospace" placeholder='[{"title":"US CPI y/y","country":"USD","t":"2026-10-15T12:30:00Z","impact":"High","forecast":"3.1","actual":"3.0"}]'></textarea>
           <small style="color:var(--soft)">Champs : title, country (USD/EUR/GBP/JPY/CAD/CHF/AUD/NZD), t (date ISO UTC ou timestamp millisecondes), impact (High/Medium/Low), forecast, actual, previous.</small>
@@ -288,10 +286,6 @@
   $("#bt-symbol").addEventListener("change", refreshBtDataStatus);
   $(".tab[data-t=bt]").addEventListener("click", refreshBtDataStatus);
   $("#bt-import").onclick = async () => { const f=$("#bt-price-file").files[0], out=$("#bt-import-status"), btn=$("#bt-import"); if(!f) return alert("Choisis un fichier CSV."); btn.disabled=true; out.textContent="Lecture du fichier…"; try { const bars=parsePriceCsv(await f.text()); if(!bars.length) throw new Error("Aucune bougie OHLC valide trouvée."); let sent=0; for(let i=0;i<bars.length;i+=3000) { const batch=bars.slice(i,i+3000); await api("/api/admin/backtest/data",{method:"POST",body:JSON.stringify({symbol:$("#bt-symbol").value,timeframe:$("#bt-import-tf").value,bars:batch})}); sent+=batch.length; out.textContent="Import en cours : "+sent+" / "+bars.length+" bougies…"; } out.textContent="Import terminé : "+sent+" bougies "+$("#bt-import-tf").value+" enregistrées."; await refreshBtDataStatus(); } catch(e) { out.textContent="Erreur : "+e.message; } finally { btn.disabled=false; } };
-
-  async function loadFreeNews() { try { const [meta,data]=await Promise.all([api("/api/admin/backtest/news"),api("/api/admin/backtest/news/events")]); const ev=data.events||[]; $("#bt-events").value=JSON.stringify(ev.map(e=>({title:e.title,country:e.country,t:e.t,impact:String(e.impact).toLowerCase()==="high"?"High":String(e.impact).toLowerCase()==="medium"?"Medium":"Low",forecast:e.forecast,actual:e.actual,previous:e.previous,confidence:"free_calendar"})),null,2); $("#bt-news-status").textContent=`${meta.count||0} événements stockés · ${meta.first_event?new Date(meta.first_event).toLocaleDateString("fr-FR"):"—"} → ${meta.last_event?new Date(meta.last_event).toLocaleDateString("fr-FR"):"—"} · ${meta.with_surprise||0} avec prévision + réel. Couverture gratuite glissante ≈90 jours, pas 2 ans.`; } catch(e) { $("#bt-news-status").textContent="Archive indisponible : "+e.message; } }
-  $("#bt-news-sync").onclick=async()=>{const b=$("#bt-news-sync"),o=$("#bt-news-status");b.disabled=true;o.textContent="Récupération du calendrier gratuit…";try{const r=await api("/api/admin/backtest/news/sync",{method:"POST",body:"{}"});o.textContent=`Synchronisation terminée : ${r.saved} événements sauvegardés (${r.from} → ${r.to}). Limite : environ 90 jours, pas 2 ans.`;await loadFreeNews();}catch(e){o.textContent="Erreur : "+e.message;}finally{b.disabled=false;}};
-  loadFreeNews();
 
   $("#bt-events-file").addEventListener("change", async (ev) => {
     const file = ev.target.files && ev.target.files[0]; if (!file) return;
