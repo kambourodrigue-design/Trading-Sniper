@@ -151,6 +151,29 @@ async function bundleFrom(env: Env, symbol: SymbolCfg, src: Src, now: number): P
   return { h1, h4, d1, source: src.p };
 }
 
+
+export interface FxUsdRates { USDJPY?: number; USDCAD?: number; USDCHF?: number; GBPUSD?: number }
+
+/** Taux de conversion récents nécessaires pour valoriser les pips Forex en USD.
+ * Les taux sont mis en cache 5 minutes ; si une source manque, la devise concernée reste non estimée.
+ */
+export async function getFxUsdRates(env: Env, now = Date.now()): Promise<FxUsdRates> {
+  const key = "market:fx-usd-conversion:v1";
+  const cached = await cacheGet(env, key);
+  if (cached) { try { return JSON.parse(cached) as FxUsdRates; } catch { /* cache invalide : recharger */ } }
+  const ids = ["USDJPY", "USDCAD", "USDCHF", "GBPUSD"] as const;
+  const entries = await Promise.all(ids.map(async (id) => {
+    try {
+      const bars = await biquoteCandles({ p: "biquote", market: "forex", id }, "15m", now - 4 * H, now + 15 * 60_000);
+      const close = bars[bars.length - 1]?.c;
+      return Number.isFinite(close) && close > 0 ? [id, close] as const : null;
+    } catch { return null; }
+  }));
+  const rates: FxUsdRates = Object.fromEntries(entries.filter((x): x is NonNullable<typeof x> => x !== null));
+  if (Object.keys(rates).length) await cacheSet(env, key, JSON.stringify(rates), 300);
+  return rates;
+}
+
 export async function getBundle(env: Env, symbol: SymbolCfg, now: number, maxAgeMs?: number): Promise<Bundle> {
   const errors: string[] = [];
   for (const src of symbol.sources) {
