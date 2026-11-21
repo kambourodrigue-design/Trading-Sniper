@@ -7,6 +7,7 @@ import { tfStat, structuralStop } from "../src/engine/analyze";
 import { adaptiveProfile } from "../src/engine/run";
 import { PROFILES } from "../src/engine/config";
 import { detectCRT, getKillzone, detectBreakerBlocks } from "../src/engine/ictcrt";
+import { pipUnit, estimatedUsd } from "../src/lib/telegram";
 
 const M = 900_000, t0 = 1_700_000_000_000;
 const k = (i: number, l: number, h: number) => ({ t: t0 + i * M, o: 0, c: 0, l, h });
@@ -142,5 +143,33 @@ t("MM100 sur H1/H4 et MM200 sur D1 sont paramétrables séparément", () => {
   const bars = Array.from({ length: 210 }, (_, i) => ({ t: t0 + i * M, o: 100 + i, h: 102 + i, l: 99 + i, c: 101 + i }));
   assert.strictEqual(tfStat(bars, 100).slowPeriod, 100);
   assert.strictEqual(tfStat(bars, 200).slowPeriod, 200);
+});
+t("classification des unités et estimation 0,01 lot : Forex, or et crypto", () => {
+  assert.strictEqual(pipUnit("BTC/USD"), 1);
+  assert.strictEqual(pipUnit("ETH/USD"), 1);
+  assert.strictEqual(pipUnit("XAU/USD"), 0.01);
+  assert.strictEqual(estimatedUsd("BTC/USD", 400), 4);
+  assert.strictEqual(estimatedUsd("BTC/USD", -400), -4);
+  assert.strictEqual(estimatedUsd("BTC/USD", 45), 0.45);
+  assert.strictEqual(estimatedUsd("BTC/USD", -45), -0.45);
+  // Exness ETHUSD : contrat 1 ETH/lot, tick 0,00001 et valeur 0,00001 USD/lot.
+  // À 0,01 lot, 1 USD de variation du cours vaut 0,01 USD.
+  assert.strictEqual(estimatedUsd("ETH/USD", 1), 0.01);
+  assert.strictEqual(estimatedUsd("ETH/USD", 100), 1);
+  assert.strictEqual(estimatedUsd("ETH/USD", -100), -1);
+  assert.strictEqual(estimatedUsd("EUR/USD", 0.0045), 4.5);
+  assert.strictEqual(estimatedUsd("USD/JPY", 0.01, {}, 150), 0.06666666666666667);
+  assert.strictEqual(estimatedUsd("EUR/JPY", 0.01, { USDJPY: 150 }), 0.06666666666666667);
+  assert.strictEqual(estimatedUsd("EUR/CAD", 0.0001, { USDCAD: 1.35 }), 0.07407407407407407);
+  assert.strictEqual(estimatedUsd("USD/CAD", 0.0001, {}, 1.35), 0.07407407407407407);
+  assert.strictEqual(estimatedUsd("USD/CHF", 0.0001, {}, 0.90), 0.11111111111111112);
+  assert.strictEqual(estimatedUsd("EUR/GBP", 0.0001, { GBPUSD: 1.27 }), 0.127);
+  assert.strictEqual(estimatedUsd("GBP/USD", 0.0001), 0.1);
+  assert.strictEqual(estimatedUsd("ETH/USD", 100), null);
+  assert.strictEqual(estimatedUsd("XAU/USD", 4), 4);
+  assert.strictEqual(pipUnit("EUR/USD"), 0.0001);
+  assert.strictEqual(pipUnit("USD/JPY"), 0.01);
+  assert.strictEqual(pipUnit("EUR/JPY"), 0.01);
+  assert.strictEqual(pipUnit("ABC/DEF"), null);
 });
 console.log(`\n${n} tests réussis`);
