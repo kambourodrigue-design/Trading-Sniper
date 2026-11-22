@@ -1,0 +1,173 @@
+/* Lucide — menu horizontal du bas (v2 « verre néon »)
+   Structure : <nav class="lx-nav"> + 5 × <a class="lx-item"> + <i class="lx-pill">
+   La pastille active (.lx-pill) glisse d'un onglet à l'autre grâce à --i (0 à 4). */
+
+.lx-nav {
+  --lx-ink: #6B6585;
+  --lx-ink-hover: #3B2A73;
+  --lx-glass: rgba(255, 255, 255, .72);
+  --lx-edge: rgba(255, 255, 255, .9);
+  --lx-shadow: 0 22px 48px -20px rgba(109, 40, 217, .55), 0 6px 18px -8px rgba(60, 30, 120, .22);
+  --lx-a: #7C3AED;
+  --lx-b: #C026D3;
+  --lx-c: #E879F9;
+  --lx-led: #22D3EE;
+  --lx-pad: 8px;
+  --lx-count: 5;
+  --i: 0;
+
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 24px));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(var(--lx-count), minmax(0, 1fr));
+  align-items: stretch;
+  padding: var(--lx-pad);
+  border-radius: 36px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 46%),
+    var(--lx-glass);
+  -webkit-backdrop-filter: blur(24px) saturate(1.7);
+  backdrop-filter: blur(24px) saturate(1.7);
+  box-shadow: var(--lx-shadow), inset 0 1px 0 var(--lx-edge);
+  isolation: isolate;
+}
+
+/* Liseré dégradé violet → cyan → magenta, tracé uniquement sur le contour */
+.lx-nav::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(115deg, rgba(124, 58, 237, .55), rgba(34, 211, 238, .45) 48%, rgba(217, 70, 239, .55));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+  opacity: .75;
+  z-index: 3;
+}
+
+/* Pastille active : une seule, qui se déplace */
+.lx-pill {
+  position: absolute;
+  z-index: 0;
+  top: var(--lx-pad);
+  bottom: var(--lx-pad);
+  left: var(--lx-pad);
+  width: calc((100% - var(--lx-pad) * 2) / var(--lx-count));
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform .5s cubic-bezier(.3, 1.25, .45, 1);
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(150deg, var(--lx-a) 0%, var(--lx-b) 62%, var(--lx-c) 100%);
+  box-shadow:
+    0 16px 26px -12px rgba(192, 38, 211, .85),
+    0 0 0 1px rgba(255, 255, 255, .18) inset,
+    0 1px 0 rgba(255, 255, 255, .45) inset;
+  pointer-events: none;
+}
+/* Témoin lumineux sous l'onglet actif */
+.lx-pill::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 16px;
+  height: 3px;
+  margin-left: -8px;
+  border-radius: 3px;
+  background: var(--lx-led);
+  box-shadow: 0 0 10px 1px var(--lx-led), 0 0 22px 2px rgba(34, 211, 238, .55);
+}
+
+.lx-item {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 66px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 2px 12px;
+  border-radius: 26px;
+  color: var(--lx-ink);
+  text-decoration: none;
+  font: 600 clamp(10px, 2.9vw, 12px)/1.1 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .25s ease, transform .2s ease;
+}
+.lx-item svg {
+  width: 25px;
+  height: 25px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .35s cubic-bezier(.3, 1.4, .5, 1), filter .25s ease;
+}
+.lx-item:hover { color: var(--lx-ink-hover); }
+.lx-item:active { transform: scale(.94); }
+.lx-item:focus-visible { outline: 2px solid var(--lx-led); outline-offset: -2px; }
+
+.lx-item[aria-current="page"] { color: #fff; font-weight: 700; }
+.lx-item[aria-current="page"] svg {
+  transform: translateY(-1px) scale(1.06);
+  filter: drop-shadow(0 2px 6px rgba(80, 10, 120, .45));
+}
+
+/* Mode nuit : variables (réglage manuel, puis réglage du système si aucun choix) */
+:root[data-theme="dark"] .lx-nav {
+  --lx-ink: #B7ADD6;
+  --lx-ink-hover: #FFFFFF;
+  --lx-glass: rgba(24, 18, 42, .72);
+  --lx-edge: rgba(255, 255, 255, .14);
+  --lx-shadow: 0 24px 50px -18px rgba(0, 0, 0, .75), 0 0 34px -10px rgba(124, 58, 237, .5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lx-nav {
+    --lx-ink: #B7ADD6;
+    --lx-ink-hover: #FFFFFF;
+    --lx-glass: rgba(24, 18, 42, .72);
+    --lx-edge: rgba(255, 255, 255, .14);
+    --lx-shadow: 0 24px 50px -18px rgba(0, 0, 0, .75), 0 0 34px -10px rgba(124, 58, 237, .5);
+  }
+}
+:root[data-theme="dark"] .lx-nav {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, 0) 46%),
+    var(--lx-glass);
+}
+
+/* Très petits écrans */
+@media (max-width: 360px) {
+  .lx-nav { --lx-pad: 6px; border-radius: 30px; }
+  .lx-pill { border-radius: 22px; }
+  .lx-item { min-height: 60px; gap: 5px; border-radius: 22px; }
+  .lx-item svg { width: 23px; height: 23px; }
+}
+
+/* Réserve d'espace sous le contenu + masqué sur ordinateur (menu du haut) */
+@media (max-width: 899.98px) {
+  body { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+@media (min-width: 900px) {
+  .lx-nav { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-pill, .lx-item, .lx-item svg { transition: none; }
+}

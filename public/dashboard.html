@@ -137,22 +137,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 :root[data-theme="dark"] .btn.primary,:root[data-theme="dark"] button.primary{background:var(--grad);color:#fff;border-color:transparent}
 @media(max-width:700px){#lucide-theme-toggle{top:10px;right:10px;padding:8px 10px}#lucide-theme-toggle .theme-label{display:none}}
 @media(prefers-reduced-motion:reduce){#lucide-theme-toggle{transition:none}}
-</style><script>(function(){const KEY='lucide_theme';let saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}const initial=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=initial;document.documentElement.style.colorScheme=initial;})();</script><style id="lucide-bottom-nav-reference">
-/* Navigation mobile inspirée du design fourni : capsule indigo, icône active bleue */
-.lucide-bottom-nav{position:fixed!important;z-index:100!important;left:50%!important;right:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;width:min(460px,calc(100% - 36px))!important;min-height:76px!important;display:flex!important;align-items:center!important;justify-content:space-around!important;gap:5px!important;padding:9px 12px!important;border:1px solid rgba(148,163,184,.16)!important;border-radius:28px!important;background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(23,37,84,.94))!important;-webkit-backdrop-filter:blur(22px) saturate(1.35)!important;backdrop-filter:blur(22px) saturate(1.35)!important;box-shadow:0 18px 42px -16px rgba(2,6,23,.72),0 8px 22px -12px rgba(37,99,235,.55),inset 0 1px 0 rgba(255,255,255,.08)!important}
-.lucide-bottom-nav a{position:relative!important;flex:1 1 0!important;min-width:0!important;min-height:56px!important;width:56px!important;max-width:64px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:0!important;padding:0!important;border-radius:20px!important;color:#AAB6D3!important;text-decoration:none!important;font-size:0!important;font-weight:700!important;line-height:1!important;white-space:nowrap!important;transition:background .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease!important}
-.lucide-bottom-nav a svg{display:block!important;width:25px!important;height:25px!important;flex:0 0 auto!important;stroke:currentColor!important;transition:transform .22s ease!important}
-.lucide-bottom-nav a span{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-.lucide-bottom-nav a.active,.lucide-bottom-nav a[aria-current="page"]{color:#fff!important;background:linear-gradient(145deg,#2563EB 0%,#1D4ED8 55%,#1E40AF 100%)!important;box-shadow:0 8px 22px -7px rgba(37,99,235,.95),inset 0 1px 0 rgba(255,255,255,.26)!important}
-.lucide-bottom-nav a.active svg,.lucide-bottom-nav a[aria-current="page"] svg{transform:scale(1.04)!important}
-.lucide-bottom-nav a:focus-visible{outline:2px solid #67E8F9!important;outline-offset:3px!important}
-.lucide-bottom-nav a:active{transform:scale(.94)!important}
-body{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important;overflow-x:hidden}
-@media(min-width:900px){.lucide-bottom-nav{display:none!important}body{padding-bottom:env(safe-area-inset-bottom,0px)!important}}
-@media(max-width:360px){.lucide-bottom-nav{width:calc(100% - 24px)!important;min-height:68px!important;padding:7px 8px!important;border-radius:24px!important}.lucide-bottom-nav a{min-height:52px!important;border-radius:17px!important}.lucide-bottom-nav a svg{width:23px!important;height:23px!important}}
-@media(prefers-reduced-motion:reduce){.lucide-bottom-nav a,.lucide-bottom-nav a svg{transition:none!important}}
-:root[data-theme="light"] .lucide-bottom-nav{background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(23,37,84,.94))!important}
-</style>
+</style><script>(function(){const KEY='lucide_theme';let saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}const initial=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=initial;document.documentElement.style.colorScheme=initial;})();</script>
 <style id="lucide-dashboard-responsive-fix">
 /* Dashboard : mise en page fluide téléphone, tablette et ordinateur */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -215,25 +200,8 @@ main.wrap{min-width:0}
 @media(min-width:761px) and (max-width:1050px){.wrap{max-width:920px}.card{padding:22px}}
 </style>
 
-<style id="lucide-pill-navigation-refinement">
-/* Lucide — retour au menu pill horizontal d'origine, finition premium */
-.lucide-pill-nav{position:fixed!important;z-index:90!important;left:50%!important;right:auto!important;top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;width:min(560px,calc(100% - 24px))!important;max-width:560px!important;min-height:78px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:4px!important;padding:7px!important;border:1px solid rgba(255,255,255,.78)!important;border-radius:34px!important;background:rgba(255,255,255,.91)!important;-webkit-backdrop-filter:blur(22px) saturate(1.35)!important;backdrop-filter:blur(22px) saturate(1.35)!important;box-shadow:0 16px 42px -16px rgba(124,58,237,.38),0 5px 18px rgba(30,20,50,.09)!important}
-.lucide-pill-nav a{flex:1 1 0!important;min-width:0!important;min-height:64px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:8px 3px!important;border-radius:27px!important;color:#686477!important;text-decoration:none!important;font-size:clamp(9px,2.65vw,13px)!important;font-weight:650!important;line-height:1.1!important;white-space:nowrap!important;transition:background .22s ease,color .22s ease,box-shadow .22s ease,transform .22s ease!important}
-.lucide-pill-nav a svg{display:block!important;width:25px!important;height:25px!important;flex:0 0 auto!important;transition:transform .22s ease!important}
-.lucide-pill-nav a.active{color:#fff!important;background:linear-gradient(140deg,#873BFA 0%,#B832D8 58%,#D946EF 100%)!important;box-shadow:0 9px 22px -9px rgba(168,85,247,.78),inset 0 1px 0 rgba(255,255,255,.24)!important}
-.lucide-pill-nav a.active svg{transform:translateY(-1px)!important}
-.lucide-pill-nav a:focus-visible{outline:2px solid #22D3EE!important;outline-offset:2px!important}
-.lucide-pill-nav a:active{transform:scale(.97)!important}
-body{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}
-:root[data-theme="dark"] .lucide-pill-nav{background:rgba(29,23,48,.94)!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 16px 42px -16px rgba(0,0,0,.58),0 0 24px rgba(124,58,237,.15)!important}
-:root[data-theme="dark"] .lucide-pill-nav a{color:#c7bfdc!important}
-:root[data-theme="dark"] .lucide-pill-nav a.active{color:#fff!important}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .lucide-pill-nav{background:rgba(29,23,48,.94)!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 16px 42px -16px rgba(0,0,0,.58),0 0 24px rgba(124,58,237,.15)!important}:root:not([data-theme="light"]) .lucide-pill-nav a{color:#c7bfdc!important}:root:not([data-theme="light"]) .lucide-pill-nav a.active{color:#fff!important}}
-@media(max-width:360px){.lucide-pill-nav{width:calc(100% - 14px)!important;padding:5px!important;gap:2px!important;min-height:70px!important}.lucide-pill-nav a{min-height:58px!important;gap:4px!important;font-size:9px!important}.lucide-pill-nav a svg{width:22px!important;height:22px!important}}
-@media(min-width:900px){.lucide-pill-nav{display:none!important}body{padding-bottom:0!important}}
-@media(prefers-reduced-motion:reduce){.lucide-pill-nav a,.lucide-pill-nav a svg{transition:none!important}}
-</style>
-<style>.lucide-bottom-nav{background:transparent!important}</style></head>
+
+<link rel="stylesheet" href="/lx-nav.css"><link rel="stylesheet" href="/lx-theme.css"></head>
 <body>
 
 <nav>
@@ -311,12 +279,13 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}
 
 </main>
 
-<div class="lucide-bottom-nav lucide-pill-nav" role="navigation" aria-label="Navigation principale">
-<a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg><span>Accueil</span></a>
-<a href="/scanner.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg><span>Fonctions</span></a>
-<a href="/subscription.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><span>Tarifs</span></a>
-<a href="/dashboard.html" class="active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Dashboard</span></a>
-<a href="/admin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.7 8 9 4.8-1.3 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span></a>
+<div class="lx-nav" role="navigation" aria-label="Navigation principale" style="--i:3">
+<i class="lx-pill" aria-hidden="true"></i>
+<a class="lx-item" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg><span>Accueil</span></a>
+<a class="lx-item" href="/scanner.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg><span>Fonctions</span></a>
+<a class="lx-item" href="/subscription.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><span>Tarifs</span></a>
+<a class="lx-item" href="/dashboard.html" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Dashboard</span></a>
+<a class="lx-item" href="/admin.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 7.7 8 9 4.8-1.3 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg><span>Admin</span></a>
 </div>
 
 <script src="/vendor/lightweight-charts.js"></script>
@@ -479,5 +448,5 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}
   renderAccountState();
 </script>
 
-<script>(function(){const root=document.documentElement;const key='lucide_theme';function paint(mode){root.dataset.theme=mode;root.style.colorScheme=mode;try{localStorage.setItem(key,mode)}catch(e){}const b=document.getElementById('lucide-theme-toggle');if(b){b.setAttribute('aria-label',mode==='dark'?'Activer le mode clair':'Activer le mode nuit');b.setAttribute('aria-pressed',String(mode==='dark'));b.innerHTML=mode==='dark'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span class="theme-label">Mode clair</span>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg><span class="theme-label">Mode nuit</span>'}}document.addEventListener('DOMContentLoaded',function(){let b=document.getElementById('lucide-theme-toggle');if(!b){b=document.createElement('button');b.id='lucide-theme-toggle';b.type='button';b.innerHTML='Mode nuit';b.addEventListener('click',()=>paint(root.dataset.theme==='dark'?'light':'dark'));document.body.appendChild(b)}paint(root.dataset.theme==='dark'?'dark':'light')});})();</script></body>
+<script>(function(){const root=document.documentElement;const key='lucide_theme';function paint(mode){root.dataset.theme=mode;root.style.colorScheme=mode;try{localStorage.setItem(key,mode)}catch(e){}const b=document.getElementById('lucide-theme-toggle');if(b){b.setAttribute('aria-label',mode==='dark'?'Activer le mode clair':'Activer le mode nuit');b.setAttribute('aria-pressed',String(mode==='dark'));b.innerHTML=mode==='dark'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span class="theme-label">Mode clair</span>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg><span class="theme-label">Mode nuit</span>'}}document.addEventListener('DOMContentLoaded',function(){let b=document.getElementById('lucide-theme-toggle');if(!b){b=document.createElement('button');b.id='lucide-theme-toggle';b.type='button';b.innerHTML='Mode nuit';b.addEventListener('click',()=>paint(root.dataset.theme==='dark'?'light':'dark'));document.body.appendChild(b)}paint(root.dataset.theme==='dark'?'dark':'light')});})();</script><script src="/lx-nav.js" defer></script></body>
 </html>
