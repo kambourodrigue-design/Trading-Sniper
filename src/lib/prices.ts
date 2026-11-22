@@ -116,7 +116,7 @@ export function aggregate(h1: Candle[], ms: number, now: number): Candle[] {
   return out.filter((bar) => bar.t + ms <= now);
 }
 
-export interface Bundle { h1: Candle[]; h4: Candle[]; d1: Candle[]; source: string }
+export interface Bundle { m15: Candle[]; h1: Candle[]; h4: Candle[]; d1: Candle[]; source: string }
 const closedOf = (bars: Candle[], duration: number, now: number) => bars.filter((bar) => bar.t + duration <= now);
 const encode = (bars: Candle[]) => JSON.stringify(bars.map((bar) => [bar.t, bar.o, bar.h, bar.l, bar.c]));
 const decode = (raw: string): Candle[] => (JSON.parse(raw) as number[][]).map(([t, o, h, l, c]) => ({ t, o, h, l, c }));
@@ -130,9 +130,21 @@ async function rawSeries(src: Src, iv: Iv, now: number, fromMs?: number): Promis
 }
 
 async function bundleFrom(env: Env, symbol: SymbolCfg, src: Src, now: number): Promise<Bundle> {
+  const m15Key = `market:v3:m15:${symbol.symbol}:${src.p}:${Math.floor(now / (15 * 60_000))}`;
   const hourKey = `market:v2:h1h4:${symbol.symbol}:${src.p}:${Math.floor(now / H)}`;
   const dayKey = `market:v2:d1:${symbol.symbol}:${src.p}:${Math.floor(now / D)}`;
-  let h1: Candle[], h4: Candle[], d1: Candle[];
+  let m15: Candle[], h1: Candle[], h4: Candle[], d1: Candle[];
+  const cachedM15 = await cacheGet(env, m15Key);
+  if (cachedM15) m15 = decode(cachedM15);
+  else {
+    try {
+      m15 = closedOf(await rawSeries(src, "15m", now), 15 * 60_000, now).slice(-192);
+      if (m15.length >= 40) await cacheSet(env, m15Key, encode(m15), 30 * 60);
+    } catch (error) {
+      noteProviderFailure(src.p, error);
+      m15 = []; // les graphiques H1/H4/D1 restent accessibles ; le moteur refuse un signal sans M15 frais
+    }
+  }
   const cachedH = await cacheGet(env, hourKey);
   if (cachedH) { const data = JSON.parse(cachedH) as { h1: string; h4: string }; h1 = decode(data.h1); h4 = decode(data.h4); }
   else {
@@ -148,7 +160,7 @@ async function bundleFrom(env: Env, symbol: SymbolCfg, src: Src, now: number): P
     if (d1.length < 205) throw new Error(`historique D1 insuffisant pour MM200 (${d1.length}/205)`);
     await cacheSet(env, dayKey, encode(d1), 2 * 86400);
   }
-  return { h1, h4, d1, source: src.p };
+  return { m15, h1, h4, d1, source: src.p };
 }
 
 
