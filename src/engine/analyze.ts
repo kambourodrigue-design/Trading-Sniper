@@ -11,6 +11,7 @@ import { CFG, Profile } from "./config";
 export interface TfStat { close: number; sma50: number; smaSlow: number; slowPeriod: 100 | 200; trend: "up" | "down" | "mixed"; rsi: number; atr: number }
 export interface Analysis {
   symbol: string; price: number; atr: number; time: number;
+  m15: { available: boolean; structure: Structure; displacement: { dir: Dir | null; strength: number; barsAgo: number } | null; zones: Zone[] };
   h1: TfStat; h4: TfStat; d1: TfStat;
   structure: Structure; zones: Zone[]; htfZones: Zone[]; sweeps: Sweep[]; wyckoff: WyckoffInfo; patterns: PatternInfo[];
   pd: { hi: number; lo: number; eq: number; pos: number }; eq: { highs: number[]; lows: number[] };
@@ -39,13 +40,28 @@ function rejectionCandle(c: Candle[]): Dir | null {
   return null;
 }
 
-export function buildAnalysis(symbol: string, h1: Candle[], h4: Candle[], d1: Candle[], now = lastOf(h1).t): Analysis {
+export function buildAnalysis(symbol: string, h1: Candle[], h4: Candle[], d1: Candle[], now = lastOf(h1).t, m15: Candle[] = []): Analysis {
   if (h1.length < 105 || h4.length < 105 || d1.length < 205) throw new Error(`Pas assez de bougies (H1 ${h1.length}/105 pour MM100, H4 ${h4.length}/105 pour MM100, D1 ${d1.length}/205 pour MM200)`);
-  const a1 = atr(h1), a4 = atr(h4);
+  const m15Available = m15.length >= 40;
+  const a15 = atr(m15), a1 = atr(h1), a4 = atr(h4);
+  const piv15 = m15Available ? findPivots(m15, 2) : [];
+  const m15Structure = m15Available ? marketStructure(m15, piv15, 2, 8) : { trend: "range" as const, event: null };
+  let displacement: Analysis["m15"]["displacement"] = null;
+  for (let k = m15.length - 1; m15Available && k >= Math.max(0, m15.length - 3); k--) {
+    const av = a15[k], bar = m15[k], range = bar.h - bar.l, body = Math.abs(bar.c - bar.o);
+    if (!(av > 0) || !(range > 0)) continue;
+    const dir: Dir = bar.c > bar.o ? "BUY" : "SELL";
+    const closeLocation = dir === "BUY" ? (bar.h - bar.c) / range : (bar.c - bar.l) / range;
+    const strength = (range / av) * (body / range);
+    if (range >= 0.8 * av && body >= 0.55 * range && closeLocation <= 0.25) {
+      displacement = { dir, strength, barsAgo: m15.length - 1 - k }; break;
+    }
+  }
   const piv1 = findPivots(h1, 3), piv4 = findPivots(h4, 3);
   const A = lastOf(a1);
   return {
     symbol, price: lastOf(h1).c, atr: A, time: lastOf(h1).t,
+    m15: { available: m15Available, structure: m15Structure, displacement, zones: m15Available ? [...detectOB(m15, a15, "M15", 48), ...detectFVG(m15, a15, "M15", 48)] : [] },
     h1: tfStat(h1, 100), h4: tfStat(h4, 100), d1: tfStat(d1, 200),
     structure: marketStructure(h1, piv1, 3, 12),
     zones: [...detectOB(h1, a1, "H1"), ...detectFVG(h1, a1, "H1"), ...detectSD(h1, a1, "H1"), ...detectBreakerBlocks(h1, a1, "H1")],
@@ -147,6 +163,17 @@ export function evaluate(an: Analysis, dir: Dir, ctx: EvalCtx): Evaluation {
   if (an.killzone.active) { score += 2; tags.add(`ICT Killzone ${an.killzone.name}`); reasons.push(`ICT Kill Zone ${an.killzone.name} active (${an.killzone.localTime})`); }
   const trig = !!sweep || evAligned || !!wy || !!pat || rej || crtAligned;
   gate("Déclencheur", trig, trig ? "au moins une confirmation (sweep, BOS/CHoCH/MSS, CRT, Wyckoff, figure ou rejet)" : "aucune confirmation (sweep, BOS/CHoCH/MSS, CRT, Wyckoff, figure, rejet)");
+
+  // Confirmation d'entrée M15 : cassure de structure récente + déplacement impulsif dans le même sens.
+  const m15Event = an.m15.structure.event;
+  const m15StructureOk = !an.m15.available || (!!m15Event && m15Event.dir === dir && m15Event.barsAgo <= 4);
+  const m15DisplacementOk = !an.m15.available || (an.m15.displacement?.dir === dir && an.m15.displacement.barsAgo <= 2);
+  if (an.m15.available && m15StructureOk) { score += 6; tags.add("M15"); reasons.push(`structure M15 ${m15Event!.type} confirmée (${m15Event!.barsAgo} bougie(s))`); }
+  if (an.m15.available && m15DisplacementOk) { score += 8; tags.add("Displacement M15"); reasons.push(`déplacement M15 ${dirFr} (force ${an.m15.displacement!.strength.toFixed(2)} ATR pondéré)`); }
+  const m15Zones = an.m15.available ? an.m15.zones.filter((z) => z.dir === dir && P >= z.bottom - 0.15 * A && P <= z.top + 0.15 * A) : [];
+  if (m15Zones.length) { score += 3; tags.add("POI M15"); reasons.push(`retour dans une zone ${m15Zones[0].kind} M15`); }
+  gate("Structure M15", m15StructureOk, !an.m15.available ? "non évaluée : historique M15 absent (backtest H1/H4/D1)" : m15StructureOk ? `${m15Event!.type} ${dirFr} récent` : "pas de BOS/CHoCH/MSS M15 récent dans le sens du signal");
+  gate("Déplacement M15", m15DisplacementOk, !an.m15.available ? "non évalué : historique M15 absent (backtest H1/H4/D1)" : m15DisplacementOk ? `impulsion ${dirFr}, clôture proche de l'extrême` : "pas de bougie impulsive M15 confirmée dans le sens du signal");
 
   // 5. Premium / discount, RSI
   const inGood = buy ? an.pd.pos <= 0.5 : an.pd.pos >= 0.5;

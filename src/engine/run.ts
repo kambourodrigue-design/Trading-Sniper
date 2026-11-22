@@ -69,7 +69,7 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
         await env.DB.prepare("UPDATE signals SET tp_reached = ?, outcome = ?, progress_at = ?, closed_at = CASE WHEN ? = 'open' THEN NULL ELSE ? END WHERE id = ?")
           .bind(r.tp, r.outcome, r.progressAt ?? s.progress_at ?? null, r.outcome, Math.floor(now / 1000), s.id).run();
         changed = true;
-        const msg = outcomeMessage(s, s.tp_reached, r);
+        const msg = await outcomeMessage(env, s, s.tp_reached, r);
         if (msg) await notify(env, msg);
       }
     }
@@ -141,7 +141,7 @@ async function independentAnalysis(env: Env, s: SymbolCfg, an: Analysis, best: E
     if (isUnique(e)) return { published: false, note: "un trade est déjà ouvert sur cet actif", log };
     throw e;
   }
-  await notify(env, signalMessage({ votes: cons.agree.map((x) => ({ provider: x.provider.split(":")[0], confidence: x.confidence, reasoning: x.reasoning })), symbol: s.symbol, direction: cons.dir, entry: roundP(an.price, an.price), stop_loss: v.sl, tp1: v.tps[0], tp2: v.tps[1], tp3: v.tps[2], confidence: conf, rr_ratio: v.rr, strategy: strategies.join(" + ") || "Analyse IA indépendante", reasoning: top.reasoning, source: "ai" }));
+  await notify(env, await signalMessage(env, { votes: cons.agree.map((x) => ({ provider: x.provider.split(":")[0], confidence: x.confidence, reasoning: x.reasoning })), symbol: s.symbol, direction: cons.dir, entry: roundP(an.price, an.price), stop_loss: v.sl, tp1: v.tps[0], tp2: v.tps[1], tp3: v.tps[2], confidence: conf, rr_ratio: v.rr, strategy: strategies.join(" + ") || "Analyse IA indépendante", reasoning: top.reasoning, source: "ai" }));
   return { published: true, note: cons.reason, log };
 }
 
@@ -152,18 +152,18 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
   // (l'ancien seuil de 75 min rejetait toute analyse lancée après la 15e minute de l'heure, ex. « Analyser maintenant »)
   const maxAge = s.session === "us" ? 9_000_000 : 7_500_000;
   const bundle = await getBundle(env, s, now, maxAge);
-  const { h1, h4, d1 } = bundle;
-  if (h1.length === 0 || now - h1[h1.length - 1].t > maxAge) {
+  const { m15, h1, h4, d1 } = bundle;
+  if (h1.length === 0 || now - h1[h1.length - 1].t > maxAge || m15.length < 40 || now - m15[m15.length - 1].t > 30 * 60_000) {
     const k = `try:${s.symbol}:${Math.floor(now / HOUR)}`;
     const n = Number(await cacheGet(env, k) ?? 0) + 1;
     await cacheSet(env, k, String(n), 7200);
     if (n < 3) return null; // données pas encore publiées : on réessaie au prochain passage (sans marquer l'heure comme analysée)
-    const note = "données non à jour après 3 essais (jour férié ? flux en retard ?) : actif ignoré jusqu'à l'heure suivante";
+    const note = "données H1 ou M15 non à jour après 3 essais (jour férié ? flux en retard ?) : actif ignoré jusqu'à l'heure suivante";
     await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, 'stale', NULL, 0, '[]', NULL, ?)").bind(s.symbol, Math.floor(now / 1000), note).run();
     await env.DB.prepare("INSERT INTO analysis_state (symbol, last_hour) VALUES (?, ?) ON CONFLICT(symbol) DO UPDATE SET last_hour = excluded.last_hour").bind(s.symbol, Math.floor(now / HOUR)).run();
     return { symbol: s.symbol, status: "stale", score: 0, note };
   }
-  const an = buildAnalysis(s.symbol, h1, h4, d1, now);
+  const an = buildAnalysis(s.symbol, h1, h4, d1, now, m15);
   // Règle : 1 seul trade par actif, suivi jusqu'à son résultat (SL / TP / stop suiveur / expiration) avant tout nouveau signal.
   const open = await env.DB.prepare("SELECT COUNT(*) n FROM signals WHERE symbol = ? AND outcome = 'open' AND user_id IS NULL").bind(s.symbol).first<{ n: number }>();
   const inter = await getIntermarket(env, s, now);
@@ -202,7 +202,7 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
         ).bind(newId(), s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], best.score, best.tags.join(" + "), best.rr,
           best.score, reasoning, JSON.stringify(hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], decision: hybridVerdict.decision, confidence: hybridVerdict.confidence, macro: hybridVerdict.macro, reasoning: hybridVerdict.reasoning, risks: hybridVerdict.risks }] : []), Math.floor(now / 1000)).run();
         status = "published"; note = hybridVerdict ? `moteur autonome + second avis IA (${hybridVerdict.provider.split(":")[0]} : ${hybridVerdict.decision})` : hybridError ? `moteur autonome ; second avis IA indisponible (${hybridError})` : "setup validé par le moteur autonome gratuit";
-        await notify(env, signalMessage({ votes: hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], confidence: hybridVerdict.confidence, reasoning: `${hybridVerdict.decision} — ${hybridVerdict.reasoning}` }] : [], symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: best.score, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning, source: "auto" }));
+        await notify(env, await signalMessage(env, { votes: hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], confidence: hybridVerdict.confidence, reasoning: `${hybridVerdict.decision} — ${hybridVerdict.reasoning}` }] : [], symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: best.score, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning, source: "auto" }));
       } catch (e) {
         if (!isUnique(e)) throw e;
         status = "rejected"; note = "un trade est déjà ouvert sur cet actif";
@@ -224,7 +224,7 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
             best.score, `${best.reasons.join(" · ")}\nIA : ${top.reasoning}${verdicts.length === 1 ? SOLO : ""}`,
             JSON.stringify(cons.agree.map((v) => ({ provider: v.provider.split(":")[0], decision: v.decision, confidence: v.confidence, reasoning: v.reasoning.slice(0, 400) }))), Math.floor(now / 1000)).run();
           status = "published"; note = cons.reason;
-          await notify(env, signalMessage({ votes: cons.agree.map((v) => ({ provider: v.provider.split(":")[0], confidence: v.confidence, reasoning: v.reasoning })), symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: conf, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning: `${best.reasons.join(" · ")}\nIA : ${top.reasoning}`, source: "auto" }));
+          await notify(env, await signalMessage(env, { votes: cons.agree.map((v) => ({ provider: v.provider.split(":")[0], confidence: v.confidence, reasoning: v.reasoning })), symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: conf, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning: `${best.reasons.join(" · ")}\nIA : ${top.reasoning}`, source: "auto" }));
         } catch (e) {
           if (!isUnique(e)) throw e;
           status = "rejected"; note = "un trade est déjà ouvert sur cet actif";

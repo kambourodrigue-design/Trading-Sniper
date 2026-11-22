@@ -88,11 +88,16 @@ export function premiumDiscount(c: Candle[], n = 60): { hi: number; lo: number; 
 }
 
 // Sweep explicite d'un pool Equal Highs / Equal Lows (BSL / SSL), avec clôture de réintégration.
-export function detectPoolSweeps(c: Candle[], a: number[], piv: Pivot[], recent = 10): Sweep[] {
-  const n = c.length, A = a[n - 1] > 0 ? a[n - 1] : 0;
-  if (!A || n < 2) return [];
-  const pools = equalLevels(piv, A), out: Sweep[] = [];
+export function detectPoolSweeps(c: Candle[], a: number[], piv: Pivot[], recent = 10, w = 3): Sweep[] {
+  const n = c.length, out: Sweep[] = [];
+  if (n < 2) return out;
   for (let k = Math.max(1, n - recent); k < n; k++) {
+    // Un pivot n'est exploitable qu'après clôture des w bougies de confirmation.
+    // Les pools sont recalculés à chaque bougie avec les seules informations alors disponibles.
+    const known = piv.filter((p) => p.i + w <= k);
+    const A = a[k] > 0 ? a[k] : 0;
+    if (!A) continue;
+    const pools = equalLevels(known, A);
     for (const level of pools.highs) {
       if (c[k].h > level + 0.05 * A && c[k].c < level) out.push({ dir: "SELL", level, wick: c[k].h, barsAgo: n - 1 - k });
     }
