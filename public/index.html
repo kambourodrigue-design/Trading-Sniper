@@ -244,7 +244,7 @@
   .bnav a.on { color:#fff; background:linear-gradient(135deg,#7C3AED,#D946EF); box-shadow:0 10px 22px -10px rgba(168,85,247,.85); }
 
 /* Lucide premium bottom navigation */
-.lucide-bottom-nav{position:fixed;z-index:80;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(720px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;gap:5px;padding:8px;border:1px solid color-mix(in srgb,var(--line,#ECE8F7) 78%,transparent);border-radius:30px;background:color-mix(in srgb,var(--surface,#fff) 86%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35);box-shadow:0 16px 46px -18px rgba(124,58,237,.42),0 4px 16px rgba(20,16,31,.08)}
+.lucide-bottom-nav{position:fixed;z-index:80;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(720px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;gap:5px;padding:8px;border:1px solid color-mix(in srgb,var(--line,#ECE8F7) 78%,transparent);border-radius:30px;background:transparent;-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35);box-shadow:0 16px 46px -18px rgba(124,58,237,.42),0 4px 16px rgba(20,16,31,.08)}
 .lucide-bottom-nav a{flex:1;min-width:0;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border-radius:23px;color:var(--ink-soft,var(--soft,#6B6580));text-decoration:none;font-size:clamp(10px,.75rem,12px);font-weight:700;line-height:1.1;white-space:nowrap;transition:background .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
 .lucide-bottom-nav a svg{width:23px;height:23px;flex:0 0 auto;transition:transform .22s ease}
 .lucide-bottom-nav a.active{color:#fff;background:linear-gradient(135deg,#873BFA 0%,#B832D8 58%,#D946EF 100%);box-shadow:0 9px 22px -9px rgba(168,85,247,.82),inset 0 1px 0 rgba(255,255,255,.2)}
@@ -266,7 +266,8 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 :root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#211A33;color:var(--ink);border-color:var(--line)}
 :root[data-theme="dark"] table th,:root[data-theme="dark"] table td{border-color:var(--line)}
 :root[data-theme="dark"] .muted,:root[data-theme="dark"] .note,:root[data-theme="dark"] .soft{color:var(--soft)}
-:root[data-theme="dark"] nav,:root[data-theme="dark"] .bottom,:root[data-theme="dark"] .lucide-bottom-nav{background:color-mix(in srgb,var(--surface) 90%,transparent);border-color:var(--line)}
+:root[data-theme="dark"] nav,:root[data-theme="dark"] .bottom{background:color-mix(in srgb,var(--surface) 90%,transparent);border-color:var(--line)}
+:root[data-theme="dark"] .lucide-bottom-nav{background:transparent!important;border-color:rgba(255,255,255,.16)!important}
 :root[data-theme="dark"] .btn,:root[data-theme="dark"] button:not(#lucide-theme-toggle){background-color:#251D39;color:var(--ink);border-color:var(--line)}
 :root[data-theme="dark"] .btn.primary,:root[data-theme="dark"] button.primary{background:var(--grad);color:#fff;border-color:transparent}
 @media(max-width:700px){#lucide-theme-toggle{top:10px;right:10px;padding:8px 10px}#lucide-theme-toggle .theme-label{display:none}}
@@ -306,7 +307,7 @@ body{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important}
 @media(min-width:900px){.lucide-pill-nav{display:none!important}body{padding-bottom:0!important}}
 @media(prefers-reduced-motion:reduce){.lucide-pill-nav a,.lucide-pill-nav a svg{transition:none!important}}
 </style>
-</head>
+<style>.lucide-bottom-nav{background:transparent!important}</style></head>
 <body>
 
 <nav>
