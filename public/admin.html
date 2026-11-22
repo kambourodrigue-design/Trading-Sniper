@@ -182,7 +182,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     <section id="bt" class="hidden">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Backtest historique du moteur</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" href="/backtest-replay.html" target="_blank" rel="noopener">Ouvrir Replay M1/M5/M15 ↗</a><a class="btn ghost sm" href="/backtest-report.html" target="_blank" rel="noopener">Rapport local ↗</a></div></div>
-        <p style="color:var(--soft);font-size:.85rem">Rejoue les règles sur des bougies historiques réellement fournies par les sources. Un actif par lancement. La profondeur affichée dépend des limites du fournisseur et du temps de chauffe des indicateurs.</p>
+        <p style="color:var(--soft);font-size:.85rem">Rejoue les règles sur des bougies historiques réellement fournies par les sources. Un actif par lancement. La profondeur affichée dépend des limites du fournisseur et du temps de chauffe des indicateurs. <b>Sans CSV importé, le test live ne couvre que quelques heures</b> (105 bougies servent à chauffer les indicateurs) : pour un vrai test, importe les historiques H1, H4 et D1.</p>
         <div class="cols">
           <div><label>Marché</label><select id="bt-symbol"><option>XAU/USD</option><option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option><option>USD/CAD</option><option>USD/CHF</option><option>AUD/USD</option><option>NZD/USD</option><option>EUR/GBP</option><option>EUR/JPY</option><option>EUR/CAD</option><option>GBP/JPY</option><option>GBP/CAD</option><option>BTC/USD</option><option>ETH/USD</option></select></div>
           <div><label>Profil</label><select id="bt-profile"><option value="adaptive" selected>Adaptatif</option><option value="strict">Strict</option><option value="balanced">Équilibré</option><option value="active">Actif</option></select></div>
@@ -303,16 +303,28 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     if (t.dataset.t === "ov") loadStats(); if (t.dataset.t === "us") loadUsers(); if (t.dataset.t === "sg") loadSignals();
   }));
 
+  function parseTs(v) {
+    const s = String(v).trim();
+    let m = s.match(/^(\d{2})[.\/-](\d{2})[.\/-](\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?/); // 20.11.2026 12:00:00 (jour.mois.année, UTC)
+    if (m) return Date.UTC(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0));
+    m = s.match(/^(\d{4})[.\/-](\d{2})[.\/-](\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/); // 2026-11-20 12:00 ou 2026.11.20 (UTC si aucun fuseau)
+    if (m) return m[7] ? Date.parse(s.replace(" ", "T")) : Date.UTC(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+    return Date.parse(s);
+  }
   function parsePriceCsv(raw) {
     const lines = raw.replace(/^\uFEFF/, "").split(/\r?\n/).filter(x => x.trim());
     if (lines.length < 2) throw new Error("CSV vide ou sans lignes de données.");
-    const delim = lines[0].includes(";") ? ";" : ",";
-    const headers = lines[0].split(delim).map(x => x.trim().toLowerCase().replace(/["']/g,""));
+    const delim = lines[0].includes(";") ? ";" : lines[0].includes("\t") ? "\t" : ",";
+    const clean = x => x.trim().replace(/^["'<]+|["'>]+$/g, "").toLowerCase();
+    const headers = lines[0].split(delim).map(clean);
     const find = names => headers.findIndex(h => names.includes(h));
-    const ti=find(["timestamp","time","date","datetime","open_time"]), oi=find(["open","o"]), hi=find(["high","h"]), li=find(["low","l"]), ci=find(["close","c"]);
-    if ([ti,oi,hi,li,ci].some(x=>x<0)) throw new Error("Colonnes requises : timestamp,open,high,low,close.");
+    let ti = find(["timestamp","datetime","gmt time","time (utc)","utc","open_time","open time","date time"]), di = -1, tmi = -1;
+    if (ti < 0) { di = find(["date"]); tmi = find(["time"]); if (di < 0 || tmi < 0) { ti = di >= 0 ? di : tmi; di = -1; tmi = -1; } }
+    if (ti < 0 && di < 0 && tmi < 0 && headers.includes("local time")) throw new Error("Ce fichier est en heure locale : exporte-le en heure GMT (UTC), sinon toutes les bougies seraient décalées.");
+    const oi=find(["open","o"]), hi=find(["high","h"]), li=find(["low","l"]), ci=find(["close","c"]);
+    if ((ti < 0 && (di < 0 || tmi < 0)) || [oi,hi,li,ci].some(x=>x<0)) throw new Error("Colonnes requises : timestamp,open,high,low,close. Colonnes trouvées dans ton fichier : " + headers.join(", ") + ".");
     const bars=[];
-    for (let i=1;i<lines.length;i++) { const a=lines[i].split(delim).map(x=>x.trim().replace(/^"|"$/g,"")); let t=Number(a[ti]); if (!Number.isFinite(t)) t=Date.parse(a[ti]); else if (t<1e12) t*=1000; const o=Number(a[oi]),h=Number(a[hi]),l=Number(a[li]),c=Number(a[ci]); if ([t,o,h,l,c].every(Number.isFinite)&&h>=Math.max(o,c,l)&&l<=Math.min(o,c)) bars.push({t:Math.floor(t),o,h,l,c}); }
+    for (let i=1;i<lines.length;i++) { const a=lines[i].split(delim).map(x=>x.trim().replace(/^"|"$/g,"")); const stamp = di>=0 ? a[di]+" "+a[tmi] : a[ti]; let t=Number(stamp); if (!Number.isFinite(t)) t=parseTs(stamp); else if (t<1e12) t*=1000; const o=Number(a[oi]),h=Number(a[hi]),l=Number(a[li]),c=Number(a[ci]); if ([t,o,h,l,c].every(Number.isFinite)&&h>=Math.max(o,c,l)&&l<=Math.min(o,c)) bars.push({t:Math.floor(t),o,h,l,c}); }
     const map=new Map(); bars.forEach(b=>map.set(b.t,b)); return [...map.values()].sort((a,b)=>a.t-b.t);
   }
   async function refreshBtDataStatus() { try { const r=await api("/api/admin/backtest/data?symbol="+encodeURIComponent($("#bt-symbol").value)); $("#bt-data-status").textContent = r.history.length ? "Historique D1 : "+r.history.map(x=>x.timeframe+" — "+x.bars+" bougies ("+x.first_month+" → "+x.last_month+")").join(" | ") : "Aucun historique importé dans D1 pour ce marché."; } catch(e) { $("#bt-data-status").textContent=e.message; } }
