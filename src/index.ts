@@ -82,6 +82,45 @@ export default {
       return json(applyAccess(JSON.parse(raw) as SignalRow[], plan));
     }
 
+    // --- Scanner IA : dernier signal publié par marché, directement issu du moteur existant ---
+    if (pathname === "/api/scanner" && req.method === "GET") {
+      const rows = await env.DB.prepare(
+        `WITH ranked AS (
+          SELECT id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy,
+                 rr_ratio, source, timeframe, score, reasoning, ai_votes, tp_reached, outcome, created_at,
+                 ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY created_at DESC, id DESC) AS rn
+          FROM signals
+          WHERE user_id IS NULL AND status = 'published'
+        )
+        SELECT id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy,
+               rr_ratio, source, timeframe, score, reasoning, ai_votes, tp_reached, outcome, created_at
+        FROM ranked WHERE rn = 1`
+      ).all<SignalRow>();
+      const user = await getUser(env.DB, bearerToken(req));
+      const plan = user ? (isAdminEmail(env, user.email) ? "elite" : (await getActivePlan(env.DB, user.id))?.plan ?? null) : null;
+      const bySymbol = new Map<string, SignalRow>();
+      for (const row of rows.results) bySymbol.set(row.symbol, row);
+      const assets = SYMBOLS.map((cfg) => {
+        const row = bySymbol.get(cfg.symbol);
+        return { symbol: cfg.symbol, label: cfg.label, market: cfg.session === "crypto" ? "Crypto" : "Forex / Métaux", signal: row ? applyAccess([row], plan)[0] : null };
+      });
+      return json({ assets, total_markets: assets.length, updated_at: Math.floor(Date.now() / 1000) });
+    }
+
+    // --- Historique des signaux réellement publiés par le moteur ---
+    if (pathname === "/api/history" && req.method === "GET") {
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 50) || 50));
+      const rows = await env.DB.prepare(
+        `SELECT id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy,
+                rr_ratio, source, timeframe, score, reasoning, ai_votes, tp_reached, outcome, created_at, closed_at
+         FROM signals WHERE user_id IS NULL AND status = 'published'
+         ORDER BY created_at DESC LIMIT ?`
+      ).bind(limit).all<SignalRow>();
+      const user = await getUser(env.DB, bearerToken(req));
+      const plan = user ? (isAdminEmail(env, user.email) ? "elite" : (await getActivePlan(env.DB, user.id))?.plan ?? null) : null;
+      return json({ signals: applyAccess(rows.results, plan), count: rows.results.length, updated_at: Math.floor(Date.now() / 1000) });
+    }
+
     // --- Bougies pour le graphique du dashboard (compte requis ; servi depuis le cache horaire du moteur) ---
     if (pathname === "/api/candles" && req.method === "GET") {
       if (!(await getUser(env.DB, bearerToken(req)))) return err("Non authentifié.", 401);
