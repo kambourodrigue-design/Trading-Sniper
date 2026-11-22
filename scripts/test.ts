@@ -8,6 +8,7 @@ import { adaptiveProfile } from "../src/engine/run";
 import { PROFILES } from "../src/engine/config";
 import { detectCRT, getKillzone, detectBreakerBlocks } from "../src/engine/ictcrt";
 import { pipUnit, estimatedUsd } from "../src/lib/telegram";
+import { detectPoolSweeps } from "../src/engine/smc";
 
 const M = 900_000, t0 = 1_700_000_000_000;
 const k = (i: number, l: number, h: number) => ({ t: t0 + i * M, o: 0, c: 0, l, h });
@@ -112,6 +113,18 @@ t("SL BUY : un sweep cohérent sous le prix protège la mèche", () => {
   const zones = [{ kind: "OB", dir: "BUY", bottom: 98, top: 99, i: 1, t: 1, touches: 0, tf: "H1" }] as any;
   const r = structuralStop(100, 1, "BUY", zones, { dir: "BUY", level: 97, wick: 96.5, barsAgo: 0 });
   assert.strictEqual(r.sl, 96.25);
+});
+
+t("anti-look-ahead : un pool n'est utilisable qu'après confirmation des deux pivots", () => {
+  const bars = Array.from({ length: 10 }, (_, i) => ({ t: i, o: 99.8, h: 100, l: 99, c: 99.8 }));
+  bars[6] = { ...bars[6], h: 101, c: 99.9 }; // faux sweep avant confirmation du second pivot
+  bars[8] = { ...bars[8], h: 100.2, c: 99.9 }; // sweep après confirmation
+  const pivots = [
+    { i: 2, t: 2, price: 100, isHigh: true },
+    { i: 5, t: 5, price: 100.02, isHigh: true },
+  ];
+  const sweeps = detectPoolSweeps(bars, Array(10).fill(1), pivots, 4, 3);
+  assert.deepStrictEqual(sweeps.map((x) => x.barsAgo), [1]);
 });
 
 t("CRT : sweep du low de la bougie de référence puis réintégration", () => {

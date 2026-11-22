@@ -1,7 +1,7 @@
 // Backtest des règles du moteur sans IA. Les API gratuites ont des historiques limités : le test dépend de la profondeur réellement retournée par le fournisseur.
 //   npm install
 //   npx tsx scripts/backtest.ts                                  # 15 actifs, 4 profils ; lit ./historical d'abord
-//   npx tsx scripts/backtest.ts --history-dir ./historical --live # sorties M15 si M15/H4 locaux suffisants
+//   npx tsx scripts/backtest.ts --history-dir ./historical --live # confirmations M15 + sorties M15 (historique local requis)
 //   npx tsx scripts/backtest.ts --symbols XAU/USD --profiles balanced,active
 //   npx tsx scripts/backtest.ts --synthetic                      # test hors-ligne sur données simulées (sans valeur statistique)
 //   Options : --cost-atr 0.04 (coût/trade) · --split 0.6 (walk-forward réglage/test) · --live (sorties M15, fenêtre courte)
@@ -130,8 +130,10 @@ async function run(symbol: string) {
     const h4 = h4Native ? h4Native.filter((k) => k.t + 4 * H <= tClose).slice(-260) : aggregate(h1All.slice(Math.max(0, i - 1300), i + 1), 4 * H, tClose).slice(-260);
     const d1 = d1All.filter((k) => k.t + D <= tClose).slice(-260);
     if (h4.length < 105 || d1.length < 205) continue;
+    const m15 = live && m15All ? m15All.filter((k) => k.t + 15 * 60_000 <= tClose).slice(-192) : [];
+    if (live && m15.length < 40) continue; // attendre une fenêtre M15 suffisante
     if (!firstT) firstT = tClose; lastT = tClose; bars++;
-    const an = buildAnalysis(symbol, h1, h4, d1);
+    const an = buildAnalysis(symbol, h1, h4, d1, tClose, m15);
     for (const pn of wantProfiles) {
       const prof = PROFILES[pn]; if (!prof) continue;
       const row = rows[pn], open = tClose < busy[pn];
@@ -152,6 +154,7 @@ async function run(symbol: string) {
   }
   const weeks = Math.max(1, (lastT - firstT) / (7 * D)) * (cfg.session === "us" ? 1 : 1);
   console.log(`\n=== ${symbol} — ${bars} décisions sur ${weeks.toFixed(0)} semaines ===`);
+  console.log(live && m15All ? "Confirmations M15 + displacement activés (bougies clôturées uniquement)." : "Confirmations M15 non testées dans ce passage ; utiliser --live avec un historique M15 pour mesurer leur effet.");
   for (const pn of wantProfiles) {
     const r = rows[pn]; if (!r) continue;
     const m = summarize(r.seq), gross = summarize(r.seq.map((t) => ({ outcome: t.outcome })));
