@@ -118,7 +118,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       throw e;
     }
     await env.CACHE.delete("signals:latest");
-    await notify(env, signalMessage({ symbol, direction, entry: num(b.entry), stop_loss: num(b.stop_loss), tp1: num(b.tp1), tp2: num(b.tp2), tp3: num(b.tp3), confidence: num(b.confidence), rr_ratio: b.rr_ratio ? String(b.rr_ratio) : null, strategy: b.strategy ? String(b.strategy) : null, source: "manual" }));
+    await notify(env, await signalMessage(env, { symbol, direction, entry: num(b.entry), stop_loss: num(b.stop_loss), tp1: num(b.tp1), tp2: num(b.tp2), tp3: num(b.tp3), confidence: num(b.confidence), rr_ratio: b.rr_ratio ? String(b.rr_ratio) : null, strategy: b.strategy ? String(b.strategy) : null, source: "manual" }));
     return json({ ok: true, id }, 201);
   }
 
@@ -248,7 +248,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       seq.push({ t, outcome: out.outcome, costR: (costAtr * an.atr) / risk });
     }
     const metrics = summarize(seq);
-    return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé. Ce test ne reproduit pas les révisions de données ni l’exécution IA." });
+    return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: `${mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé."} Confirmations M15 et displacement non testés ici : cet endpoint ne charge que H1/H4/D1. Utiliser scripts/backtest.ts avec --live et un historique M15 pour évaluer les nouvelles confirmations. Ce test ne reproduit pas les révisions de données ni l’exécution IA.` });
   }
 
   // --- Test des sources de données (biquote / Kraken / Binance) ---
