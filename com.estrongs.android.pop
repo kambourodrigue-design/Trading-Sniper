@@ -1,0 +1,1686 @@
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Mon Apr 24 15:07:57 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1014)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1151)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Mon Apr 24 17:47:03 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.app.ad.a.a(DuAd.java:308)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7369)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Apr 25 06:17:30 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1352)
+java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:140)
+com.estrongs.android.scanner.a.a(Accessor.java:572)
+com.estrongs.android.ui.topclassify.f$4.run(CornerMarkManager.java:139)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Apr 25 06:17:30 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1352)
+java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:140)
+com.estrongs.android.scanner.a.a(Accessor.java:572)
+com.estrongs.android.ui.topclassify.f$4.run(CornerMarkManager.java:139)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 27 16:21:28 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.ui.dialog.ax.a(UpdateDialog.java:458)
+com.estrongs.android.pop.view.FileExplorerActivity$74.handleMessage(FileExplorerActivity.java:6441)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 27 16:21:28 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.ui.dialog.ax.a(UpdateDialog.java:458)
+com.estrongs.android.pop.view.FileExplorerActivity$74.handleMessage(FileExplorerActivity.java:6441)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 27 16:21:28 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.duapps.ad.entity.FacebookCacheManager.<init>(FacebookCacheManager.java:83)
+com.duapps.ad.entity.FacebookCacheManager.<init>(FacebookCacheManager.java:71)
+com.duapps.ad.base.ChannelFactory.createChannels(ChannelFactory.java:130)
+com.duapps.ad.ADRequestController.init(ADRequestController.java:72)
+com.duapps.ad.ADRequestController.<init>(ADRequestController.java:64)
+com.duapps.ad.PullRequestController.getPullController(PullRequestController.java:38)
+com.duapps.ad.DuNativeAd.<init>(DuNativeAd.java:52)
+com.estrongs.android.pop.app.ad.a$3.run(DuAd.java:301)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jul 12 22:05:22 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1014)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1151)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jul 12 22:05:22 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1014)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1151)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jul 12 22:10:49 GMT 2023
+ExceptionType:java.lang.IllegalStateException
+ExceptionClass:android.view.WindowManagerGlobal
+ExceptionMethod:addView	ExceptionLine:379
+traces:
+View DecorView@982ed73[] has already been added to the window manager.
+android.view.WindowManagerGlobal.addView(WindowManagerGlobal.java:379)
+android.view.WindowManagerImpl.addView(WindowManagerImpl.java:133)
+com.estrongs.android.pop.esclasses.ESMediaController.a(ESMediaController.java:426)
+com.estrongs.android.pop.esclasses.ESMediaController.dispatchKeyEvent(ESMediaController.java:591)
+com.estrongs.android.pop.app.PopVideoPlayer$28.dispatchKeyEvent(PopVideoPlayer.java:533)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jul 12 22:10:59 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.ui.c.b.a.s(NewStorageDeviceBlock.java:539)
+com.estrongs.android.ui.c.b.a.e(NewStorageDeviceBlock.java:472)
+com.estrongs.android.ui.c.b.a.a(NewStorageDeviceBlock.java:100)
+com.estrongs.android.ui.c.c.d.a(SDCardViewHolder.java:44)
+com.estrongs.android.ui.c.a.onBindViewHolder(HomeAdapter.java:343)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jul 12 22:10:59 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 12:32:56 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 12:32:57 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1151)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1091)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1$2.run(FileExplorerActivity.java:7346)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 12:33:04 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.a.a.execute(ESTask.java:526)
+com.estrongs.fs.b.n.a(ESFileLoaderTask.java:182)
+com.estrongs.android.view.n.b(FileGridViewWrapper.java:1195)
+com.estrongs.android.view.n.g(FileGridViewWrapper.java:1155)
+com.estrongs.android.view.n.a(FileGridViewWrapper.java:959)
+com.estrongs.android.pop.view.FileExplorerActivity$49.a(FileExplorerActivity.java:4857)
+com.estrongs.android.view.n.a(FileGridViewWrapper.java:863)
+com.estrongs.android.view.n.j(FileGridViewWrapper.java:838)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:5713)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:350)
+com.estrongs.android.pop.view.FileExplorerActivity$33$1.run(FileExplorerActivity.java:830)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 12:33:04 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1014)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1151)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 12:33:12 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1352)
+java.util.concurrent.AbstractExecutorService.submit(AbstractExecutorService.java:118)
+com.facebook.ads.internal.i.b.f.e(Unknown Source:47)
+com.facebook.ads.internal.i.b.f.a(Unknown Source:0)
+com.facebook.ads.internal.i.b.f$e.run(Unknown Source:7)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 18:28:17 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.pop.view.utils.d.a(OpenRecommData.java:699)
+com.estrongs.android.pop.app.OpenRecomm.onCreate(OpenRecomm.java:205)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 18:28:27 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:946)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1363)
+com.nostra13.universalimageloader.core.ImageLoaderEngine.submit(ImageLoaderEngine.java:69)
+com.nostra13.universalimageloader.core.ImageLoader.displayImage(ImageLoader.java:269)
+com.nostra13.universalimageloader.core.ImageLoader.displayImage(ImageLoader.java:365)
+com.nostra13.universalimageloader.core.ImageLoader.displayImage(ImageLoader.java:340)
+com.estrongs.android.g.a.d.a(ESImageLoader.java:134)
+com.estrongs.android.g.a.d.b(ESImageLoader.java:195)
+com.estrongs.android.g.a.d.a(ESImageLoader.java:335)
+com.estrongs.android.g.a.d.a(ESImageLoader.java:330)
+com.estrongs.android.pop.app.log.c.f.a(LogImgViewHolder.java:100)
+com.estrongs.android.pop.app.log.c.f.a(LogImgViewHolder.java:58)
+com.estrongs.android.pop.app.log.a.a.onBindViewHolder(LogAdapter.java:190)
+com.estrongs.android.ui.c.a.onBindViewHolder(HomeAdapter.java:391)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 18:28:28 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 18:28:28 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 18:28:36 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.ui.dialog.ax.a(UpdateDialog.java:458)
+com.estrongs.android.pop.view.FileExplorerActivity$74.handleMessage(FileExplorerActivity.java:6441)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Aug 09 18:28:36 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Aug 11 08:05:56 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.app.ad.a.a(DuAd.java:308)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7369)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Aug 11 08:05:57 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 20 17:12:20 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.a.a.execute(ESTask.java:526)
+com.estrongs.fs.b.n.a(ESFileLoaderTask.java:182)
+com.estrongs.android.view.n.b(FileGridViewWrapper.java:1195)
+com.estrongs.android.view.n.g(FileGridViewWrapper.java:1155)
+com.estrongs.android.view.n.a(FileGridViewWrapper.java:959)
+com.estrongs.android.pop.view.FileExplorerActivity$48.a(FileExplorerActivity.java:4643)
+com.estrongs.android.view.n.c(FileGridViewWrapper.java:867)
+com.estrongs.android.view.n$12.a(FileGridViewWrapper.java:605)
+com.estrongs.android.view.m.a(FeaturedGridViewWrapper.java:608)
+com.estrongs.android.view.m$c$2.onClick(FeaturedGridViewWrapper.java:731)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 20 18:36:39 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 20 18:36:46 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Mon Aug 21 08:38:36 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1151)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1091)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1$2.run(FileExplorerActivity.java:7346)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Aug 29 16:48:59 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1151)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1091)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1$2.run(FileExplorerActivity.java:7346)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Aug 29 16:49:08 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Aug 29 16:49:08 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Sep 01 12:27:02 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Sep 28 00:40:55 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.Timer.<init>(Timer.java:168)
+java.util.Timer.<init>(Timer.java:140)
+com.estrongs.android.pop.app.i.a.<init>(BtScan.java:42)
+com.estrongs.android.pop.app.i.a.a(BtScan.java:52)
+com.estrongs.android.pop.view.FileExplorerActivity.aN(FileExplorerActivity.java:2596)
+com.estrongs.android.pop.view.FileExplorerActivity.onPause(FileExplorerActivity.java:6399)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Oct 01 17:38:55 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.duapps.ad.ADRequestController.init(ADRequestController.java:88)
+com.duapps.ad.ADRequestController.<init>(ADRequestController.java:64)
+com.duapps.ad.PullRequestController.getPullController(PullRequestController.java:38)
+com.duapps.ad.DuNativeAd.<init>(DuNativeAd.java:52)
+com.estrongs.android.pop.app.ad.a$3.run(DuAd.java:301)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Oct 21 22:55:46 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1151)
+com.estrongs.android.appinfo.AppFolderInfoManager.a(AppFolderInfoManager.java:1091)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1$2.run(FileExplorerActivity.java:7346)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Oct 21 22:55:52 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Oct 21 22:55:52 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.app.log.q.a(LogManager.java:237)
+com.estrongs.android.ui.c.b.a(HomePageGridViewWrapper.java:189)
+com.estrongs.android.pop.view.FileExplorerActivity$47.a(FileExplorerActivity.java:4505)
+com.estrongs.android.view.n.a(FileGridViewWrapper.java:863)
+com.estrongs.android.view.n.j(FileGridViewWrapper.java:838)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:5713)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:350)
+com.estrongs.android.pop.view.FileExplorerActivity$33$1.run(FileExplorerActivity.java:830)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Mon Oct 30 18:19:57 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.ui.c.b.a.r(NewStorageDeviceBlock.java:479)
+com.estrongs.android.ui.c.b.a.e(NewStorageDeviceBlock.java:471)
+com.estrongs.android.ui.c.b.a.a(NewStorageDeviceBlock.java:100)
+com.estrongs.android.ui.c.c.d.a(SDCardViewHolder.java:44)
+com.estrongs.android.ui.c.a.onBindViewHolder(HomeAdapter.java:343)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Dec 22 10:27:58 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.ui.c.b.a.r(NewStorageDeviceBlock.java:479)
+com.estrongs.android.ui.c.b.a.e(NewStorageDeviceBlock.java:471)
+com.estrongs.android.ui.c.b.a.c(NewStorageDeviceBlock.java:116)
+com.estrongs.android.ui.c.a.a(HomeAdapter.java:121)
+com.estrongs.android.ui.c.b.l(HomePageGridViewWrapper.java:270)
+com.estrongs.android.pop.view.FileExplorerActivity.f(FileExplorerActivity.java:3815)
+com.estrongs.android.ui.controller.b$8.a(UIControllerImpl.java:1098)
+com.estrongs.android.ui.d.a$a$2.onClick(HomeTabLayoutManager.java:274)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Dec 22 10:28:04 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.app.ad.a.a(DuAd.java:308)
+com.estrongs.android.pop.app.ad.a.b(DuAd.java:475)
+com.estrongs.android.pop.app.h$1$1.run(ESDeviceMonitor.java:87)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Dec 22 10:28:04 GMT 2023
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Jan 26 21:08:18 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 11 19:10:24 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 11 19:10:24 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:25:53 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.ui.dialog.ax.a(UpdateDialog.java:458)
+com.estrongs.android.pop.view.FileExplorerActivity$74.handleMessage(FileExplorerActivity.java:6441)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:25:59 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:25:59 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.ui.c.b.a.r(NewStorageDeviceBlock.java:479)
+com.estrongs.android.ui.c.b.a.e(NewStorageDeviceBlock.java:471)
+com.estrongs.android.ui.c.b.a.a(NewStorageDeviceBlock.java:100)
+com.estrongs.android.ui.c.c.d.a(SDCardViewHolder.java:44)
+com.estrongs.android.ui.c.a.onBindViewHolder(HomeAdapter.java:343)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:36:48 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:39:08 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:39:08 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1371)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 12 09:39:15 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Apr 13 08:58:26 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jun 22 16:46:44 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jun 22 16:46:44 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.app.analysis.b.a(AnalysisDataProvider.java:77)
+com.estrongs.android.pop.app.analysis.AnalysisCtrl.b(AnalysisCtrl.java:197)
+com.estrongs.android.pop.app.analysis.AnalysisCtrl.a(AnalysisCtrl.java:152)
+com.estrongs.android.view.a.a(AnalysisGridViewWrapper.java:220)
+com.estrongs.android.view.n.a(FileGridViewWrapper.java:863)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:4351)
+com.estrongs.android.pop.view.FileExplorerActivity.c(FileExplorerActivity.java:5068)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:3782)
+com.estrongs.android.pop.view.FileExplorerActivity.b(FileExplorerActivity.java:4268)
+com.estrongs.android.pop.view.FileExplorerActivity.c(FileExplorerActivity.java:4219)
+com.estrongs.android.pop.app.analysis.AnalysisCtrl.b(AnalysisCtrl.java:765)
+com.estrongs.android.pop.app.analysis.AnalysisCtrl.a(AnalysisCtrl.java:935)
+com.estrongs.android.pop.app.analysis.AnalysisCtrl.a(AnalysisCtrl.java:914)
+com.estrongs.android.pop.app.analysis.AnalysisCtrl$8$1.run(AnalysisCtrl.java:870)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 06 17:59:04 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.duapps.ad.ADRequestController.init(ADRequestController.java:88)
+com.duapps.ad.ADRequestController.<init>(ADRequestController.java:64)
+com.duapps.ad.PullRequestController.getPullController(PullRequestController.java:38)
+com.duapps.ad.DuNativeAd.<init>(DuNativeAd.java:52)
+com.estrongs.android.pop.app.ad.a$3.run(DuAd.java:301)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 06 17:59:10 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.ui.c.b.a.r(NewStorageDeviceBlock.java:479)
+com.estrongs.android.ui.c.b.a.e(NewStorageDeviceBlock.java:471)
+com.estrongs.android.ui.c.b.a.a(NewStorageDeviceBlock.java:100)
+com.estrongs.android.ui.c.c.d.a(SDCardViewHolder.java:44)
+com.estrongs.android.ui.c.a.onBindViewHolder(HomeAdapter.java:343)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 27 14:20:04 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 27 14:20:04 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 27 14:20:09 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 27 14:20:19 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.view.FileExplorerActivity$4$1.run(FileExplorerActivity.java:7363)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Jul 27 14:20:27 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+com.estrongs.android.pop.app.ad.a.a(DuAd.java:308)
+com.estrongs.android.pop.app.ad.a.b(DuAd.java:475)
+com.estrongs.android.pop.app.h$1$1.run(ESDeviceMonitor.java:87)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Nov 07 05:52:27 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+org.apache.http.impl.conn.tsccm.AbstractConnPool.enableConnectionGC(AbstractConnPool.java:145)
+org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager.createConnectionPool(ThreadSafeClientConnManager.java:125)
+org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager.<init>(ThreadSafeClientConnManager.java:103)
+com.dianxinos.dxservice.a.f.a(HttpPostHelper.java:216)
+com.dianxinos.dxservice.a.f.b(HttpPostHelper.java:131)
+com.dianxinos.dxservice.stat.r$a.a(EventReporter.java:242)
+com.dianxinos.dxservice.stat.r.b(EventReporter.java:117)
+com.dianxinos.dxservice.stat.r.a(EventReporter.java:55)
+com.dianxinos.dxservice.stat.o$a.run(EventDispatcher.java:183)
+android.os.Handler.handleCallback(Handler.java:938)
+android.os.Handler.dispatchMessage(Handler.java:99)
+android.os.Looper.loopOnce(Looper.java:201)
+android.os.Looper.loop(Looper.java:288)
+android.os.HandlerThread.run(HandlerThread.java:67)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Nov 07 05:52:27 GMT 2024
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1371)
+com.estrongs.android.scanner.b.a(Cataloger.java:734)
+com.estrongs.android.pop.view.utils.AppRunner.a(AppRunner.java:1161)
+com.estrongs.android.pop.view.utils.AppRunner.a(AppRunner.java:1083)
+com.estrongs.android.pop.view.utils.AppRunner.b(AppRunner.java:647)
+com.estrongs.android.pop.view.utils.AppRunner.c(AppRunner.java:304)
+com.estrongs.android.pop.view.utils.AppRunner.a(AppRunner.java:269)
+com.estrongs.android.pop.view.FileExplorerActivity.a(FileExplorerActivity.java:2193)
+com.estrongs.android.pop.view.FileExplorerActivity$66.a(FileExplorerActivity.java:1106)
+com.estrongs.android.view.n$12.a(FileGridViewWrapper.java:614)
+com.estrongs.android.view.m.a(FeaturedGridViewWrapper.java:608)
+com.estrongs.android.view.m$c$2.onClick(FeaturedGridViewWrapper.java:731)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 10 13:14:36 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 10 15:29:13 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 10 20:36:15 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 10:09:48 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 10:10:28 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 10:57:33 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 11:17:03 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 12:41:30 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 19:09:37 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 19:48:27 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 19:56:45 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 20:01:59 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 21:32:18 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 21:32:18 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 21:32:18 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 21:32:18 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:954)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1022)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1159)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+java.lang.Thread.run(Thread.java:1012)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Apr 17 23:16:16 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 18 03:46:54 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Apr 18 05:21:03 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:976)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 24 02:51:15 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1083)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 24 08:33:50 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1083)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 24 08:34:17 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1083)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 24 19:51:41 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1083)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sun Aug 24 19:51:41 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1083)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:965)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1386)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Mon Aug 25 07:36:07 GMT 2025
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1083)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Feb 05 14:41:36 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+java.lang.Thread.start(Thread.java:1479)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:963)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1031)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1168)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+java.lang.Thread.run(Thread.java:1563)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Feb 05 14:41:36 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+java.lang.Thread.start(Thread.java:1479)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:963)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1383)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Thu Feb 05 18:32:25 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Feb 06 01:00:19 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+com.estrongs.android.pop.app.ad.a.a(DuAd.java:308)
+com.estrongs.android.pop.app.ad.a.b(DuAd.java:475)
+com.estrongs.android.pop.app.h$1$1.run(ESDeviceMonitor.java:87)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Feb 06 14:52:52 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Feb 06 14:53:03 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+java.lang.Thread.start(Thread.java:1479)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:963)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:1031)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1168)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+java.lang.Thread.run(Thread.java:1563)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Fri Feb 06 14:53:03 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1425)
+java.lang.Thread.start(Thread.java:1479)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:963)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1383)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jun 24 19:34:27 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:977)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1114)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+java.lang.Thread.run(Thread.java:1572)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jun 24 19:34:27 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1335)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jun 24 19:34:33 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Jun 24 19:34:42 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Sep 01 14:34:49 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+com.duapps.ad.ADRequestController.init(ADRequestController.java:88)
+com.duapps.ad.ADRequestController.<init>(ADRequestController.java:64)
+com.duapps.ad.PullRequestController.getPullController(PullRequestController.java:38)
+com.duapps.ad.DuNativeAd.<init>(DuNativeAd.java:52)
+com.estrongs.android.pop.app.ad.a$3.run(DuAd.java:301)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Sep 01 17:11:40 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:977)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1114)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+java.lang.Thread.run(Thread.java:1572)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Sep 01 17:11:43 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1335)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Tue Sep 01 17:14:08 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 20:11:20 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.h.a.c(RemoteSetting.java:163)
+com.estrongs.android.h.a.b(RemoteSetting.java:25)
+com.estrongs.android.h.a$1.downloadError(RemoteSetting.java:130)
+com.estrongs.android.util.y.l(HttpDownloader.java:397)
+com.estrongs.android.util.y.a(HttpDownloader.java:22)
+com.estrongs.android.util.y$1.run(HttpDownloader.java:121)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 20:11:20 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.h.a.c(RemoteSetting.java:163)
+com.estrongs.android.h.a.b(RemoteSetting.java:25)
+com.estrongs.android.h.a$1.downloadError(RemoteSetting.java:130)
+com.estrongs.android.util.y.l(HttpDownloader.java:397)
+com.estrongs.android.util.y.a(HttpDownloader.java:22)
+com.estrongs.android.util.y$1.run(HttpDownloader.java:121)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 20:11:20 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+com.estrongs.android.util.y.k(HttpDownloader.java:125)
+com.estrongs.android.util.y.c(HttpDownloader.java:130)
+com.estrongs.android.h.a.c(RemoteSetting.java:163)
+com.estrongs.android.h.a.b(RemoteSetting.java:25)
+com.estrongs.android.h.a$1.downloadError(RemoteSetting.java:130)
+com.estrongs.android.util.y.l(HttpDownloader.java:397)
+com.estrongs.android.util.y.a(HttpDownloader.java:22)
+com.estrongs.android.util.y$1.run(HttpDownloader.java:121)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 21:23:28 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 21:25:33 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:977)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1114)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+java.lang.Thread.run(Thread.java:1572)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 21:25:33 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1335)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 22:03:24 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.processWorkerExit(ThreadPoolExecutor.java:977)
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1114)
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+java.lang.Thread.run(Thread.java:1572)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Sat Sep 12 22:03:24 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1433)
+java.lang.Thread.start(Thread.java:1488)
+java.lang.JavaLangAccess.start(JavaLangAccess.java:480)
+jdk.internal.vm.SharedThreadContainer.start(SharedThreadContainer.java:151)
+java.util.concurrent.ThreadPoolExecutor.addWorker(ThreadPoolExecutor.java:909)
+java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1335)
+com.estrongs.android.scanner.b.a(Cataloger.java:245)
+com.estrongs.android.scanner.service.FileScannerService$a.handleMessage(FileScannerService.java:84)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Oct 14 11:39:25 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1432)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
+
+VersionName : 4.1.8.7.1 VersionCode : 729 Model : TECNO KI5k Time : Wed Oct 14 11:44:26 GMT 2026
+ExceptionType:java.lang.OutOfMemoryError
+ExceptionClass:java.lang.Thread
+ExceptionMethod:nativeCreate	ExceptionLine:-2
+traces:
+pthread_create (1040KB stack) failed: Try again
+java.lang.Thread.nativeCreate(Native Method)
+java.lang.Thread.start(Thread.java:1432)
+android.app.SharedPreferencesImpl.startLoadFromDisk(SharedPreferencesImpl.java:142)
+android.app.SharedPreferencesImpl.<init>(SharedPreferencesImpl.java:130)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:576)
+android.app.ContextImpl.getSharedPreferences(ContextImpl.java:541)
+android.content.ContextWrapper.getSharedPreferences(ContextWrapper.java:196)
+com.estrongs.android.pop.FexApplication.getSharedPreferences(FexApplication.java:1043)
