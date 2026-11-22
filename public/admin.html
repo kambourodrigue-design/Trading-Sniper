@@ -90,8 +90,36 @@
   .bnav a { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 2px 9px; border-radius:24px; font-size:.68rem; font-weight:600; color:var(--soft); text-decoration:none; transition:background .2s, color .2s; }
   .bnav a svg { width:22px; height:22px; }
   .bnav a.on { color:#fff; background:linear-gradient(135deg,#7C3AED,#D946EF); box-shadow:0 10px 22px -10px rgba(168,85,247,.85); }
+
+/* Lucide premium bottom navigation */
+.lucide-bottom-nav{position:fixed;z-index:80;left:50%;bottom:calc(12px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(720px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;gap:5px;padding:8px;border:1px solid color-mix(in srgb,var(--line,#ECE8F7) 78%,transparent);border-radius:30px;background:color-mix(in srgb,var(--surface,#fff) 86%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35);box-shadow:0 16px 46px -18px rgba(124,58,237,.42),0 4px 16px rgba(20,16,31,.08)}
+.lucide-bottom-nav a{flex:1;min-width:0;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border-radius:23px;color:var(--ink-soft,var(--soft,#6B6580));text-decoration:none;font-size:clamp(10px,.75rem,12px);font-weight:700;line-height:1.1;white-space:nowrap;transition:background .22s ease,color .22s ease,transform .22s ease,box-shadow .22s ease}
+.lucide-bottom-nav a svg{width:23px;height:23px;flex:0 0 auto;transition:transform .22s ease}
+.lucide-bottom-nav a.active{color:#fff;background:linear-gradient(135deg,#873BFA 0%,#B832D8 58%,#D946EF 100%);box-shadow:0 9px 22px -9px rgba(168,85,247,.82),inset 0 1px 0 rgba(255,255,255,.2)}
+.lucide-bottom-nav a.active svg{transform:translateY(-1px)}
+.lucide-bottom-nav a:focus-visible{outline:2px solid #22D3EE;outline-offset:2px}
+.lucide-bottom-nav a:active{transform:scale(.97)}
+body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
+@media(min-width:900px){.lucide-bottom-nav{display:none}body{padding-bottom:env(safe-area-inset-bottom,0px)!important}}
+@media(prefers-reduced-motion:reduce){.lucide-bottom-nav a,.lucide-bottom-nav a svg{transition:none}}
 </style>
-</head>
+<style>
+/* Lucide global theme switch */
+#lucide-theme-toggle{position:fixed;top:14px;right:14px;z-index:10050;display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--line,rgba(124,58,237,.2));border-radius:999px;background:color-mix(in srgb,var(--surface,#fff) 88%,transparent);color:var(--ink,#17132B);box-shadow:0 8px 24px rgba(45,20,90,.16);backdrop-filter:blur(14px);font:700 12px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
+#lucide-theme-toggle:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(124,58,237,.22)}
+#lucide-theme-toggle svg{width:17px;height:17px;flex:none}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#100D1A;--surface:#1B162B;--ink:#F4F0FF;--ink-soft:#B4A9CF;--soft:#B4A9CF;--line:#332849;--lav:#28203D;--cyan:#22D3EE;--violet:#A78BFA;--grad:linear-gradient(135deg,#9333EA,#D946EF)}
+:root[data-theme="dark"] body{background-color:var(--bg)!important;color:var(--ink)}
+:root[data-theme="dark"] .card,:root[data-theme="dark"] .panel,:root[data-theme="dark"] .metric-card,:root[data-theme="dark"] .stat-card,:root[data-theme="dark"] .section-card{background-color:var(--surface);border-color:var(--line);color:var(--ink)}
+:root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#211A33;color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] table th,:root[data-theme="dark"] table td{border-color:var(--line)}
+:root[data-theme="dark"] .muted,:root[data-theme="dark"] .note,:root[data-theme="dark"] .soft{color:var(--soft)}
+:root[data-theme="dark"] nav,:root[data-theme="dark"] .bottom,:root[data-theme="dark"] .lucide-bottom-nav{background:color-mix(in srgb,var(--surface) 90%,transparent);border-color:var(--line)}
+:root[data-theme="dark"] .btn,:root[data-theme="dark"] button:not(#lucide-theme-toggle){background-color:#251D39;color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .btn.primary,:root[data-theme="dark"] button.primary{background:var(--grad);color:#fff;border-color:transparent}
+@media(max-width:700px){#lucide-theme-toggle{top:10px;right:10px;padding:8px 10px}#lucide-theme-toggle .theme-label{display:none}}
+@media(prefers-reduced-motion:reduce){#lucide-theme-toggle{transition:none}}
+</style><script>(function(){const KEY='lucide_theme';let saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}const initial=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=initial;document.documentElement.style.colorScheme=initial;})();</script></head>
 <body>
 <nav><div class="wrap">
   <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="g">cide</span></span><span class="tag">Admin</span></div>
@@ -413,5 +441,5 @@
 
   boot();
 </script>
-</body>
+<script>(function(){const root=document.documentElement;const key='lucide_theme';function paint(mode){root.dataset.theme=mode;root.style.colorScheme=mode;try{localStorage.setItem(key,mode)}catch(e){}const b=document.getElementById('lucide-theme-toggle');if(b){b.setAttribute('aria-label',mode==='dark'?'Activer le mode clair':'Activer le mode nuit');b.setAttribute('aria-pressed',String(mode==='dark'));b.innerHTML=mode==='dark'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span class="theme-label">Mode clair</span>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg><span class="theme-label">Mode nuit</span>'}}document.addEventListener('DOMContentLoaded',function(){let b=document.getElementById('lucide-theme-toggle');if(!b){b=document.createElement('button');b.id='lucide-theme-toggle';b.type='button';b.innerHTML='Mode nuit';b.addEventListener('click',()=>paint(root.dataset.theme==='dark'?'light':'dark'));document.body.appendChild(b)}paint(root.dataset.theme==='dark'?'dark':'light')});})();</script></body>
 </html>
