@@ -157,7 +157,98 @@ body > nav, header > nav, nav.top {
 
 /* ---------- Corrections d'en-tête sur mobile ---------- */
 nav a { text-decoration: none; }
-@media (max-width: 700px) {
-  /* laisse la place au bouton Mode nuit, fixé en haut à droite */
-  nav .navin { padding-right: 54px; }
+
+
+/* ---------- Bouton soleil dans le menu du haut (lx-header.js) ---------- */
+html.lx-has-nav #lucide-theme-toggle { display: none !important; } /* l'ancien bouton flottant est remplacé */
+nav .navin, nav .wrap { padding-right: 62px; } /* réserve la place du bouton à droite */
+
+.lx-theme {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--lx-glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #F59E0B;
+  cursor: pointer;
+  box-shadow: 0 10px 22px -14px rgba(245, 158, 11, .75), 0 1px 0 rgba(255, 255, 255, .6) inset;
+  transition: transform .2s ease, box-shadow .25s ease, color .25s ease, border-color .25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.lx-theme:hover { border-color: color-mix(in srgb, #F59E0B 55%, var(--line)); }
+.lx-theme:active { transform: scale(.93); }
+.lx-theme:focus-visible { outline: 2px solid var(--lx-led); outline-offset: 2px; }
+.lx-theme svg { width: 22px; height: 22px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; }
+.lx-theme .lx-sun-core { fill: currentColor; fill-opacity: .95; transition: fill-opacity .3s ease; }
+.lx-theme .lx-sun-rays { transform-origin: 12px 12px; transition: transform .6s cubic-bezier(.3, 1.3, .5, 1), opacity .3s ease; }
+/* Mode nuit : le soleil devient un contour pâle, les rayons tournent */
+:root[data-theme="dark"] .lx-theme { color: #C9BCEF; box-shadow: 0 10px 22px -14px rgba(124, 58, 237, .8), 0 1px 0 rgba(255, 255, 255, .08) inset; }
+:root[data-theme="dark"] .lx-theme .lx-sun-core { fill-opacity: 0; }
+:root[data-theme="dark"] .lx-theme .lx-sun-rays { transform: rotate(45deg); opacity: .75; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lx-theme { color: #C9BCEF; }
+  :root:not([data-theme="light"]) .lx-theme .lx-sun-core { fill-opacity: 0; }
+}
+
+/* Pages sans menu du haut (backtest) : l'ancien bouton flottant devient une pastille ronde, sans texte */
+html:not(.lx-has-nav) #lucide-theme-toggle { width: 42px; height: 42px; padding: 0; justify-content: center; border-radius: 14px; }
+html:not(.lx-has-nav) #lucide-theme-toggle .theme-label { display: none; }
+
+/* ---------- Boutons « Créer un compte » / « Se connecter » sous le menu ---------- */
+.lx-auth {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  width: min(1160px, calc(100% - 24px));
+  box-sizing: border-box;
+  margin: 10px auto 0;
+}
+.lx-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 46px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 16px;
+  font: 650 .94rem/1 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: -.005em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.lx-btn svg { width: 19px; height: 19px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.lx-btn:active { transform: scale(.97); }
+.lx-btn:focus-visible { outline: 2px solid var(--lx-led); outline-offset: 2px; }
+.lx-btn-main { background: var(--lx-grad); color: #fff; box-shadow: 0 14px 26px -14px rgba(192, 38, 211, .85), 0 1px 0 rgba(255, 255, 255, .35) inset; }
+.lx-btn-ghost { background: var(--lx-glass); color: var(--ink); border: 1px solid var(--line); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.lx-btn-ghost:hover { border-color: color-mix(in srgb, var(--violet) 55%, var(--line)); }
+@media (min-width: 700px) {
+  .lx-auth { justify-content: flex-end; }
+  .lx-btn { flex: 0 0 auto; min-width: 180px; }
+}
+@media (max-width: 340px) { .lx-btn { font-size: .85rem; padding: 0 8px; gap: 6px; } .lx-btn svg { width: 17px; height: 17px; } }
+
+/* Menu du haut de l'accueil : liens sur une seule ligne */
+@media (min-width: 1000px) {
+  nav .navlinks { gap: clamp(10px, 1.4vw, 22px); }
+  nav .navlinks a { white-space: nowrap; }
+}
+/* Largeurs intermédiaires : on garde les pages, les ancres de l'accueil restent accessibles en défilant */
+@media (min-width: 769px) and (max-width: 999.98px) {
+  nav .navlinks a[href^="#"] { display: none; }
+  nav .navlinks a { white-space: nowrap; }
 }
