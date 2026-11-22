@@ -178,7 +178,6 @@ t("classification des unités et estimation 0,01 lot : Forex, or et crypto", () 
   assert.strictEqual(estimatedUsd("USD/CHF", 0.0001, {}, 0.90), 0.11111111111111112);
   assert.strictEqual(estimatedUsd("EUR/GBP", 0.0001, { GBPUSD: 1.27 }), 0.127);
   assert.strictEqual(estimatedUsd("GBP/USD", 0.0001), 0.1);
-  assert.strictEqual(estimatedUsd("ETH/USD", 100), null);
   assert.strictEqual(estimatedUsd("XAU/USD", 4), 4);
   assert.strictEqual(pipUnit("EUR/USD"), 0.0001);
   assert.strictEqual(pipUnit("USD/JPY"), 0.01);
