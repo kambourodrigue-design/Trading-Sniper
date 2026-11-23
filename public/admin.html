@@ -51,6 +51,20 @@
   #flash { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px; font-size:.83rem; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; max-width:90%; }
   #flash.show { opacity:1; }
   .hidden { display:none !important; }
+  .signal-manager-head p { color:var(--soft); font-size:.8rem; margin:-5px 0 14px; line-height:1.5; }
+  .signal-filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:5px; margin:0 0 14px; border:1px solid var(--line); border-radius:16px; background:var(--bg); }
+  .signal-filter { min-width:0; display:flex; align-items:center; justify-content:center; gap:7px; padding:11px 8px; border:1px solid transparent; border-radius:12px; background:transparent; color:var(--soft); font:600 .78rem Inter,sans-serif; cursor:pointer; }
+  .signal-filter b { display:inline-flex; min-width:21px; height:21px; align-items:center; justify-content:center; padding:0 6px; border-radius:99px; background:var(--line); color:var(--soft); font-size:.68rem; }
+  .signal-filter.active { color:#fff; background:linear-gradient(110deg,#7C3AED,#C026D3); box-shadow:0 8px 20px -10px rgba(168,85,247,.8); }
+  .signal-filter.active b { background:rgba(255,255,255,.2); color:#fff; }
+  .filter-dot { width:7px; height:7px; flex:none; border-radius:50%; background:#22C55E; box-shadow:0 0 0 3px rgba(34,197,94,.13); }
+  .filter-dot.archive { background:#A78BFA; box-shadow:0 0 0 3px rgba(167,139,250,.14); }
+  .signal-list .item { padding:15px 0; }
+  .signal-list .item b { font-size:.92rem; }
+  .signal-list .item small { line-height:1.55; overflow-wrap:anywhere; }
+  .signal-list .acts .btn { border-radius:999px; }
+  @media(max-width:480px){.signal-filter{font-size:.72rem;gap:5px;padding:10px 5px}.signal-list .acts{width:100%}.signal-list .acts .btn{flex:1}}
+
 
   /* ===== v2 : même thème que la page d'accueil ===== */
   :root { --hero-a:#B9A6FB; --hero-b:#C98BFA; --hero-c:#E879F9; --hero-d:#FCFBFF; --navbg:rgba(255,255,255,.62); --navborder:rgba(255,255,255,.78); --glass:rgba(255,255,255,.55); --pillc:#6D28D9; --lede:#6A5C8E; --grid:rgba(255,255,255,.18); --cyan:#22D3EE; }
@@ -233,7 +247,14 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
           <button class="btn" style="width:100%;margin-top:14px" type="submit">Publier</button>
         </form>
       </div>
-      <div class="card"><h2>Tous les signaux</h2><div id="slist"></div></div>
+      <div class="card signal-manager">
+        <div class="signal-manager-head"><div><h2>Tous les signaux</h2><p>Suivi des positions ouvertes et consultation des trades clôturés.</p></div></div>
+        <div class="signal-filters" role="tablist" aria-label="Catégories de signaux">
+          <button class="signal-filter active" type="button" data-sfilter="active" role="tab" aria-selected="true"><span class="filter-dot live"></span>Signaux actifs <b id="active-count">0</b></button>
+          <button class="signal-filter" type="button" data-sfilter="closed" role="tab" aria-selected="false"><span class="filter-dot archive"></span>Historique <b id="closed-count">0</b></button>
+        </div>
+        <div id="slist"><div id="sactive"></div><div id="sclosed" class="hidden"></div></div>
+      </div>
     </section>
   </div>
 </main>
@@ -406,22 +427,37 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 
   async function loadSignals() {
     try {
-      const s = await api("/api/admin/signals");
-      $("#slist").innerHTML = s.length ? s.map((x) => {
+      const signals = await api("/api/admin/signals");
+      const active = signals.filter(x => !x.outcome || x.outcome === "open");
+      const closed = signals.filter(x => x.outcome && x.outcome !== "open");
+      const renderSignal = (x, isClosed) => {
         const hid = x.status === "hidden";
-        return '<div class="item' + (hid ? " dim" : "") + '"><div><b>' + esc(x.symbol) + " · " + esc(x.direction) + "</b><small>" + esc(x.source) + " · " + esc(x.outcome || "open") + " · " + (x.confidence == null ? "—" : x.confidence + "%") +
-          " · E " + (x.entry == null ? "—" : x.entry) + " SL " + (x.stop_loss == null ? "—" : x.stop_loss) + " TP1 " + (x.tp1 == null ? "—" : x.tp1) + "</small><small>" + fmtDT(x.created_at) + (hid ? " · masqué" : "") +
-          '</small></div><div class="acts">' + (x.outcome === "open" ? '<button class="btn ghost sm" data-close="' + esc(x.id) + '">Clôturer</button>' : "") + '<button class="btn ghost sm" data-tog="' + esc(x.id) + '" data-st="' + (hid ? "published" : "hidden") + '">' + (hid ? "Afficher" : "Masquer") +
+        const outcome = x.outcome || "open";
+        return '<div class="item' + (hid ? " dim" : "") + '"><div><b>' + esc(x.symbol) + " · " + esc(x.direction) + '</b><small>' + esc(x.source || "auto") + ' · ' + esc(outcome) + ' · ' + (x.confidence == null ? "—" : x.confidence + "%") +
+          " · E " + (x.entry == null ? "—" : x.entry) + " SL " + (x.stop_loss == null ? "—" : x.stop_loss) + " TP1 " + (x.tp1 == null ? "—" : x.tp1) + '</small><small>' + fmtDT(x.created_at) + (hid ? " · masqué" : "") +
+          '</small></div><div class="acts">' + (!isClosed ? '<button class="btn ghost sm" data-close="' + esc(x.id) + '">Clôturer</button>' : '<span class="badge off">Clôturé</span>') + '<button class="btn ghost sm" data-tog="' + esc(x.id) + '" data-st="' + (hid ? "published" : "hidden") + '">' + (hid ? "Afficher" : "Masquer") +
           '</button><button class="btn ghost sm danger" data-del="' + esc(x.id) + '">Supprimer</button></div></div>';
-      }).join("") : EMPTY;
+      };
+      $("#sactive").innerHTML = active.length ? '<div class="signal-list">' + active.map(x => renderSignal(x, false)).join("") + '</div>' : EMPTY;
+      $("#sclosed").innerHTML = closed.length ? '<div class="signal-list">' + closed.map(x => renderSignal(x, true)).join("") + '</div>' : EMPTY;
+      $("#active-count").textContent = active.length;
+      $("#closed-count").textContent = closed.length;
     } catch (e) { flash(e.message); }
   }
 
   $("#slist").addEventListener("click", async (ev) => {
-    const t = ev.target.dataset.tog, d = ev.target.dataset.del, c = ev.target.dataset.close;
+    const filter = ev.target.closest("[data-sfilter]");
+    if (filter) {
+      const showClosed = filter.dataset.sfilter === "closed";
+      $("#sactive").classList.toggle("hidden", showClosed);
+      $("#sclosed").classList.toggle("hidden", !showClosed);
+      document.querySelectorAll("[data-sfilter]").forEach(b => { const on = b === filter; b.classList.toggle("active", on); b.setAttribute("aria-selected", String(on)); });
+      return;
+    }
+    const t = ev.target.closest("[data-tog]")?.dataset.tog, d = ev.target.closest("[data-del]")?.dataset.del, c = ev.target.closest("[data-close]")?.dataset.close;
     try {
       if (c && confirm("Clôturer ce trade ? Il ne sera compté ni gagnant ni perdant et l'actif sera libéré pour un nouveau signal.")) { await post("/api/admin/signals/" + c, { outcome: "closed" }, "PATCH"); flash("Trade clôturé"); loadSignals(); }
-      if (t) { await post("/api/admin/signals/" + t, { status: ev.target.dataset.st }, "PATCH"); loadSignals(); }
+      if (t) { const target = ev.target.closest("[data-tog]"); await post("/api/admin/signals/" + t, { status: target.dataset.st }, "PATCH"); loadSignals(); }
       if (d && confirm("Supprimer définitivement ce signal ?")) { await api("/api/admin/signals/" + d, { method: "DELETE" }); flash("Signal supprimé"); loadSignals(); }
     } catch (e) { flash(e.message); }
   });

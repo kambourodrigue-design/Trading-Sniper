@@ -119,6 +119,34 @@
 body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 @media(min-width:900px){.lucide-bottom-nav{display:none}body{padding-bottom:env(safe-area-inset-bottom,0px)!important}}
 @media(prefers-reduced-motion:reduce){.lucide-bottom-nav a,.lucide-bottom-nav a svg{transition:none}}
+
+  /* Espace de trading : tuiles éditoriales Lucide, adaptées au mobile */
+  .trading-hub { padding:22px; overflow:hidden; }
+  .hub-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:17px; }
+  .hub-heading h2 { font-size:1.25rem; }
+  .hub-heading p { color:var(--ink-soft); font-size:.78rem; margin-top:5px; line-height:1.45; }
+  .hub-kicker { color:#A78BFA; font:700 .62rem 'JetBrains Mono',monospace; letter-spacing:.14em; }
+  .hub-orbit { width:40px; height:40px; display:grid; place-items:center; border-radius:14px; color:#E9D5FF; background:linear-gradient(135deg,rgba(124,58,237,.24),rgba(217,70,239,.18)); border:1px solid rgba(167,139,250,.24); font-size:1.25rem; }
+  .hub-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .hub-tile { min-width:0; min-height:105px; position:relative; display:flex; align-items:center; gap:11px; padding:14px 12px; overflow:hidden; border:1px solid rgba(167,139,250,.2); border-radius:17px; text-decoration:none; color:var(--ink); background:linear-gradient(145deg,rgba(124,58,237,.09),rgba(217,70,239,.035) 65%,rgba(34,211,238,.035)); transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+  .hub-tile::after { content:""; position:absolute; width:90px; height:90px; right:-48px; bottom:-56px; border-radius:50%; background:rgba(168,85,247,.12); filter:blur(2px); pointer-events:none; }
+  .hub-tile:hover { transform:translateY(-2px); border-color:rgba(192,132,252,.55); box-shadow:0 12px 28px -20px rgba(168,85,247,.8); }
+  .hub-icon { width:39px; height:39px; flex:none; display:grid; place-items:center; border-radius:13px; color:#C4B5FD; background:rgba(124,58,237,.17); border:1px solid rgba(167,139,250,.2); }
+  .hub-icon svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .hub-copy { min-width:0; display:flex; flex-direction:column; gap:5px; }
+  .hub-copy b { font:700 .83rem 'Plus Jakarta Sans','Inter',sans-serif; line-height:1.2; }
+  .hub-copy small { color:var(--ink-soft); font-size:.66rem; line-height:1.35; }
+  .hub-arrow { position:absolute; top:10px; right:11px; color:var(--ink-soft); font-size:.8rem; opacity:.8; }
+  .hub-cyan { background:linear-gradient(145deg,rgba(34,211,238,.10),rgba(124,58,237,.045)); border-color:rgba(34,211,238,.2); }
+  .hub-cyan .hub-icon { color:#67E8F9; background:rgba(34,211,238,.10); border-color:rgba(34,211,238,.18); }
+  .hub-premium { background:linear-gradient(135deg,rgba(217,70,239,.13),rgba(124,58,237,.08)); }
+  .hub-premium .hub-icon { color:#F0ABFC; background:rgba(217,70,239,.13); }
+  .hub-wide { grid-column:1 / -1; min-height:82px; }
+  :root[data-theme="dark"] .hub-tile { background:linear-gradient(145deg,rgba(124,58,237,.17),rgba(38,29,61,.72) 70%,rgba(34,211,238,.055)); border-color:rgba(167,139,250,.2); }
+  :root[data-theme="dark"] .hub-cyan { background:linear-gradient(145deg,rgba(34,211,238,.11),rgba(38,29,61,.82)); border-color:rgba(34,211,238,.22); }
+  :root[data-theme="dark"] .hub-premium { background:linear-gradient(135deg,rgba(217,70,239,.16),rgba(38,29,61,.82)); }
+  @media(max-width:430px){ .trading-hub{padding:17px}.hub-grid{gap:8px}.hub-tile{min-height:100px;padding:12px 9px;gap:8px}.hub-icon{width:34px;height:34px;border-radius:11px}.hub-icon svg{width:19px;height:19px}.hub-copy b{font-size:.75rem}.hub-copy small{font-size:.61rem}.hub-arrow{right:8px;top:8px} }
+  @media(prefers-reduced-motion:reduce){.hub-tile{transition:none}}
 </style>
 <style>
 /* Lucide global theme switch */
@@ -250,16 +278,16 @@ main.wrap{min-width:0}
       <p style="color:var(--ink-soft); font-size:.82rem; margin-top:10px">Starter : signaux XAU/USD et BTC/USD. Pro et Elite : tous les actifs et justification détaillée des analyses macroéconomiques et techniques. Le paiement (Stripe / Mobile Money) sera branché ici une fois les webhooks activés ; en attendant, l'administrateur peut activer ton abonnement.</p>
     </section>
 
-    <section class="card">
-      <h2 style="margin:0 0 12px">Espace de trading</h2>
-      <div class="row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
-        <a class="btn btn-ghost" href="/scanner.html">Scanner IA</a>
-        <a class="btn btn-ghost" href="/multi-timeframe.html">Multi-timeframe</a>
-        <a class="btn btn-ghost" href="/history.html">Historique</a>
-        <a class="btn btn-ghost" href="/performance.html">Performance</a>
-        <a class="btn btn-ghost" href="/academy.html">Académie</a>
-        <a class="btn btn-ghost" href="/subscription.html">Abonnement</a>
-        <a class="btn btn-ghost" href="/backtest-report.html">Backtest</a>
+    <section class="card trading-hub">
+      <div class="hub-heading"><div><span class="hub-kicker">LUCIDE WORKSPACE</span><h2 style="margin:3px 0 0">Espace de trading</h2><p>Retrouve tes outils d'analyse, de formation et de suivi.</p></div><span class="hub-orbit" aria-hidden="true">✦</span></div>
+      <div class="hub-grid">
+        <a class="hub-tile hub-primary" href="/scanner.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5M10.8 7v7.6M7 10.8h7.6"/></svg></span><span class="hub-copy"><b>Scanner IA</b><small>Signaux et opportunités</small></span><span class="hub-arrow">↗</span></a>
+        <a class="hub-tile hub-cyan" href="/multi-timeframe.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></span><span class="hub-copy"><b>Multi-timeframe</b><small>Analyse des unités de temps</small></span><span class="hub-arrow">↗</span></a>
+        <a class="hub-tile" href="/history.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span class="hub-copy"><b>Historique</b><small>Signaux précédents</small></span><span class="hub-arrow">↗</span></a>
+        <a class="hub-tile" href="/performance.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></svg></span><span class="hub-copy"><b>Performance</b><small>Statistiques et résultats</small></span><span class="hub-arrow">↗</span></a>
+        <a class="hub-tile hub-cyan" href="/academy.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5M22 9v7"/></svg></span><span class="hub-copy"><b>Académie</b><small>Maîtriser les stratégies</small></span><span class="hub-arrow">↗</span></a>
+        <a class="hub-tile hub-premium" href="/subscription.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg></span><span class="hub-copy"><b>Abonnement</b><small>Gérer ton accès premium</small></span><span class="hub-arrow">↗</span></a>
+        <a class="hub-tile hub-wide" href="/backtest-report.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/></svg></span><span class="hub-copy"><b>Backtest</b><small>Évaluer la stratégie sur l'historique</small></span><span class="hub-arrow">↗</span></a>
       </div>
     </section>
 
