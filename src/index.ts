@@ -33,7 +33,8 @@ export default {
       return new Response(null, { headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization" } });
     }
 
-    await ensureSchema(env); // crée les tables au tout premier appel
+    try {
+      await ensureSchema(env); // crée les tables au tout premier appel
 
     // Diagnostic léger du backend : vérifie les dépendances sans exposer de secrets.
     if (pathname === "/api/health" && req.method === "GET") {
@@ -163,7 +164,12 @@ export default {
     if (pathname === "/api/webhooks/stripe" && req.method === "POST") return json({ received: true });
     if (pathname === "/api/webhooks/cinetpay" && req.method === "POST") return json({ received: true });
 
-    return err("Not found", 404);
+      return err("Not found", 404);
+    } catch (e) {
+      console.error("worker fetch error", pathname, e instanceof Error ? (e.stack || e.message) : e);
+      // Garder une réponse JSON pour les routes API, même lorsqu'une exception survient.
+      return json({ error: "Internal server error", path: pathname }, 500);
+    }
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
