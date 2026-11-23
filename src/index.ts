@@ -33,6 +33,18 @@ export default {
       return new Response(null, { headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization" } });
     }
 
+    // Endpoint de diagnostic léger : ne modifie aucune donnée et n'expose aucun secret.
+    if (pathname === "/api/health" && req.method === "GET") {
+      const checks: Record<string, "ok" | "error"> = { worker: "ok", d1: "error", kv: "error" };
+      try { await env.DB.prepare("SELECT 1 AS ok").first(); checks.d1 = "ok"; } catch (e) { console.error("health:d1", e); }
+      try { await env.CACHE.get("__lucide_health_check__"); checks.kv = "ok"; } catch (e) { console.error("health:kv", e); }
+      const healthy = checks.d1 === "ok" && checks.kv === "ok";
+      return new Response(JSON.stringify({ status: healthy ? "ok" : "degraded", checks, timestamp: new Date().toISOString() }), {
+        status: healthy ? 200 : 503,
+        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" },
+      });
+    }
+
     await ensureSchema(env); // crée les tables au tout premier appel
 
     const adminRes = await handleAdmin(req, env, ctx, pathname);
@@ -48,6 +60,12 @@ export default {
       const userId = newId();
       await env.DB.prepare("INSERT INTO users (id, email, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?)").bind(userId, email, hash, salt, Math.floor(Date.now() / 1000)).run();
       return json({ token: await createSession(env.DB, userId), user: { id: userId, email } }, 201);
+    }
+
+    if (pathname === "/api/auth/login" && req.method === "GET") {
+      return new Response(JSON.stringify({ error: "Cette route de connexion attend une requête POST avec email et mot de passe." }), {
+        status: 405, headers: { "content-type": "application/json; charset=utf-8", "allow": "POST", "access-control-allow-origin": "*" },
+      });
     }
 
     if (pathname === "/api/auth/login" && req.method === "POST") {
