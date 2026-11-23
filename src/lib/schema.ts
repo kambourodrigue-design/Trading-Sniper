@@ -30,7 +30,7 @@ const COLUMNS: string[] = [
   "ALTER TABLE signals ADD COLUMN progress_at INTEGER",
 ];
 
-let ready: Promise<void> | null = null;
+let ready = false;
 async function tolerant(env: Env, stmts: string[]): Promise<string[]> {
   const errs: string[] = [];
   for (const s of stmts) { try { await env.DB.prepare(s).run(); } catch (e) { errs.push(`${s.slice(0, 60)} → ${(e as Error).message}`); } }
@@ -38,14 +38,14 @@ async function tolerant(env: Env, stmts: string[]): Promise<string[]> {
 }
 // Crée les tables manquantes et met à niveau une ancienne base (colonnes manquantes, index) — une seule fois par instance du Worker.
 // Chaque instruction est exécutée séparément : une instruction en échec n'empêche pas les autres.
-export function ensureSchema(env: Env): Promise<void> {
-  if (!ready) {
-    ready = (async () => {
-      await tolerant(env, SCHEMA);                       // tables (et index quand les colonnes existent déjà)
-      await tolerant(env, COLUMNS);                      // colonnes manquantes d'une ancienne base
-      const errs = await tolerant(env, SCHEMA);          // 2e passe : index qui dépendaient de ces colonnes
-      if (errs.length) console.error("schéma : ", errs.join(" | "));
-    })().catch((e) => { ready = null; throw e; });
-  }
-  return ready;
+export async function ensureSchema(env: Env): Promise<void> {
+  // Ne jamais mémoriser une Promise globale entre requêtes Cloudflare Workers :
+  // une requête peut se terminer avant qu'une autre ne récupère/résolve cette Promise.
+  // Le booléen ne conserve que l'état terminé de l'initialisation dans cette instance.
+  if (ready) return;
+  await tolerant(env, SCHEMA);                       // tables (et index quand les colonnes existent déjà)
+  await tolerant(env, COLUMNS);                      // colonnes manquantes d'une ancienne base
+  const errs = await tolerant(env, SCHEMA);          // 2e passe : index qui dépendaient de ces colonnes
+  if (errs.length) console.error("schéma : ", errs.join(" | "));
+  ready = true;
 }
