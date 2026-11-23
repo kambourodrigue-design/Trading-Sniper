@@ -141,7 +141,6 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 <body>
 <nav><div class="wrap">
   <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="g">cide</span></span><span class="tag">Admin</span></div>
-  <button class="btn ghost sm hidden" id="logout">Déconnexion</button>
 </div></nav>
 
 <header class="dhead">
@@ -166,6 +165,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
   </section>
 
   <div id="app" class="hidden">
+    <div class="row" style="justify-content:flex-end;margin-bottom:12px"><button class="btn ghost sm hidden" id="logout">Déconnexion</button></div>
     <div class="tabs">
       <div class="tab on" data-t="ov">Aperçu</div>
       <div class="tab" data-t="us">Utilisateurs</div>
@@ -291,7 +291,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     if (raw) {
       try { data = JSON.parse(raw); }
       catch (_) {
-        const html = /^\\s*<!doctype html|^\\s*<html/i.test(raw);
+        const html = /^\s*<!doctype html|^\s*<html/i.test(raw);
         const detail = html
           ? "Le serveur a renvoyé une page HTML au lieu du JSON. Vérifie le routage /api/* et le déploiement du Worker."
           : "Réponse API illisible (JSON invalide).";
