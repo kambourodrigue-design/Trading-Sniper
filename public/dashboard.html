@@ -423,19 +423,40 @@ main.wrap{min-width:0}
     }
   });
 
-  async function loadSignals() {
+  // Chargement robuste : une erreur API temporaire ne nécessite plus
+  // que l'utilisateur actualise lui-même toute la page.
+  let signalsRetryTimer = null;
+  let signalsLoadId = 0;
+  async function loadSignals(attempt = 0, loadId = null) {
+    if (loadId === null) {
+      loadId = ++signalsLoadId;
+      if (signalsRetryTimer) { clearTimeout(signalsRetryTimer); signalsRetryTimer = null; }
+    }
     const list = $("#signals-list");
-    list.innerHTML = '<div class="empty"><span class="spin"></span> Chargement…</div>';
+    list.innerHTML = attempt === 0
+      ? '<div class="empty"><span class="spin"></span> Chargement des signaux…</div>'
+      : '<div class="empty"><span class="spin"></span> Connexion au moteur… nouvelle tentative ' + attempt + '/5</div>';
     try {
       const res = await fetch(`${API_BASE}/api/signals/latest`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const data = await readApiResponse(res);
+      if (loadId !== signalsLoadId) return;
       if (!Array.isArray(data) || data.length === 0) { list.innerHTML = '<div class="empty">Aucun signal pour le moment : Lucide n’émet un signal que lorsque toutes les conditions sont réunies.</div>'; return; }
       window.sigs = {}; data.forEach(function (x) { window.sigs[x.id] = x; }); list.innerHTML = data.map(signalCard).join("");
-    } catch {
-      list.innerHTML = '<div class="empty">Impossible de charger les signaux. Vérifie que le backend est déployé et que API_BASE est correct.</div>';
+    } catch (error) {
+      if (loadId !== signalsLoadId) return;
+      if (attempt < 5) {
+        const delay = Math.min(2000 * (attempt + 1), 10000);
+        list.innerHTML = '<div class="empty"><span class="spin"></span> Données momentanément indisponibles. Nouvelle tentative automatique dans ' + (delay / 1000) + ' s…</div>';
+        signalsRetryTimer = setTimeout(function () {
+          signalsRetryTimer = null;
+          loadSignals(attempt + 1, loadId);
+        }, delay);
+      } else {
+        list.innerHTML = '<div class="empty">Le serveur ne répond toujours pas. Réessaie avec le bouton « Actualiser les signaux ».</div>';
+      }
     }
   }
-  $("#refresh-signals").addEventListener("click", loadSignals);
+  $("#refresh-signals").addEventListener("click", function () { loadSignals(); });
 
   // ----- Graphique (TradingView Lightweight Charts) : bougies + niveaux Entry / SL / TP -----
   var chart = null, series = null, lines = [], curSig = null, curTf = "H1";
