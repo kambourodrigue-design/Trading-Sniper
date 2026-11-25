@@ -51,11 +51,11 @@ t("summarize : breakeven ≠ victoire, espérance, profit factor, drawdown, sér
   assert.strictEqual(m.total_r, 3.5); assert.strictEqual(m.expectancy_r, 0.7); assert.strictEqual(m.profit_factor, 2.75);
   assert.strictEqual(m.max_drawdown_r, 2); assert.strictEqual(m.max_loss_streak, 2);
 });
-t("12 paires Forex + Gold + BTC/ETH configurés uniquement sur biquote", () => {
+t("12 paires Forex + Gold + BTC/ETH configurés avec les seuls fournisseurs autorisés", () => {
   assert.strictEqual(SYMBOLS.length, 15);
   assert.strictEqual(SYMBOLS.filter((x) => x.currencies.length === 2 && x.session === "fx").length, 12);
   for (const item of SYMBOLS) for (const source of item.sources) {
-    if (source.p !== "biquote") throw new Error(`fournisseur interdit : ${source.p}`);
+    if (!(source.p === "biquote" || source.p === "binance" || source.p === "kraken")) throw new Error(`fournisseur interdit : ${source.p}`);
   }
 });
 t("biais macro : surprise USD positive pénalise EUR/USD et favorise USD/JPY", () => {

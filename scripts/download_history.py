@@ -2,16 +2,16 @@
 """Download 2y+ of public historical candles for Lucide Sniper.
 
 Forex/Gold: Dukascopy public BI5 M1 candle feed (BID candles).
-Crypto histories must be imported separately as local CSV files.
+Crypto: Binance public Spot klines (BTCUSDT, ETHUSDT).
 Outputs local CSV files; deliberately does not upload M1/M5 into D1 because
 that volume can exceed practical D1 storage/write quotas. No API key required.
 """
 from __future__ import annotations
-import argparse, csv, datetime as dt, json, lzma, math, struct, time, urllib.error, urllib.request
+import argparse, csv, datetime as dt, json, lzma, math, os, struct, sys, time, urllib.error, urllib.parse, urllib.request
 from pathlib import Path
 
 FX_SYMBOLS = ["EURUSD","GBPUSD","USDJPY","USDCAD","USDCHF","AUDUSD","NZDUSD","EURGBP","EURJPY","EURCAD","GBPJPY","GBPCAD"]
-SYMBOLS = ["XAUUSD", *FX_SYMBOLS]
+SYMBOLS = ["XAUUSD", *FX_SYMBOLS, "BTCUSDT", "ETHUSDT"]
 
 
 def utc_day(d: dt.date) -> int:
@@ -89,12 +89,29 @@ def download_dukascopy(symbol,start,end,outdir):
         agg=aggregate(rows,mins); write_csv(outdir/symbol/f"{tf}.csv",agg); counts[tf]=len(agg)
     return {"symbol":symbol,**counts,"first":rows[0][0] if rows else None,"last":rows[-1][0] if rows else None,"download_errors":failures[:20]}
 
+def download_binance(symbol,start,end,outdir):
+    start_ms=utc_day(start); end_ms=utc_day(end+dt.timedelta(days=1))-1; rows=[]; cursor=start_ms
+    while cursor<=end_ms:
+        q=urllib.parse.urlencode({"symbol":symbol,"interval":"1m","startTime":cursor,"endTime":end_ms,"limit":1000})
+        data=json.loads(fetch("https://api.binance.com/api/v3/klines?"+q))
+        if not data: break
+        for k in data: rows.append((int(k[0]),float(k[1]),float(k[2]),float(k[3]),float(k[4])))
+        nxt=int(data[-1][0])+60000
+        if nxt<=cursor: break
+        cursor=nxt
+        time.sleep(0.12)
+    rows=list({r[0]:r for r in rows}.values()); rows.sort(key=lambda x:x[0])
+    write_csv(outdir/symbol/"M1.csv",rows)
+    counts={"M1":len(rows)}
+    for tf,mins in (("M5",5),("M15",15),("M30",30),("H1",60),("H4",240),("D1",1440)):
+        agg=aggregate(rows,mins); write_csv(outdir/symbol/f"{tf}.csv",agg); counts[tf]=len(agg)
+    return {"symbol":symbol,**counts,"first":rows[0][0] if rows else None,"last":rows[-1][0] if rows else None,"download_errors":[]}
 
 def main():
     p=argparse.ArgumentParser(description="Lucide Sniper: gratuit historical M1/M5 downloader")
     p.add_argument("--start",default=(dt.date.today()-dt.timedelta(days=730)).isoformat(),help="UTC YYYY-MM-DD")
     p.add_argument("--end",default=(dt.date.today()-dt.timedelta(days=1)).isoformat(),help="UTC YYYY-MM-DD")
-    p.add_argument("--symbols",default="all",help="all, XAUUSD,EURUSD,... (Forex/Gold uniquement)")
+    p.add_argument("--symbols",default="all",help="all, XAUUSD,EURUSD,...")
     p.add_argument("--out",default="./historical",help="Local output folder")
     a=p.parse_args(); start=dt.date.fromisoformat(a.start); end=dt.date.fromisoformat(a.end)
     if end<start: p.error("--end must be >= --start")
@@ -104,9 +121,9 @@ def main():
     out=Path(a.out); report=[]
     for s in selected:
         print(f"\nDownloading {s} {start} → {end}",flush=True)
-        report.append(download_dukascopy(s,start,end,out))
+        report.append(download_binance(s,start,end,out) if s in ("BTCUSDT","ETHUSDT") else download_dukascopy(s,start,end,out))
     out.mkdir(parents=True,exist_ok=True)
-    (out/"manifest.json").write_text(json.dumps({"source":"Dukascopy public BID M1","generated_utc":dt.datetime.now(dt.timezone.utc).isoformat(),"start":start.isoformat(),"end":end.isoformat(),"results":report},indent=2),encoding="utf-8")
+    (out/"manifest.json").write_text(json.dumps({"source":"Dukascopy public BID M1 / Binance Spot M1","generated_utc":dt.datetime.now(dt.timezone.utc).isoformat(),"start":start.isoformat(),"end":end.isoformat(),"results":report},indent=2),encoding="utf-8")
     print("\nFinished. See",out/"manifest.json")
 
 if __name__=="__main__": main()

@@ -14,6 +14,6 @@ class DownloaderTests(unittest.TestCase):
         out=h.aggregate(rows,5)
         self.assertEqual(len(out),1); self.assertEqual(tuple(out[0][1:]),(1,3,.5,2.5))
     def test_market_coverage(self):
-        self.assertEqual(len(h.SYMBOLS),13); self.assertEqual(len(set(h.SYMBOLS)),13)
-        self.assertIn('XAUUSD',h.SYMBOLS); self.assertNotIn('BTCUSDT',h.SYMBOLS); self.assertNotIn('ETHUSDT',h.SYMBOLS)
+        self.assertEqual(len(h.SYMBOLS),15); self.assertEqual(len(set(h.SYMBOLS)),15)
+        self.assertIn('XAUUSD',h.SYMBOLS); self.assertIn('BTCUSDT',h.SYMBOLS); self.assertIn('ETHUSDT',h.SYMBOLS)
 if __name__=='__main__': unittest.main()
