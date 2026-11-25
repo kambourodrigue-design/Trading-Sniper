@@ -1,9 +1,9 @@
 export type Session = "fx" | "us" | "crypto";
-export type ProviderName = "biquote" | "binance" | "kraken";
+export type ProviderName = "biquote";
 export interface Src { p: ProviderName; market: string; id: string }
 export interface SymbolCfg { symbol: string; label: string; currencies: string[]; session: Session; sources: Src[] }
 
-// Flux principal biquote (sans clé). Binance/Kraken sont des replis uniquement pour les cryptomonnaies.
+// Source de marché unique : biquote (sans clé).
 // Les symboles biquote suivent le catalogue MT5 documenté : EURUSD, XAUUSD, BTCUSD, etc.
 export const SYMBOLS: SymbolCfg[] = [
   { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx", sources: [{ p: "biquote", market: "metals", id: "XAUUSD" }] },
@@ -20,10 +20,10 @@ export const SYMBOLS: SymbolCfg[] = [
   { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPJPY" }] },
   { symbol: "GBP/CAD", label: "Livre / Dollar canadien", currencies: ["GBP", "CAD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPCAD" }] },
   { symbol: "BTC/USD", label: "Bitcoin", currencies: ["BTC", "USD"], session: "crypto", sources: [
-    { p: "biquote", market: "crypto", id: "BTCUSD" }, { p: "kraken", market: "spot", id: "XBTUSD" }, { p: "binance", market: "spot", id: "BTCUSDT" },
+    { p: "biquote", market: "crypto", id: "BTCUSD" },
   ] },
   { symbol: "ETH/USD", label: "Ethereum", currencies: ["ETH", "USD"], session: "crypto", sources: [
-    { p: "biquote", market: "crypto", id: "ETHUSD" }, { p: "kraken", market: "spot", id: "XETHZUSD" }, { p: "binance", market: "spot", id: "ETHUSDT" },
+    { p: "biquote", market: "crypto", id: "ETHUSD" },
   ] },
 ];
 
