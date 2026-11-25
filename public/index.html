@@ -321,7 +321,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     </div>
     <div class="stat">
       <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg></div>
-      <b id="live-rate">—</b><span>atteint TP1 · mesuré sur 90 jours</span>
+      <b id="live-rate">—</b><span>taux de réussite · mesuré sur 90 jours</span>
     </div>
     <div class="stat">
       <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -449,7 +449,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     <div class="live-panel">
       <div class="live-grid">
         <div><b id="lv-open">—</b><span class="l">en cours</span></div>
-        <div><b id="lv-win">—</b><span class="l">TP1 atteint ou plus</span></div>
+        <div><b id="lv-win">—</b><span class="l">gagnants (TP1, TP2 ou TP3)</span></div>
         <div><b id="lv-loss">—</b><span class="l">stoppés avant TP1</span></div>
       </div>
       <p>Chaque signal est suivi automatiquement jusqu’au Take Profit ou au Stop Loss, et un seul trade reste ouvert par actif. Les résultats sont affichés tels quels, gagnants comme perdants (90 derniers jours).</p>
@@ -621,8 +621,8 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
   window.addEventListener("scroll", spy, { passive: true }); spy();
   fetch("/api/stats").then(function (r) { return r.json(); }).then(function (j) {
     var set = function (id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
-    set("live-rate", j.tp1_rate == null ? "—" : j.tp1_rate + " %");
-    set("lv-open", j.open); set("lv-win", j.reached_tp1_or_more); set("lv-loss", j.stopped_before_tp1);
+    set("live-rate", j.win_rate == null ? "—" : j.win_rate + " %");
+    set("lv-open", j.open); set("lv-win", j.wins); set("lv-loss", j.losses);
   }).catch(function () {});
 })();
 </script>

@@ -26,7 +26,7 @@ export function interText(symbol: string, usd: DollarStat | null, bias: number):
   if (!usd) return "INTERMARCHÉS : proxy EUR/USD D1 indisponible ; aucun biais USD appliqué.";
   const state = usd.score > 0.2 ? "USD plutôt fort" : usd.score < -0.2 ? "USD plutôt faible" : "USD neutre";
   const reading = bias > 0.25 ? "favorable à la hausse" : bias < -0.25 ? "favorable à la baisse" : "neutre";
-  return `INTERMARCHÉS (proxy, non DXY officiel) : EUR/USD ${usd.last.toFixed(4)}, ${(usd.ret10 * 100).toFixed(2)} % sur 10 séances, ${usd.below50 ? "sous" : "au-dessus de"} sa MM50 ; ${state}. Lecture USD pour ${symbol} : ${reading} (biais ${bias >= 0 ? "+" : ""}${bias.toFixed(2)}). Les rendements US ne sont pas inclus dans cette version gratuite.`;
+  return `INTERMARCHÉS (proxy, non DXY officiel) : EUR/USD ${usd.last.toFixed(4)}, ${(usd.ret10 * 100).toFixed(2)} % sur 10 séances, ${usd.below50 ? "sous" : "au-dessus de"} sa MM50 ; ${state}. Lecture USD pour ${symbol} : ${reading} (biais ${bias >= 0 ? "+" : ""}${bias.toFixed(2)}).`;
 }
 
 async function fetchDollar(_env: Env, now: number): Promise<DollarStat | null> {

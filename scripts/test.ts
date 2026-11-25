@@ -44,10 +44,10 @@ t("R : sl −1, tp1 0, tp2 +1,5, tp3 +4, coût déduit des trades clos", () => {
   assert.deepStrictEqual(["sl", "tp1", "tp2", "tp3"].map((o) => rOf(o)), [-1, 0, 1.5, 4]);
   assert.strictEqual(rOf("sl", 0.1), -1.1); assert.strictEqual(rOf("expired", 0.1), 0);
 });
-t("summarize : breakeven ≠ victoire, espérance, profit factor, drawdown, série", () => {
+t("summarize : TP1/TP2/TP3 = gagnants (même break-even), espérance, profit factor, drawdown, série", () => {
   const m = summarize([{ outcome: "tp3" }, { outcome: "sl" }, { outcome: "sl" }, { outcome: "tp1" }, { outcome: "tp2" }, { outcome: "expired" }]);
   assert.strictEqual(m.trades, 5); assert.strictEqual(m.wins, 2); assert.strictEqual(m.breakeven, 1); assert.strictEqual(m.losses, 2); assert.strictEqual(m.unresolved, 1);
-  assert.strictEqual(m.win_rate, 40); assert.strictEqual(m.tp1_touch_rate, 60);
+  assert.strictEqual(m.tp_hits, 3); assert.strictEqual(m.win_rate, 60); assert.strictEqual(m.tp1_touch_rate, 60);
   assert.strictEqual(m.total_r, 3.5); assert.strictEqual(m.expectancy_r, 0.7); assert.strictEqual(m.profit_factor, 2.75);
   assert.strictEqual(m.max_drawdown_r, 2); assert.strictEqual(m.max_loss_streak, 2);
 });

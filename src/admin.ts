@@ -7,7 +7,7 @@ import { buildAnalysis, evaluate } from "./engine/analyze";
 import { adaptiveProfile } from "./engine/run";
 import { isMarketOpen } from "./engine/sessions";
 import { evaluateOutcome, Sig } from "./engine/outcome";
-import { summarize } from "./engine/metrics";
+import { summarize, summarizeCounts } from "./engine/metrics";
 import { biquoteCandles, binanceCandles, krakenCandles, yahooCandles } from "./lib/prices";
 import type { Candle, Dir } from "./engine/types";
 import { probeSources } from "./lib/prices";
@@ -44,18 +44,18 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     ).all<{ plan: string; n: number }>();
     const s24 = await env.DB.prepare("SELECT COUNT(*) n FROM signals WHERE created_at > ?").bind(now - 86400).first<{ n: number }>();
     const openSig = await env.DB.prepare("SELECT COUNT(*) n FROM signals WHERE outcome = 'open' AND user_id IS NULL").first<{ n: number }>();
-    const outc = await env.DB.prepare("SELECT source, outcome, COUNT(*) n FROM signals WHERE source IN ('auto', 'ai') AND created_at > ? GROUP BY source, outcome").bind(now - 90 * 86400).all<{ source: string; outcome: string; n: number }>();
+    const outc = await env.DB.prepare("SELECT source, outcome, COUNT(*) n FROM signals WHERE source IN ('auto', 'ai') AND status = 'published' AND created_at > ? GROUP BY source, outcome").bind(now - 90 * 86400).all<{ source: string; outcome: string; n: number }>();
+    // Même définition que /api/stats : summarizeCounts (win_rate = TP1+ atteint).
     const tally = (src: string | null) => {
-      let w = 0, l = 0;
-      for (const r of outc.results) if (src === null || r.source === src) { if (r.outcome === "sl") l += r.n; else if (r.outcome.startsWith("tp")) w += r.n; }
-      return { wins: w, losses: l, rate: w + l ? Math.round((100 * w) / (w + l)) : null };
+      const c: Record<string, number> = {};
+      for (const r of outc.results) if (src === null || r.source === src) c[r.outcome] = (c[r.outcome] ?? 0) + r.n;
+      return summarizeCounts(c);
     };
     const all = tally(null), viaRules = tally("auto"), viaAi = tally("ai");
-    const wins = all.wins, losses = all.losses;
     const by_plan: Record<string, number> = {};
     let active = 0;
     for (const r of byPlan.results) { by_plan[r.plan] = r.n; active += r.n; }
-    return json({ users: users?.n ?? 0, active_subscribers: active, by_plan, signals_24h: s24?.n ?? 0, open_signals: openSig?.n ?? 0, tp1_rate: all.rate, wins, losses, rules_rate: viaRules.rate, ai_rate: viaAi.rate });
+    return json({ users: users?.n ?? 0, active_subscribers: active, by_plan, signals_24h: s24?.n ?? 0, open_signals: openSig?.n ?? 0, win_rate: all.win_rate, wins: all.tp_hits, losses: all.losses, trades: all.trades, rules_rate: viaRules.win_rate, ai_rate: viaAi.win_rate });
   }
 
   // --- Utilisateurs ---

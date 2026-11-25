@@ -154,7 +154,9 @@ export default {
         const win = (c.tp1 ?? 0) + (c.tp2 ?? 0) + (c.tp3 ?? 0), loss = c.sl ?? 0;
         // tp1_rate / reached_tp1_or_more / stopped_before_tp1 : anciens champs conservés (le breakeven y compte comme gagnant).
         // `performance` : mesure en R (breakeven séparé, espérance, profit factor), sans spread ni slippage.
-        return { open: c.open ?? 0, expired: c.expired ?? 0, reached_tp1_or_more: win, stopped_before_tp1: loss, tp1_rate: win + loss ? Math.round((100 * win) / (win + loss)) : null, performance: summarizeCounts(c) };
+        const perf = summarizeCounts(c);
+        // TAUX UNIQUE DU SITE : `win_rate` = % de trades clos ayant atteint TP1, TP2 ou TP3 (break-even après TP1 compté gagnant). Toutes les pages le lisent ici.
+        return { open: c.open ?? 0, expired: c.expired ?? 0, win_rate: perf.win_rate, wins: perf.tp_hits, losses: perf.losses, trades: perf.trades, reached_tp1_or_more: win, stopped_before_tp1: loss, tp1_rate: win + loss ? Math.round((100 * win) / (win + loss)) : null, performance: perf };
       };
       // auto = signaux des règles validés par les IA ; ai = analyses indépendantes des IA
       return json({ window_days: 90, ...sum(null), by_source: { auto: sum("auto"), ai: sum("ai") } });

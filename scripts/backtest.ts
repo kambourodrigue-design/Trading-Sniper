@@ -172,8 +172,8 @@ async function run(symbol: string) {
     reportRows.push({ symbol, profile: pn, decisions: bars, setups: r.n, weeks: Number(weeks.toFixed(2)), ...m, gross_expectancy_r: gross.expectancy_r, cost_atr: costAtr, split: split, walk_forward: walkForward, source_mode: historySource, exit_timeframe: live ? "M15" : "H1", equity_curve });
     const top = Object.entries(r.blockers).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${Math.round((100 * v) / Math.max(1, r.evals))} %`).join(", ");
     const f = (x: number | null, d = 2) => (x === null ? "—" : x.toFixed(d));
-    console.log(`[${pn.padEnd(8)}] setups : ${String(r.n).padStart(3)} (${(r.n / weeks).toFixed(2)}/semaine) | clos ${m.trades} : ${m.wins} gagnants (R>0), ${m.breakeven} breakeven, ${m.losses} SL, ${m.unresolved} expirés`);
-    console.log(`           win rate ${m.win_rate ?? "—"} % (TP1 touché : ${m.tp1_touch_rate ?? "—"} %) | espérance ${f(m.expectancy_r)} R/trade (brute ${f(gross.expectancy_r)}) | R total ${m.total_r} | profit factor ${f(m.profit_factor)}`);
+    console.log(`[${pn.padEnd(8)}] setups : ${String(r.n).padStart(3)} (${(r.n / weeks).toFixed(2)}/semaine) | clos ${m.trades} : ${m.tp_hits} gagnants (TP1+, dont ${m.breakeven} sortis à break-even), ${m.losses} SL, ${m.unresolved} expirés`);
+    console.log(`           win rate (TP1+) ${m.win_rate ?? "—"} % | espérance ${f(m.expectancy_r)} R/trade (brute ${f(gross.expectancy_r)}) | R total ${m.total_r} | profit factor ${f(m.profit_factor)}`);
     console.log(`           gain moyen ${f(m.avg_win_r)} R, perte moyenne ${f(m.avg_loss_r)} R | drawdown max ${m.max_drawdown_r} R | pire série de SL : ${m.max_loss_streak} | coût ${costAtr} ATR/trade`);
     if (r.seq.length >= 4 && split > 0 && split < 1) {
       const cut = firstT + (lastT - firstT) * split, parts: Array<[string, typeof r.seq]> = [["réglage ", r.seq.filter((x) => x.t < cut)], ["TEST hors-éch.", r.seq.filter((x) => x.t >= cut)]];

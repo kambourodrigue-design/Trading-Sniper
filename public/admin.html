@@ -404,7 +404,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
       const m = r.metrics;
       const val = (v, suffix="") => v == null ? "—" : v + suffix;
       out.innerHTML = '<div class="stats">' + [
-        ["Trades clôturés", m.trades], ["Win rate", val(m.win_rate, "%")], ["Profit factor", val(m.profit_factor)], ["Espérance", val(m.expectancy_r, " R")], ["R net", val(m.total_r, " R")], ["Drawdown max", val(m.max_drawdown_r, " R")]
+        ["Trades clôturés", m.trades], ["Win rate (TP1+)", val(m.win_rate, "%")], ["Profit factor", val(m.profit_factor)], ["Espérance", val(m.expectancy_r, " R")], ["R net", val(m.total_r, " R")], ["Drawdown max", val(m.max_drawdown_r, " R")]
       ].map(x => '<div class="stat"><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('') + '</div>' +
       '<p style="color:var(--soft);font-size:.82rem;margin:12px 0">'+esc(r.symbol)+' · '+esc(r.profile)+' · source '+esc(r.source)+' · fenêtre réellement parcourue : '+esc(r.coverage_start ? new Date(r.coverage_start).toLocaleString('fr-FR') : '—')+' → '+esc(r.coverage_end ? new Date(r.coverage_end).toLocaleString('fr-FR') : '—')+' · '+esc(r.decisions)+' décisions · '+esc(r.setups)+' setups · coût '+esc(r.cost_atr)+' ATR</p>' +
       '<h3>Historique des trades détectés</h3>' + (r.trades.length ? '<div style="overflow:auto"><table><thead><tr><th>Date</th><th>Résultat</th><th>Coût (R)</th></tr></thead><tbody>'+r.trades.map(t=>'<tr><td>'+esc(new Date(t.date).toLocaleString("fr-FR"))+'</td><td>'+esc(t.result)+'</td><td>'+esc(t.cost_r)+'</td></tr>').join('')+'</tbody></table></div>' : '<p class="empty">Aucun setup validé sur cette fenêtre.</p>') + '<p style="color:var(--soft);font-size:.78rem;margin-top:12px">'+esc(r.note)+'</p>';
@@ -429,7 +429,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     loadAnalysis();
     const s = await api("/api/admin/stats");
     const plans = Object.keys(s.by_plan).map((k) => k + " " + s.by_plan[k]).join(" · ");
-    const cards = [["Utilisateurs", s.users, ""], ["Abonnés actifs", s.active_subscribers, plans], ["Signaux (24 h)", s.signals_24h, ""], ["Signaux ouverts", s.open_signals, ""], ["Atteint TP1 (90 j)", s.tp1_rate == null ? "—" : s.tp1_rate + " %", s.wins + " gagnants · " + s.losses + " stoppés · règles " + (s.rules_rate == null ? "—" : s.rules_rate + " %") + " · IA seule " + (s.ai_rate == null ? "—" : s.ai_rate + " %")]];
+    const cards = [["Utilisateurs", s.users, ""], ["Abonnés actifs", s.active_subscribers, plans], ["Signaux (24 h)", s.signals_24h, ""], ["Signaux ouverts", s.open_signals, ""], ["Taux de réussite (90 j)", s.win_rate == null ? "—" : s.win_rate + " %", s.wins + " gagnants (TP1/TP2/TP3) · " + s.losses + " stoppés · règles " + (s.rules_rate == null ? "—" : s.rules_rate + " %") + " · IA seule " + (s.ai_rate == null ? "—" : s.ai_rate + " %")]];
     $("#stats").innerHTML = cards.map((c) => '<div class="stat"><span>' + c[0] + "</span><b>" + esc(c[1]) + "</b>" + (c[2] ? "<small>" + esc(c[2]) + "</small>" : "") + "</div>").join("");
   }
 

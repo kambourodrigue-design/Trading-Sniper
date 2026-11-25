@@ -11,8 +11,9 @@ export const isClosed = (o: string) => o === "sl" || o === "tp1" || o === "tp2" 
 
 export interface Summary {
   trades: number; wins: number; breakeven: number; losses: number; unresolved: number;
-  win_rate: number | null;        // % de trades clos avec R > 0 (le breakeven n'est PAS une victoire)
-  tp1_touch_rate: number | null;  // % de trades clos ayant touché au moins TP1 (ancien « taux TP1 »)
+  tp_hits: number;                // trades clos ayant touché TP1, TP2 ou TP3 (une sortie break-even après TP1 COMPTE comme gagnante)
+  win_rate: number | null;        // TAUX UNIQUE DU SITE : % de trades clos ayant touché au moins TP1 (TP1/TP2/TP3, même sortis à break-even)
+  tp1_touch_rate: number | null;  // alias de win_rate (compatibilité)
   total_r: number; expectancy_r: number | null; profit_factor: number | null;
   avg_win_r: number | null; avg_loss_r: number | null;
   max_drawdown_r: number; max_loss_streak: number;
@@ -32,8 +33,8 @@ export function summarize(seq: Array<{ outcome: string; costR?: number }>): Summ
   }
   const closed = wins + be + losses;
   return {
-    trades: closed, wins, breakeven: be, losses, unresolved,
-    win_rate: closed ? Math.round((100 * wins) / closed) : null,
+    trades: closed, wins, breakeven: be, losses, unresolved, tp_hits: touched,
+    win_rate: closed ? Math.round((100 * touched) / closed) : null,
     tp1_touch_rate: closed ? Math.round((100 * touched) / closed) : null,
     total_r: r2(total), expectancy_r: closed ? r2(total / closed) : null,
     profit_factor: gl > 0 ? r2(gw / gl) : gw > 0 ? null : null,

@@ -4,6 +4,7 @@
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const n = (x: number | null | undefined) => (x == null ? "—" : String(x));
 import { getFxUsdRates } from "./prices";
+import { summarizeCounts } from "../engine/metrics";
 import type { FxUsdRates } from "./prices";
 
 const DISCLAIMER = "⚠️ Aide à la décision, pas un conseil financier. Risque de perte en capital.";
@@ -192,12 +193,12 @@ export async function sendDailySummary(env: Env, now = Date.now()): Promise<void
   const perSymbol = new Map<string, { n: number; wins: number; losses: number; pips: number; measured: number; priceMove: number; priceCount: number; usd: number; usdCount: number }>();
   for (const t of rows) {
     counts[t.outcome] = (counts[t.outcome] ?? 0) + 1;
-    if (t.outcome === "tp2" || t.outcome === "tp3") measuredWins++;
+    if (t.outcome === "tp1" || t.outcome === "tp2" || t.outcome === "tp3") measuredWins++;
     else if (t.outcome === "sl") measuredLosses++;
     else neutral++;
     const stats = perSymbol.get(t.symbol) ?? { n: 0, wins: 0, losses: 0, pips: 0, measured: 0, priceMove: 0, priceCount: 0, usd: 0, usdCount: 0 };
     stats.n++;
-    if (t.outcome === "tp2" || t.outcome === "tp3") stats.wins++;
+    if (t.outcome === "tp1" || t.outcome === "tp2" || t.outcome === "tp3") stats.wins++;
     if (t.outcome === "sl") stats.losses++;
     let exit: number | null = null;
     if (t.outcome === "sl") exit = t.stop_loss;
@@ -228,15 +229,14 @@ export async function sendDailySummary(env: Env, now = Date.now()): Promise<void
     closedDetails.push(detail);
   }
   const closed = rows.length;
-  const decided = measuredWins + measuredLosses;
-  const winRate = decided ? Math.round(measuredWins * 100 / decided) : null;
+  const winRate = summarizeCounts(counts).win_rate; // définition unique du site (TP1+ atteint, break-even compté gagnant)
   const lines = [
     `📊 <b>BILAN TRADING DU ${day} (UTC)</b>`, "",
     `📨 Nouveaux signaux publiés : <b>${created?.n ?? 0}</b>`,
     `🔒 Positions clôturées aujourd'hui : <b>${closed}</b>`,
-    `🟢 Gagnants (TP2/TP3) : <b>${measuredWins}</b>`,
+    `🟢 Gagnants (TP1/TP2/TP3) : <b>${measuredWins}</b>`,
     `🔴 Perdants (SL) : <b>${measuredLosses}</b>`,
-    `🟡 Neutres (TP1/break-even, expiration ou clôture manuelle) : <b>${neutral}</b>`,
+    `🟡 Neutres (expiration ou clôture manuelle) : <b>${neutral}</b>`,
     `📈 Taux de réussite* : <b>${winRate == null ? "—" : `${winRate}%`}</b>`,
     `⏳ Positions encore ouvertes : <b>${open?.n ?? 0}</b>`,
     "", "<b>📏 PERFORMANCE MESURÉE</b>",
