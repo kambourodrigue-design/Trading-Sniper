@@ -195,7 +195,9 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     if (mode !== "technical" && !events.length) return err("Ajoute un historique d'annonces économiques valide pour activer le filtre fondamental.");
     const H = 3600000, D = 86400000, nowMs = Date.now();
     let h1: Candle[] = [], h4: Candle[] = [], d1: Candle[] = [], source = "";
-    const from = nowMs - days * D;
+    // La période doit être ancrée sur la dernière bougie H1 clôturée disponible,
+    // pas sur Date.now(). Les imports historiques peuvent s'arrêter avant aujourd'hui.
+    let from = nowMs - days * D;
     const fetcher = async (src: Src, iv: "1h" | "4h" | "1d", start: number) => src.p === "biquote" ? biquoteCandles(src, iv, start, nowMs) : src.p === "kraken" ? krakenCandles(src, iv, start, nowMs) : binanceCandles(src, iv, start, nowMs);
     // Charger la période demandée + marge D1 pour le warm-up (205 bougies).
     // La marge évite de charger systématiquement 2 ans pour un test de 30 jours.
@@ -217,6 +219,14 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     }
     if (!source) return err("Aucune source ne fournit assez de bougies H1/H4/D1 pour ce test. Importe les historiques 1H, 4H et 1D en CSV.", 503);
     if (days > 7 && source !== "D1 importé") return err("Un historique long n'est pas disponible chez le fournisseur live. Importe les CSV H1, H4 et D1 pour ce marché avant de lancer un test long.", 422);
+    // Fin effective du backtest : dernière bougie H1 clôturée réellement disponible.
+    // Ainsi, une sélection de 30 jours parcourt 30 jours de données historiques,
+    // même si l'import s'arrête plusieurs jours avant aujourd'hui.
+    const lastClosedH1 = [...h1].reverse().find(x => Number.isFinite(x.t) && x.t + H <= nowMs);
+    if (!lastClosedH1) return err("Aucune bougie H1 clôturée n'est disponible pour ce marché.", 422);
+    const effectiveEnd = lastClosedH1.t + H;
+    from = effectiveEnd - days * D;
+
     if (source === "D1 importé") {
       const minSpan = (days - 3) * D;
       const spans = { H1: h1.length ? h1[h1.length-1].t-h1[0].t : 0, H4: h4.length ? h4[h4.length-1].t-h4[0].t : 0, D1: d1.length ? d1[d1.length-1].t-d1[0].t : 0 };
@@ -259,6 +269,12 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       if (hh.length < 105 || dd.length < 205) continue;
       const m15 = m15Chunk.slice(Math.max(0, m15End - 192), m15End);
       if (m15.length < 40) return err(`Historique M15 absent ou incomplet autour du ${new Date(t).toISOString()}. Importe les M15 sur toute la période, puis relance.`, 422);
+      // Ne pas accepter 40 anciennes bougies M15 si les données sont absentes
+      // près de la date évaluée : cela pouvait masquer un trou d'import.
+      const lastClosedM15 = m15[m15.length - 1];
+      if (!lastClosedM15 || lastClosedM15.t + 15 * 60_000 < t - 60 * 60_000) {
+        return err(`Données M15 trop anciennes ou trouées autour du ${new Date(t).toISOString()}. Vérifie l'import M15 pour cette période.`, 422);
+      }
       decisions++; if (!firstEval) firstEval = t; lastEval = t;
       const an = buildAnalysis(cfg.symbol, h1.slice(Math.max(0, i - 167), i + 1), hh, dd, t, m15);
       const open = t < busyUntil;
@@ -290,7 +306,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       return json({ partial: true, cursor: chunkEnd, progress: Math.round(((chunkEnd - 104) / Math.max(1, h1.length - 1 - 104)) * 100), state: { seq, busyUntil, decisions, setups, firstEval, lastEval, newsBlocked, macroRejected } });
     }
     const metrics = summarize(seq);
-    return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: `${mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé."} Confirmations M15, structure et displacement évalués avec les bougies M15 clôturées. Les sorties TP/SL restent rejouées en H1 pour conserver une comparaison homogène. Ce test ne reproduit pas les révisions de données ni l’exécution IA.` });
+    return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, requested_start: new Date(from).toISOString(), available_end: new Date(effectiveEnd).toISOString(), coverage_complete: !!firstEval && firstEval <= from + 3 * D && lastEval >= effectiveEnd - 3 * D, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: `${mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé."} Confirmations M15, structure et displacement évalués avec les bougies M15 clôturées. Les sorties TP/SL restent rejouées en H1 pour conserver une comparaison homogène. Ce test ne reproduit pas les révisions de données ni l’exécution IA.` });
   }
 
   // --- Test des sources de données (biquote / Kraken / Binance) ---
