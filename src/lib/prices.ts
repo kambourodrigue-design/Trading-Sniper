@@ -6,7 +6,7 @@ const H = 3_600_000, D = 86_400_000;
 export type Iv = "15m" | "1h" | "4h" | "1d";
 const BIQUOTE_URL = "https://biquote.io";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-const SPACING: Record<string, number> = { biquote: 250, binance: 150, kraken: 1_100 };
+const SPACING: Record<string, number> = { biquote: 250 };
 const lastCall: Record<string, number> = {};
 const cooldownUntil: Record<string, number> = {};
 function assertProviderReady(provider: string): void {
@@ -15,8 +15,10 @@ function assertProviderReady(provider: string): void {
 }
 function noteProviderFailure(provider: string, error: unknown): void {
   const msg = String((error as Error)?.message ?? error);
-  const ms = /HTTP 451/.test(msg) ? 6 * 3600_000 : /HTTP 429/.test(msg) ? 60_000 : /HTTP 5\d\d/.test(msg) ? 30_000 : 0;
-  if (ms) cooldownUntil[provider] = Date.now() + ms;
+  const ms = /HTTP 429|rate.?limit/i.test(msg) ? 2 * 60_000
+    : /HTTP 5\d\d|timeout|timed out|network|fetch failed|ECONN/i.test(msg) ? 45_000
+    : 0;
+  if (ms) cooldownUntil[provider] = Math.max(cooldownUntil[provider] ?? 0, Date.now() + ms);
 }
 
 async function throttle(provider: string): Promise<void> {
@@ -67,43 +69,6 @@ export async function biquoteCandles(src: Src, iv: Iv, fromMs?: number, toMs?: n
   return toCandleRows(body.bars, "openTime").filter((bar) => (fromMs === undefined || bar.t >= fromMs) && (toMs === undefined || bar.t <= toMs));
 }
 
-const BINANCE_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
-export async function binanceCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
-  const out: Candle[] = [];
-  let start = fromMs, last = "";
-  for (let page = 0; page < 20 && start < toMs; page++) {
-    const qs = new URLSearchParams({ symbol: src.id, interval: iv, startTime: String(Math.floor(start)), endTime: String(Math.floor(toMs)), limit: "1000" });
-    let rows: unknown[][] | null = null;
-    for (const host of BINANCE_HOSTS) {
-      await throttle("binance");
-      try {
-        const res = await fetch(`${host}/api/v3/klines?${qs}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12_000) });
-        if (res.ok) { rows = await res.json() as unknown[][]; break; }
-        last = `Binance ${src.id} ${iv} HTTP ${res.status}`;
-      } catch (error) { last = `Binance : ${(error as Error).message.slice(0, 100)}`; }
-    }
-    if (!rows) throw new Error(last || "Binance indisponible");
-    for (const row of rows) {
-      const t = Number(row[0]), o = Number(row[1]), h = Number(row[2]), l = Number(row[3]), c = Number(row[4]);
-      if (Number.isFinite(t) && [o, h, l, c].every(Number.isFinite)) out.push({ t, o, h, l, c });
-    }
-    if (rows.length < 1000) break;
-    start = Number(rows[rows.length - 1][0]) + 1;
-  }
-  return out.filter((bar) => bar.t <= toMs).sort((a, b) => a.t - b.t);
-}
-
-const KRAKEN_IV: Record<Iv, number> = { "15m": 15, "1h": 60, "4h": 240, "1d": 1440 };
-export async function krakenCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
-  const qs = new URLSearchParams({ pair: src.id, interval: String(KRAKEN_IV[iv]), since: String(Math.max(0, Math.floor(fromMs / 1000) - 1)) });
-  const body = await readJson(`https://api.kraken.com/0/public/OHLC?${qs}`, "kraken");
-  if (Array.isArray(body.error) && body.error.length) throw new Error(`Kraken : ${body.error.join(", ")}`);
-  const key = Object.keys(body.result ?? {}).find((name) => name !== "last");
-  const rows = key ? body.result[key] as unknown[][] : [];
-  return rows.map((row) => ({ t: Number(row[0]) * 1000, o: Number(row[1]), h: Number(row[2]), l: Number(row[3]), c: Number(row[4]) }))
-    .filter((bar) => bar.t <= toMs && Number.isFinite(bar.t) && [bar.o, bar.h, bar.l, bar.c].every(Number.isFinite)).sort((a, b) => a.t - b.t);
-}
-
 export function aggregate(h1: Candle[], ms: number, now: number): Candle[] {
   const out: Candle[] = [];
   let current: Candle | null = null, bucket = -1;
@@ -124,9 +89,8 @@ const HORIZON: Record<Iv, number> = { "15m": 3, "1h": 21, "4h": 75, "1d": 420 };
 
 async function rawSeries(src: Src, iv: Iv, now: number, fromMs?: number): Promise<Candle[]> {
   const from = fromMs ?? now - HORIZON[iv] * D;
-  if (src.p === "biquote") return biquoteCandles(src, iv, from, now + H);
-  if (src.p === "kraken") return krakenCandles(src, iv, from, now + H);
-  return binanceCandles(src, iv, from, now + H);
+  if (src.p !== "biquote") throw new Error(`Fournisseur non pris en charge : ${src.p}`);
+  return biquoteCandles(src, iv, from, now + H);
 }
 
 async function bundleFrom(env: Env, symbol: SymbolCfg, src: Src, now: number): Promise<Bundle> {
@@ -191,8 +155,16 @@ export async function getBundle(env: Env, symbol: SymbolCfg, now: number, maxAge
   for (const src of symbol.sources) {
     try {
       const bundle = await bundleFrom(env, symbol, src, now);
-      const last = bundle.h1[bundle.h1.length - 1]?.t ?? 0;
-      if (maxAgeMs !== undefined && (!last || now - last > maxAgeMs)) throw new Error("dernière bougie H1 trop ancienne");
+      const lastH1 = bundle.h1[bundle.h1.length - 1]?.t ?? 0;
+      if (maxAgeMs !== undefined) {
+        if (!lastH1 || now - lastH1 > maxAgeMs) throw new Error("dernière bougie H1 trop ancienne");
+        // Le moteur live exige M15 : si le fournisseur principal ne livre pas de M15
+        // récents, on doit essayer le fournisseur suivant au lieu de retourner un bundle vide.
+        const lastM15 = bundle.m15[bundle.m15.length - 1]?.t ?? 0;
+        if (bundle.m15.length < 40 || !lastM15 || now - lastM15 > 30 * 60_000) {
+          throw new Error(`historique M15 insuffisant ou trop ancien (${bundle.m15.length} bougies)`);
+        }
+      }
       return bundle;
     } catch (error) { noteProviderFailure(src.p, error); errors.push(`${src.p}/${src.id}: ${(error as Error).message}`); }
   }
@@ -221,7 +193,7 @@ export async function probeSources(_env: Env, symbol: SymbolCfg, now = Date.now(
     try {
       const bars = closedOf(await rawSeries(src, "1h", now), H, now);
       if (!bars.length) throw new Error("aucune bougie H1 clôturée");
-      const required = src.p === "biquote" ? 105 : 105;
+      const required = 105;
       out.push({ provider: src.p, id: src.id, ok: true, detail: `${bars.length} bougies H1 ; dernière clôture il y a ${Math.round((now - bars[bars.length - 1].t) / 60_000)} min${bars.length < required ? ` ; historique insuffisant pour MM100 (${required} requis)` : ""}` });
     } catch (error) { noteProviderFailure(src.p, error); out.push({ provider: src.p, id: src.id, ok: false, detail: (error as Error).message.slice(0, 180) }); }
   }
