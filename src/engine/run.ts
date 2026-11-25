@@ -287,13 +287,10 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
       const msg = String((e as Error).message).slice(0, 300);
       console.error("analyse", s.symbol, msg);
       const planErr = /plan-required|market-not-in-plan|plan-ended|key-withheld|account-required|key-unknown|key-missing|source de données indisponible/i.test(msg);
-      // Une erreur fournisseur ne doit pas neutraliser un actif pendant 30 min :
-      // les fournisseurs ont leur propre cooldown, l'actif est retenté rapidement.
-      // Seul un vrai problème de droits/plan conserve une quarantaine longue.
-      const pauseSec = planErr ? 12 * 3600 : /HTTP 403|HTTP 429|Too many requests|temporisation|indisponible|trop ancienne|historique insuffisant/i.test(msg) ? 180 : 300;
-      await cacheSet(env, `dis:${s.symbol}`, msg, pauseSec);
+      // Plan de données insuffisant : 12 h. Panne passagère (429, blocage, réseau) : 30 min, pour ne pas marteler les fournisseurs.
+      await cacheSet(env, `dis:${s.symbol}`, msg, planErr ? 12 * 3600 : 1800);
       await env.DB.prepare("INSERT INTO analysis_log (symbol, ts, status, dir, score, gates, ai, note) VALUES (?, ?, 'error', NULL, 0, '[]', NULL, ?)")
-        .bind(s.symbol, Math.floor(now / 1000), `actif en pause ${planErr ? "12 h" : `${Math.round(pauseSec / 60)} min`} — ${msg}`.slice(0, 400)).run();
+        .bind(s.symbol, Math.floor(now / 1000), `actif en pause ${planErr ? "12 h" : "30 min"} — ${msg}`.slice(0, 400)).run();
       if (/allowance-exhausted/i.test(msg)) await cacheSet(env, "data:pause", msg, 3600);
       results.push({ symbol: s.symbol, status: "error", score: 0, note: msg });
     }
