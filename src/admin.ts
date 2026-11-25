@@ -174,7 +174,8 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
 
   // --- Backtest historique admin : un actif par requête pour limiter le temps CPU Worker ---
   if (pathname === "/api/admin/backtest" && m === "POST") {
-    const b = await req.json<{ symbol?: string; profile?: string; days?: number; costAtr?: number; mode?: string; events?: Array<{ title?: string; country?: string; t?: number | string; impact?: string; forecast?: string; actual?: string; previous?: string; confidence?: string }> }>().catch(() => ({} as { symbol?: string; profile?: string; days?: number; costAtr?: number; mode?: string; events?: Array<{ title?: string; country?: string; t?: number | string; impact?: string; forecast?: string; actual?: string; previous?: string; confidence?: string }> }));
+    type BtRequest = { symbol?: string; profile?: string; days?: number; costAtr?: number; mode?: string; cursor?: number; state?: { seq?: Array<{ t: number; outcome: string; costR: number }>; busyUntil?: number; decisions?: number; setups?: number; firstEval?: number; lastEval?: number; newsBlocked?: number; macroRejected?: number }; events?: Array<{ title?: string; country?: string; t?: number | string; impact?: string; forecast?: string; actual?: string; previous?: string; confidence?: string }> };
+    const b = await req.json<BtRequest>().catch(() => ({} as BtRequest));
     const cfg = SYMBOLS.find((x) => x.symbol === String(b.symbol ?? "XAU/USD").toUpperCase());
     const profileName = String(b.profile ?? "adaptive");
     if (!cfg) return err("Actif inconnu.");
@@ -196,9 +197,13 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     let h1: Candle[] = [], h4: Candle[] = [], d1: Candle[] = [], source = "";
     const from = nowMs - days * D;
     const fetcher = async (src: Src, iv: "1h" | "4h" | "1d", start: number) => src.p === "biquote" ? biquoteCandles(src, iv, start, nowMs) : src.p === "kraken" ? krakenCandles(src, iv, start, nowMs) : binanceCandles(src, iv, start, nowMs);
-    // Priorité aux données historiques importées par l'administrateur (D1), sans dépendance à R2.
-    const stored = await env.DB.prepare("SELECT timeframe, bars FROM backtest_candles WHERE symbol = ? AND month >= ? ORDER BY month").bind(cfg.symbol, new Date(nowMs - Math.max(days, 730) * D).toISOString().slice(0,7)).all<{timeframe:string;bars:string}>();
-    const unpack = (tf:string) => stored.results.filter(x=>x.timeframe===tf).flatMap(x=>JSON.parse(x.bars) as Candle[]).sort((a,b)=>a.t-b.t);
+    // Charger la période demandée + marge D1 pour le warm-up (205 bougies).
+    // La marge évite de charger systématiquement 2 ans pour un test de 30 jours.
+    const historyDays = Math.min(1000, days + 220);
+    const stored = await env.DB.prepare("SELECT timeframe, bars FROM backtest_candles WHERE symbol = ? AND month >= ? ORDER BY month").bind(cfg.symbol, new Date(nowMs - historyDays * D).toISOString().slice(0,7)).all<{timeframe:string;bars:string}>();
+    // Les lots D1 sont déjà triés par mois et les bougies par timestamp à l'import.
+    // Les concaténer dans l'ordre évite un tri CPU coûteux sur des milliers de bougies.
+    const unpack = (tf:string) => stored.results.filter(x=>x.timeframe===tf).flatMap(x=>JSON.parse(x.bars) as Candle[]);
     const ih1=unpack("1H"), ih4=unpack("4H"), id1=unpack("1D");
     if (ih1.length >= 105 && ih4.length >= 105 && id1.length >= 205) { h1=ih1; h4=ih4; d1=id1; source="D1 importé"; }
     else {
@@ -218,14 +223,29 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       const missing = Object.entries(spans).filter(([,span]) => span < minSpan).map(([tf]) => tf);
       if (missing.length) return err(`Historique importé incomplet sur ${missing.join(", ")} : chaque timeframe doit couvrir environ ${days} jours. Importe les fichiers manquants.`, 422);
     }
-    const seq: Array<{ t: number; outcome: string; costR: number }> = [];
-    let busyUntil = 0, decisions = 0, setups = 0, firstEval = 0, lastEval = 0, newsBlocked = 0, macroRejected = 0;
+    const saved = b.state && typeof b.state === "object" ? b.state : {};
+    const seq: Array<{ t: number; outcome: string; costR: number }> = Array.isArray(saved.seq) ? saved.seq : [];
+    let busyUntil = Number(saved.busyUntil ?? 0), decisions = Number(saved.decisions ?? 0), setups = Number(saved.setups ?? 0), firstEval = Number(saved.firstEval ?? 0), lastEval = Number(saved.lastEval ?? 0), newsBlocked = Number(saved.newsBlocked ?? 0), macroRejected = Number(saved.macroRejected ?? 0);
     const startMs = Math.max(from, h1[104].t + H);
-    for (let i = 104; i < h1.length - 1; i++) {
+    // Chaque requête ne simule que 12 bougies H1. Le navigateur enchaîne les blocs
+    // pour rester sous la limite CPU de 10 ms des Workers Free.
+    const requestedCursor = Number(b.cursor ?? 104);
+    const cursor = Number.isFinite(requestedCursor) ? Math.max(104, Math.min(h1.length - 1, Math.floor(requestedCursor))) : 104;
+    const chunkEnd = Math.min(h1.length - 1, cursor + 12);
+    const upperClosed = (bars: Candle[], cutoff: number, duration: number) => {
+      let lo = 0, hi = bars.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (bars[mid].t + duration <= cutoff) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+    // Positionner les curseurs H4/D1 directement, puis avancer dans chaque bloc.
+    let h4End = upperClosed(h4, h1[cursor].t + H, 4 * H), d1End = upperClosed(d1, h1[cursor].t + H, D);
+    for (let i = cursor; i < chunkEnd; i++) {
       const t = h1[i].t + H;
+      while (h4End < h4.length && h4[h4End].t + 4 * H <= t) h4End++;
+      while (d1End < d1.length && d1[d1End].t + D <= t) d1End++;
       if (t < startMs || !isMarketOpen(cfg, t)) continue;
-      const hh = h4.filter((x) => x.t + 4 * H <= t).slice(-260);
-      const dd = d1.filter((x) => x.t + D <= t).slice(-260);
+      const hh = h4.slice(Math.max(0, h4End - 260), h4End);
+      const dd = d1.slice(Math.max(0, d1End - 260), d1End);
       if (hh.length < 105 || dd.length < 205) continue;
       decisions++; if (!firstEval) firstEval = t; lastEval = t;
       const an = buildAnalysis(cfg.symbol, h1.slice(Math.max(0, i - 167), i + 1), hh, dd);
@@ -240,12 +260,22 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
       if (mode === "fundamental" && Math.abs(macro.bias) >= 0.2 && ((macro.bias > 0 && best.dir !== "BUY") || (macro.bias < 0 && best.dir !== "SELL"))) { macroRejected++; continue; }
       const sig: Sig = { id: "bt", symbol: cfg.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], tp_reached: 0, created_at: t / 1000 };
       const horizon = t + CFG.expiryHours * H;
-      const future = h1.filter((x) => x.t >= t && x.t < Math.min(horizon, nowMs - H));
+      const futureLimit = Math.min(horizon, nowMs - H);
+      // Les bougies H1 étant triées, commencer à i+1 et avancer jusqu'à la limite
+      // évite un filtre complet de l'historique pour chaque trade.
+      let futureStart = i + 1;
+      while (futureStart < h1.length && h1[futureStart].t < t) futureStart++;
+      let futureEnd = futureStart;
+      while (futureEnd < h1.length && h1[futureEnd].t < futureLimit) futureEnd++;
+      const future = h1.slice(futureStart, futureEnd);
       const out = evaluateOutcome(sig, future, nowMs / 1, H);
       busyUntil = out.at ? out.at + H : Math.min(horizon, nowMs);
       setups++;
       const risk = Math.abs(best.entry - best.sl) || 1e-9;
       seq.push({ t, outcome: out.outcome, costR: (costAtr * an.atr) / risk });
+    }
+    if (chunkEnd < h1.length - 1) {
+      return json({ partial: true, cursor: chunkEnd, progress: Math.round(((chunkEnd - 104) / Math.max(1, h1.length - 1 - 104)) * 100), state: { seq, busyUntil, decisions, setups, firstEval, lastEval, newsBlocked, macroRejected } });
     }
     const metrics = summarize(seq);
     return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: `${mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé."} Confirmations M15 et displacement non testés ici : cet endpoint ne charge que H1/H4/D1. Utiliser scripts/backtest.ts avec --live et un historique M15 pour évaluer les nouvelles confirmations. Ce test ne reproduit pas les révisions de données ni l’exécution IA.` });
