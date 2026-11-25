@@ -127,11 +127,3 @@
   .lx-sun, .lx-sun-rays, .lx-auth-btn { transition: none; }
   .lx-sun.lx-spin .lx-sun-rays { animation: none; }
 }
-
-/* 2026-11-23 — En-tête épuré : le menu de navigation est porté par la barre inférieure.
-   On conserve le logo et le bouton de thème dans l'en-tête. */
-body > nav a:not(.brand),
-body > nav .links,
-body > nav .navlinks,
-body > nav .row,
-body > nav #logout { display: none !important; }

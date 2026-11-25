@@ -119,34 +119,6 @@
 body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 @media(min-width:900px){.lucide-bottom-nav{display:none}body{padding-bottom:env(safe-area-inset-bottom,0px)!important}}
 @media(prefers-reduced-motion:reduce){.lucide-bottom-nav a,.lucide-bottom-nav a svg{transition:none}}
-
-  /* Espace de trading : tuiles éditoriales Lucide, adaptées au mobile */
-  .trading-hub { padding:22px; overflow:hidden; }
-  .hub-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:17px; }
-  .hub-heading h2 { font-size:1.25rem; }
-  .hub-heading p { color:var(--ink-soft); font-size:.78rem; margin-top:5px; line-height:1.45; }
-  .hub-kicker { color:#A78BFA; font:700 .62rem 'JetBrains Mono',monospace; letter-spacing:.14em; }
-  .hub-orbit { width:40px; height:40px; display:grid; place-items:center; border-radius:14px; color:#E9D5FF; background:linear-gradient(135deg,rgba(124,58,237,.24),rgba(217,70,239,.18)); border:1px solid rgba(167,139,250,.24); font-size:1.25rem; }
-  .hub-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .hub-tile { min-width:0; min-height:105px; position:relative; display:flex; align-items:center; gap:11px; padding:14px 12px; overflow:hidden; border:1px solid rgba(167,139,250,.2); border-radius:17px; text-decoration:none; color:var(--ink); background:linear-gradient(145deg,rgba(124,58,237,.09),rgba(217,70,239,.035) 65%,rgba(34,211,238,.035)); transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
-  .hub-tile::after { content:""; position:absolute; width:90px; height:90px; right:-48px; bottom:-56px; border-radius:50%; background:rgba(168,85,247,.12); filter:blur(2px); pointer-events:none; }
-  .hub-tile:hover { transform:translateY(-2px); border-color:rgba(192,132,252,.55); box-shadow:0 12px 28px -20px rgba(168,85,247,.8); }
-  .hub-icon { width:39px; height:39px; flex:none; display:grid; place-items:center; border-radius:13px; color:#C4B5FD; background:rgba(124,58,237,.17); border:1px solid rgba(167,139,250,.2); }
-  .hub-icon svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
-  .hub-copy { min-width:0; display:flex; flex-direction:column; gap:5px; }
-  .hub-copy b { font:700 .83rem 'Plus Jakarta Sans','Inter',sans-serif; line-height:1.2; }
-  .hub-copy small { color:var(--ink-soft); font-size:.66rem; line-height:1.35; }
-  .hub-arrow { position:absolute; top:10px; right:11px; color:var(--ink-soft); font-size:.8rem; opacity:.8; }
-  .hub-cyan { background:linear-gradient(145deg,rgba(34,211,238,.10),rgba(124,58,237,.045)); border-color:rgba(34,211,238,.2); }
-  .hub-cyan .hub-icon { color:#67E8F9; background:rgba(34,211,238,.10); border-color:rgba(34,211,238,.18); }
-  .hub-premium { background:linear-gradient(135deg,rgba(217,70,239,.13),rgba(124,58,237,.08)); }
-  .hub-premium .hub-icon { color:#F0ABFC; background:rgba(217,70,239,.13); }
-  .hub-wide { grid-column:1 / -1; min-height:82px; }
-  :root[data-theme="dark"] .hub-tile { background:linear-gradient(145deg,rgba(124,58,237,.17),rgba(38,29,61,.72) 70%,rgba(34,211,238,.055)); border-color:rgba(167,139,250,.2); }
-  :root[data-theme="dark"] .hub-cyan { background:linear-gradient(145deg,rgba(34,211,238,.11),rgba(38,29,61,.82)); border-color:rgba(34,211,238,.22); }
-  :root[data-theme="dark"] .hub-premium { background:linear-gradient(135deg,rgba(217,70,239,.16),rgba(38,29,61,.82)); }
-  @media(max-width:430px){ .trading-hub{padding:17px}.hub-grid{gap:8px}.hub-tile{min-height:100px;padding:12px 9px;gap:8px}.hub-icon{width:34px;height:34px;border-radius:11px}.hub-icon svg{width:19px;height:19px}.hub-copy b{font-size:.75rem}.hub-copy small{font-size:.61rem}.hub-arrow{right:8px;top:8px} }
-  @media(prefers-reduced-motion:reduce){.hub-tile{transition:none}}
 </style>
 <style>
 /* Lucide global theme switch */
@@ -235,6 +207,7 @@ main.wrap{min-width:0}
 <nav>
   <div class="wrap">
     <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="gradient-text">cide</span></span></div>
+    <div class="row" style="gap:10px"><a href="/scanner.html" class="btn btn-ghost" style="padding:9px 12px;font-size:.8rem">Scanner IA</a><a href="/history.html" class="btn btn-ghost" style="padding:9px 12px;font-size:.8rem">Historique</a><a href="/performance.html" class="btn btn-ghost" style="padding:9px 12px;font-size:.8rem">Stats</a><div id="nav-account" class="row" style="gap:10px"></div></div>
   </div>
 </nav>
 
@@ -274,20 +247,19 @@ main.wrap{min-width:0}
     <section class="card">
       <div class="row"><h2 style="margin:0">Mon compte</h2><span class="plan-badge" id="plan-badge">Aucun abonnement actif</span></div>
       <p style="color:var(--ink-soft); font-size:.85rem; margin-top:8px" id="account-email"></p>
-      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-ghost hidden" id="logout-btn" type="button">Déconnexion</button></div>
       <p style="color:var(--ink-soft); font-size:.82rem; margin-top:10px">Starter : signaux XAU/USD et BTC/USD. Pro et Elite : tous les actifs et justification détaillée des analyses macroéconomiques et techniques. Le paiement (Stripe / Mobile Money) sera branché ici une fois les webhooks activés ; en attendant, l'administrateur peut activer ton abonnement.</p>
     </section>
 
-    <section class="card trading-hub">
-      <div class="hub-heading"><div><span class="hub-kicker">LUCIDE WORKSPACE</span><h2 style="margin:3px 0 0">Espace de trading</h2><p>Retrouve tes outils d'analyse, de formation et de suivi.</p></div><span class="hub-orbit" aria-hidden="true">✦</span></div>
-      <div class="hub-grid">
-        <a class="hub-tile hub-primary" href="/scanner.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5M10.8 7v7.6M7 10.8h7.6"/></svg></span><span class="hub-copy"><b>Scanner IA</b><small>Signaux et opportunités</small></span><span class="hub-arrow">↗</span></a>
-        <a class="hub-tile hub-cyan" href="/multi-timeframe.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></span><span class="hub-copy"><b>Multi-timeframe</b><small>Analyse des unités de temps</small></span><span class="hub-arrow">↗</span></a>
-        <a class="hub-tile" href="/history.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span class="hub-copy"><b>Historique</b><small>Signaux précédents</small></span><span class="hub-arrow">↗</span></a>
-        <a class="hub-tile" href="/performance.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-6M22 20H2"/></svg></span><span class="hub-copy"><b>Performance</b><small>Statistiques et résultats</small></span><span class="hub-arrow">↗</span></a>
-        <a class="hub-tile hub-cyan" href="/academy.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5M22 9v7"/></svg></span><span class="hub-copy"><b>Académie</b><small>Maîtriser les stratégies</small></span><span class="hub-arrow">↗</span></a>
-        <a class="hub-tile hub-premium" href="/subscription.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/></svg></span><span class="hub-copy"><b>Abonnement</b><small>Gérer ton accès premium</small></span><span class="hub-arrow">↗</span></a>
-        <a class="hub-tile hub-wide" href="/backtest-report.html"><span class="hub-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/></svg></span><span class="hub-copy"><b>Backtest</b><small>Évaluer la stratégie sur l'historique</small></span><span class="hub-arrow">↗</span></a>
+    <section class="card">
+      <h2 style="margin:0 0 12px">Espace de trading</h2>
+      <div class="row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+        <a class="btn btn-ghost" href="/scanner.html">Scanner IA</a>
+        <a class="btn btn-ghost" href="/multi-timeframe.html">Multi-timeframe</a>
+        <a class="btn btn-ghost" href="/history.html">Historique</a>
+        <a class="btn btn-ghost" href="/performance.html">Performance</a>
+        <a class="btn btn-ghost" href="/academy.html">Académie</a>
+        <a class="btn btn-ghost" href="/subscription.html">Abonnement</a>
+        <a class="btn btn-ghost" href="/backtest-report.html">Backtest</a>
       </div>
     </section>
 
@@ -322,26 +294,6 @@ main.wrap{min-width:0}
   const API_BASE = ""; // même domaine que le site (Worker + pages statiques)
 
   const $ = (sel) => document.querySelector(sel);
-
-  // Gestion uniforme des réponses API : évite "Unexpected token '<'" si le Worker
-  // ou le routage Cloudflare renvoie une page HTML à la place du JSON attendu.
-  async function readApiResponse(res) {
-    const raw = await res.text();
-    let data = {};
-    if (raw) {
-      try { data = JSON.parse(raw); }
-      catch (_) {
-        const html = /^\s*<!doctype html|^\s*<html/i.test(raw);
-        const detail = html
-          ? "Le serveur a renvoyé une page HTML au lieu du JSON. Vérifie le routage /api/* et le déploiement du Worker."
-          : "Réponse API illisible (JSON invalide).";
-        throw new Error(detail + " (HTTP " + res.status + ")");
-      }
-    }
-    if (!res.ok) throw new Error(data.error || "Erreur API (HTTP " + res.status + ")");
-    return data;
-  }
-
   let token = localStorage.getItem("lucide_token") || null;
   let email = localStorage.getItem("lucide_email") || null;
   let mode = "login";
@@ -370,14 +322,14 @@ main.wrap{min-width:0}
       $("#auth-section").classList.add("hidden");
       $("#dashboard").classList.remove("hidden");
       $("#account-email").textContent = "Connecté en tant que " + email;
-      $("#logout-btn").classList.remove("hidden");
+      $("#nav-account").innerHTML = `<button class="btn btn-ghost" id="logout-btn">Déconnexion</button>`;
       $("#logout-btn").onclick = () => { localStorage.removeItem("lucide_token"); localStorage.removeItem("lucide_email"); token = null; renderAccountState(); };
       loadSignals();
       loadMe();
     } else {
       $("#auth-section").classList.remove("hidden");
       $("#dashboard").classList.add("hidden");
-      $("#logout-btn").classList.add("hidden");
+      $("#nav-account").innerHTML = "";
     }
   }
 
@@ -386,14 +338,15 @@ main.wrap{min-width:0}
     try {
       const res = await fetch(API_BASE + "/api/me", { headers: { Authorization: "Bearer " + token } });
       if (res.status === 401) { localStorage.removeItem("lucide_token"); localStorage.removeItem("lucide_email"); token = null; renderAccountState(); return; }
-      const me = await readApiResponse(res);
+      const me = await res.json();
       $("#plan-badge").textContent = me.plan
         ? me.plan.toUpperCase() + (me.plan_end ? " · jusqu'au " + new Date(me.plan_end * 1000).toLocaleDateString("fr-FR") : "")
         : "Aucun abonnement actif";
       if (me.is_admin) {
         const a = document.createElement("a");
         a.href = ADMIN_URL; a.target = "_blank"; a.rel = "noopener"; a.className = "btn btn-ghost"; a.textContent = "Admin";
-        }
+        $("#nav-account").prepend(a);
+      }
     } catch (e) {}
   }
 
@@ -413,7 +366,7 @@ main.wrap{min-width:0}
       const res = await fetch(`${API_BASE}/api/auth/${mode === "login" ? "login" : "register"}`, {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
       });
-      const data = await readApiResponse(res);
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur");
       token = data.token; email = data.user.email;
       localStorage.setItem("lucide_token", token); localStorage.setItem("lucide_email", email);
@@ -423,40 +376,19 @@ main.wrap{min-width:0}
     }
   });
 
-  // Chargement robuste : une erreur API temporaire ne nécessite plus
-  // que l'utilisateur actualise lui-même toute la page.
-  let signalsRetryTimer = null;
-  let signalsLoadId = 0;
-  async function loadSignals(attempt = 0, loadId = null) {
-    if (loadId === null) {
-      loadId = ++signalsLoadId;
-      if (signalsRetryTimer) { clearTimeout(signalsRetryTimer); signalsRetryTimer = null; }
-    }
+  async function loadSignals() {
     const list = $("#signals-list");
-    list.innerHTML = attempt === 0
-      ? '<div class="empty"><span class="spin"></span> Chargement des signaux…</div>'
-      : '<div class="empty"><span class="spin"></span> Connexion au moteur… nouvelle tentative ' + attempt + '/5</div>';
+    list.innerHTML = '<div class="empty"><span class="spin"></span> Chargement…</div>';
     try {
       const res = await fetch(`${API_BASE}/api/signals/latest`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      const data = await readApiResponse(res);
-      if (loadId !== signalsLoadId) return;
+      const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) { list.innerHTML = '<div class="empty">Aucun signal pour le moment : Lucide n’émet un signal que lorsque toutes les conditions sont réunies.</div>'; return; }
       window.sigs = {}; data.forEach(function (x) { window.sigs[x.id] = x; }); list.innerHTML = data.map(signalCard).join("");
-    } catch (error) {
-      if (loadId !== signalsLoadId) return;
-      if (attempt < 5) {
-        const delay = Math.min(2000 * (attempt + 1), 10000);
-        list.innerHTML = '<div class="empty"><span class="spin"></span> Données momentanément indisponibles. Nouvelle tentative automatique dans ' + (delay / 1000) + ' s…</div>';
-        signalsRetryTimer = setTimeout(function () {
-          signalsRetryTimer = null;
-          loadSignals(attempt + 1, loadId);
-        }, delay);
-      } else {
-        list.innerHTML = '<div class="empty">Le serveur ne répond toujours pas. Réessaie avec le bouton « Actualiser les signaux ».</div>';
-      }
+    } catch {
+      list.innerHTML = '<div class="empty">Impossible de charger les signaux. Vérifie que le backend est déployé et que API_BASE est correct.</div>';
     }
   }
-  $("#refresh-signals").addEventListener("click", function () { loadSignals(); });
+  $("#refresh-signals").addEventListener("click", loadSignals);
 
   // ----- Graphique (TradingView Lightweight Charts) : bougies + niveaux Entry / SL / TP -----
   var chart = null, series = null, lines = [], curSig = null, curTf = "H1";
@@ -483,7 +415,7 @@ main.wrap{min-width:0}
     var msg = $("#chart-msg"); msg.textContent = "Chargement…";
     try {
       var res = await fetch(API_BASE + "/api/candles?symbol=" + encodeURIComponent(curSig.symbol) + "&tf=" + curTf, { headers: { Authorization: "Bearer " + token } });
-      var d = await readApiResponse(res);
+      var d = await res.json(); if (!res.ok) throw new Error(d.error || "Erreur");
       ensureChart();
       series.setData(d.candles.map(function (c) { return { time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] }; }));
       lines.forEach(function (l) { series.removePriceLine(l); }); lines = [];
