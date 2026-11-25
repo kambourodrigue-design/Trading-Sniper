@@ -55,8 +55,9 @@ t("12 paires Forex + Gold + BTC/ETH configurés avec les seuls fournisseurs auto
   assert.strictEqual(SYMBOLS.length, 15);
   assert.strictEqual(SYMBOLS.filter((x) => x.currencies.length === 2 && x.session === "fx").length, 12);
   for (const item of SYMBOLS) for (const source of item.sources) {
-    if (!(source.p === "biquote" || source.p === "binance" || source.p === "kraken")) throw new Error(`fournisseur interdit : ${source.p}`);
+    if (!(source.p === "biquote" || source.p === "binance" || source.p === "kraken" || source.p === "yahoo")) throw new Error(`fournisseur interdit : ${source.p}`);
   }
+  for (const item of SYMBOLS.filter((x) => x.session === "fx")) if (!item.sources.some((source) => source.p === "yahoo")) throw new Error(`repli Yahoo absent : ${item.symbol}`);
 });
 t("biais macro : surprise USD positive pénalise EUR/USD et favorise USD/JPY", () => {
   const now = Date.UTC(2026, 10, 19, 12, 0);

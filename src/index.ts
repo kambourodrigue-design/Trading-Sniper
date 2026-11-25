@@ -33,7 +33,17 @@ export default {
       return new Response(null, { headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS", "access-control-allow-headers": "content-type,authorization" } });
     }
 
-    await ensureSchema(env); // crée les tables au tout premier appel
+    try {
+      await ensureSchema(env); // crée les tables au tout premier appel
+
+    // Diagnostic léger du backend : vérifie les dépendances sans exposer de secrets.
+    if (pathname === "/api/health" && req.method === "GET") {
+      const checks: Record<string, string> = { worker: "ok", d1: "error", kv: "error" };
+      try { await env.DB.prepare("SELECT 1 AS ok").first(); checks.d1 = "ok"; } catch (e) { console.error("health D1", e); }
+      try { await env.CACHE.get("__lucide_health_check__"); checks.kv = "ok"; } catch (e) { console.error("health KV", e); }
+      const ok = checks.d1 === "ok" && checks.kv === "ok";
+      return json({ status: ok ? "ok" : "degraded", checks, timestamp: new Date().toISOString() }, ok ? 200 : 503);
+    }
 
     const adminRes = await handleAdmin(req, env, ctx, pathname);
     if (adminRes) return adminRes;
@@ -154,7 +164,12 @@ export default {
     if (pathname === "/api/webhooks/stripe" && req.method === "POST") return json({ received: true });
     if (pathname === "/api/webhooks/cinetpay" && req.method === "POST") return json({ received: true });
 
-    return err("Not found", 404);
+      return err("Not found", 404);
+    } catch (e) {
+      console.error("worker fetch error", pathname, e instanceof Error ? (e.stack || e.message) : e);
+      // Garder une réponse JSON pour les routes API, même lorsqu'une exception survient.
+      return json({ error: "Internal server error", path: pathname }, 500);
+    }
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {

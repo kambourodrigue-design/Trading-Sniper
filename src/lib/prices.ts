@@ -6,7 +6,7 @@ const H = 3_600_000, D = 86_400_000;
 export type Iv = "15m" | "1h" | "4h" | "1d";
 const BIQUOTE_URL = "https://biquote.io";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-const SPACING: Record<string, number> = { biquote: 250, binance: 150, kraken: 1_100 };
+const SPACING: Record<string, number> = { biquote: 250, binance: 150, kraken: 1_100, yahoo: 350 };
 const lastCall: Record<string, number> = {};
 const cooldownUntil: Record<string, number> = {};
 function assertProviderReady(provider: string): void {
@@ -104,6 +104,42 @@ export async function krakenCandles(src: Src, iv: Iv, fromMs: number, toMs: numb
     .filter((bar) => bar.t <= toMs && Number.isFinite(bar.t) && [bar.o, bar.h, bar.l, bar.c].every(Number.isFinite)).sort((a, b) => a.t - b.t);
 }
 
+// Repli gratuit Yahoo Finance (chart API publique, sans clé). Les timestamps retournés sont en Unix UTC.
+const YAHOO_INTERVAL: Record<Iv, string> = { "15m": "15m", "1h": "1h", "4h": "4h", "1d": "1d" };
+async function yahooChartRows(src: Src, interval: string, fromMs: number, toMs: number): Promise<Candle[]> {
+  const qs = new URLSearchParams({ period1: String(Math.floor(fromMs / 1000)), period2: String(Math.floor(toMs / 1000)), interval });
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${src.id}?${qs}`;
+  await throttle("yahoo");
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; LucideSniper/1.0)" },
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (!res.ok) throw new Error(`Yahoo ${src.id} HTTP ${res.status}`);
+  const body = await res.json() as any;
+  const result = body?.chart?.result?.[0];
+  if (body?.chart?.error || !result) throw new Error(`Yahoo ${src.id}: ${body?.chart?.error?.description ?? "réponse OHLC vide"}`);
+  const ts: unknown[] = result.timestamp ?? [];
+  const quote = result.indicators?.quote?.[0] ?? {};
+  const out: Candle[] = [];
+  for (let i = 0; i < ts.length; i++) {
+    const t = Number(ts[i]) * 1000;
+    const o = Number(quote.open?.[i]), h = Number(quote.high?.[i]), l = Number(quote.low?.[i]), c = Number(quote.close?.[i]);
+    if (Number.isFinite(t) && t >= fromMs && t <= toMs && [o, h, l, c].every(Number.isFinite) && h >= l && h >= Math.max(o, c) && l <= Math.min(o, c)) out.push({ t, o, h, l, c });
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
+export async function yahooCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
+  if (iv !== "4h") return yahooChartRows(src, iv, fromMs, toMs);
+  // Yahoo ne propose pas toujours l'intervalle 4h selon le ticker : reconstituer depuis H1 si nécessaire.
+  try {
+    const direct = await yahooChartRows(src, "4h", fromMs, toMs);
+    if (direct.length) return direct;
+  } catch { /* fallback H1 ci-dessous */ }
+  const h1 = await yahooChartRows(src, "1h", fromMs - 4 * H, toMs);
+  return aggregate(h1, 4 * H, toMs + H).filter((bar) => bar.t >= fromMs && bar.t <= toMs);
+}
+
 export function aggregate(h1: Candle[], ms: number, now: number): Candle[] {
   const out: Candle[] = [];
   let current: Candle | null = null, bucket = -1;
@@ -123,9 +159,11 @@ const decode = (raw: string): Candle[] => (JSON.parse(raw) as number[][]).map(([
 const HORIZON: Record<Iv, number> = { "15m": 3, "1h": 21, "4h": 75, "1d": 420 };
 
 async function rawSeries(src: Src, iv: Iv, now: number, fromMs?: number): Promise<Candle[]> {
-  const from = fromMs ?? now - HORIZON[iv] * D;
+  const yahooH4From = iv === "4h" ? now - 120 * D : undefined;
+  const from = fromMs ?? yahooH4From ?? now - HORIZON[iv] * D;
   if (src.p === "biquote") return biquoteCandles(src, iv, from, now + H);
   if (src.p === "kraken") return krakenCandles(src, iv, from, now + H);
+  if (src.p === "yahoo") return yahooCandles(src, iv, from, now + H);
   return binanceCandles(src, iv, from, now + H);
 }
 

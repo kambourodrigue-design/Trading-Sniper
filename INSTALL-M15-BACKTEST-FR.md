@@ -29,3 +29,6 @@ Si le backtest indique que M15 est incomplet, complète l'import M15 pour le mar
 Remplacer les deux fichiers listés ci-dessus dans le dépôt, puis vérifier le diff et lancer `npm run typecheck` dans un environnement où les dépendances sont installées. Commit/push vers GitHub seulement après vérification.
 
 Aucun déploiement Cloudflare n'a été effectué par cette préparation. Le test de syntaxe TypeScript a réussi, ainsi que la vérification syntaxique des scripts de `public/admin.html`. Le typecheck global n'a pas pu être validé ici car les dépendances Cloudflare ne sont pas installées.
+
+## Correctif complémentaire — repli de prix Forex
+Ce ZIP inclut aussi le correctif `CORRECTIF-REPLI-YAHOO-FR.md` : BiQuote reste prioritaire, Yahoo Finance est ajouté en secours gratuit pour les paires Forex et l'or. Aucun D1/KV n'est modifié. Voir ce guide pour les fichiers changés et les vérifications avant push.

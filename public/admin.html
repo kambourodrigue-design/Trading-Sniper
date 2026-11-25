@@ -51,6 +51,20 @@
   #flash { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px; font-size:.83rem; opacity:0; transition:opacity .2s; pointer-events:none; z-index:20; max-width:90%; }
   #flash.show { opacity:1; }
   .hidden { display:none !important; }
+  .signal-manager-head p { color:var(--soft); font-size:.8rem; margin:-5px 0 14px; line-height:1.5; }
+  .signal-filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:5px; margin:0 0 14px; border:1px solid var(--line); border-radius:16px; background:var(--bg); }
+  .signal-filter { min-width:0; display:flex; align-items:center; justify-content:center; gap:7px; padding:11px 8px; border:1px solid transparent; border-radius:12px; background:transparent; color:var(--soft); font:600 .78rem Inter,sans-serif; cursor:pointer; }
+  .signal-filter b { display:inline-flex; min-width:21px; height:21px; align-items:center; justify-content:center; padding:0 6px; border-radius:99px; background:var(--line); color:var(--soft); font-size:.68rem; }
+  .signal-filter.active { color:#fff; background:linear-gradient(110deg,#7C3AED,#C026D3); box-shadow:0 8px 20px -10px rgba(168,85,247,.8); }
+  .signal-filter.active b { background:rgba(255,255,255,.2); color:#fff; }
+  .filter-dot { width:7px; height:7px; flex:none; border-radius:50%; background:#22C55E; box-shadow:0 0 0 3px rgba(34,197,94,.13); }
+  .filter-dot.archive { background:#A78BFA; box-shadow:0 0 0 3px rgba(167,139,250,.14); }
+  .signal-list .item { padding:15px 0; }
+  .signal-list .item b { font-size:.92rem; }
+  .signal-list .item small { line-height:1.55; overflow-wrap:anywhere; }
+  .signal-list .acts .btn { border-radius:999px; }
+  @media(max-width:480px){.signal-filter{font-size:.72rem;gap:5px;padding:10px 5px}.signal-list .acts{width:100%}.signal-list .acts .btn{flex:1}}
+
 
   /* ===== v2 : même thème que la page d'accueil ===== */
   :root { --hero-a:#B9A6FB; --hero-b:#C98BFA; --hero-c:#E879F9; --hero-d:#FCFBFF; --navbg:rgba(255,255,255,.62); --navborder:rgba(255,255,255,.78); --glass:rgba(255,255,255,.55); --pillc:#6D28D9; --lede:#6A5C8E; --grid:rgba(255,255,255,.18); --cyan:#22D3EE; }
@@ -127,7 +141,6 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 <body>
 <nav><div class="wrap">
   <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="g">cide</span></span><span class="tag">Admin</span></div>
-  <button class="btn ghost sm hidden" id="logout">Déconnexion</button>
 </div></nav>
 
 <header class="dhead">
@@ -152,6 +165,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
   </section>
 
   <div id="app" class="hidden">
+    <div class="row" style="justify-content:flex-end;margin-bottom:12px"><button class="btn ghost sm hidden" id="logout">Déconnexion</button></div>
     <div class="tabs">
       <div class="tab on" data-t="ov">Aperçu</div>
       <div class="tab" data-t="us">Utilisateurs</div>
@@ -182,7 +196,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     <section id="bt" class="hidden">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Backtest historique du moteur</h2><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost sm" href="/backtest-replay.html" target="_blank" rel="noopener">Ouvrir Replay M1/M5/M15 ↗</a><a class="btn ghost sm" href="/backtest-report.html" target="_blank" rel="noopener">Rapport local ↗</a></div></div>
-        <p style="color:var(--soft);font-size:.85rem">Rejoue les règles sur des bougies historiques réellement fournies par les sources. Un actif par lancement. La profondeur affichée dépend des limites du fournisseur et du temps de chauffe des indicateurs. <b>Sans CSV importé, le test live ne couvre que quelques heures</b> (105 bougies servent à chauffer les indicateurs) : pour un vrai test, importe les historiques H1, H4 et D1.</p>
+        <p style="color:var(--soft);font-size:.85rem">Rejoue les règles sur des bougies historiques réellement fournies par les sources. Un actif par lancement. La profondeur affichée dépend des limites du fournisseur et du temps de chauffe des indicateurs. <b>Sans CSV importé, le test live ne couvre que quelques heures</b> (105 bougies servent à chauffer les indicateurs) : pour un vrai test, importe les historiques M15, H1, H4 et D1. Les confirmations M15 seront obligatoires dans ce backtest.</p>
         <div class="cols">
           <div><label>Marché</label><select id="bt-symbol"><option>XAU/USD</option><option>EUR/USD</option><option>GBP/USD</option><option>USD/JPY</option><option>USD/CAD</option><option>USD/CHF</option><option>AUD/USD</option><option>NZD/USD</option><option>EUR/GBP</option><option>EUR/JPY</option><option>EUR/CAD</option><option>GBP/JPY</option><option>GBP/CAD</option><option>BTC/USD</option><option>ETH/USD</option></select></div>
           <div><label>Profil</label><select id="bt-profile"><option value="adaptive" selected>Adaptatif</option><option value="strict">Strict</option><option value="balanced">Équilibré</option><option value="active">Actif</option></select></div>
@@ -191,8 +205,8 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
           <div><label>Mode d'analyse</label><select id="bt-mode"><option value="technical">A — Technique seul</option><option value="news_filter">B — Technique + filtre annonces</option><option value="fundamental">C — Technique + annonces + surprise macro</option></select></div>
         </div>
         <details open style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">Importer les prix historiques (CSV) — stockage D1 gratuit</summary>
-          <p style="color:var(--soft);font-size:.82rem">Importe séparément les bougies 1H, 4H et 1D du marché sélectionné. Format CSV requis : timestamp,open,high,low,close. Timestamp en millisecondes UTC ou date ISO UTC. Les fichiers sont envoyés par lots et stockés dans ta base D1 existante ; aucun R2 n'est nécessaire. Commence par H1, puis H4 et D1.</p>
-          <div class="cols"><div><label>Timeframe du fichier</label><select id="bt-import-tf"><option value="1H">1 heure (H1)</option><option value="4H">4 heures (H4)</option><option value="1D">1 jour (D1)</option></select></div><div><label>Fichier CSV OHLC</label><input id="bt-price-file" type="file" accept=".csv,text/csv"></div></div>
+          <p style="color:var(--soft);font-size:.82rem">Importe séparément les bougies M15, 1H, 4H et 1D du marché sélectionné. Format CSV requis : timestamp,open,high,low,close. Timestamp en millisecondes UTC ou date ISO UTC. Les fichiers sont envoyés par lots et stockés dans ta base D1 existante ; aucun R2 n'est nécessaire. Pour le backtest avec confirmations, importe M15 en plus de H1, H4 et D1.</p>
+          <div class="cols"><div><label>Timeframe du fichier</label><select id="bt-import-tf"><option value="M15">15 minutes (M15)</option><option value="1H">1 heure (H1)</option><option value="4H">4 heures (H4)</option><option value="1D">1 jour (D1)</option></select></div><div><label>Fichier CSV OHLC</label><input id="bt-price-file" type="file" accept=".csv,text/csv"></div></div>
           <button class="btn ghost" id="bt-import" type="button" style="width:100%;margin-top:8px">Importer l'historique dans D1</button><div id="bt-import-status" style="margin-top:8px;color:var(--soft);font-size:.82rem"></div>
           <div id="bt-data-status" style="margin-top:8px;color:var(--soft);font-size:.82rem"></div>
         </details>
@@ -233,7 +247,14 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
           <button class="btn" style="width:100%;margin-top:14px" type="submit">Publier</button>
         </form>
       </div>
-      <div class="card"><h2>Tous les signaux</h2><div id="slist"></div></div>
+      <div class="card signal-manager">
+        <div class="signal-manager-head"><div><h2>Suivi des trades</h2><p>Positions en cours et historique des trades clôturés.</p></div></div>
+        <div class="signal-filters" role="tablist" aria-label="Catégories de signaux">
+          <button class="signal-filter active" type="button" data-sfilter="active" role="tab" aria-selected="true"><span class="filter-dot live"></span>Trades en cours <b id="active-count">0</b></button>
+          <button class="signal-filter" type="button" data-sfilter="closed" role="tab" aria-selected="false"><span class="filter-dot archive"></span>Historique des trades <b id="closed-count">0</b></button>
+        </div>
+        <div id="slist"><div id="sactive"></div><div id="sclosed" class="hidden"></div></div>
+      </div>
     </section>
   </div>
 </main>
@@ -262,14 +283,37 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
   if (API_BASE.indexOf("YOUR-SUBDOMAIN") > -1) $("#cfg").classList.remove("hidden");
 
   function flash(text) { const f = $("#flash"); f.textContent = text; f.classList.add("show"); setTimeout(() => f.classList.remove("show"), 2600); }
+
+  // Lit le corps une seule fois et distingue une réponse JSON d'une page HTML Cloudflare.
+  async function readApiResponse(res) {
+    const raw = await res.text();
+    let data = {};
+    if (raw) {
+      try { data = JSON.parse(raw); }
+      catch (_) {
+        const html = /^\s*<!doctype html|^\s*<html/i.test(raw);
+        const detail = html
+          ? "Le serveur a renvoyé une page HTML au lieu du JSON. Vérifie le routage /api/* et le déploiement du Worker."
+          : "Réponse API illisible (JSON invalide).";
+        const error = new Error(detail + " (HTTP " + res.status + ")");
+        error.status = res.status;
+        throw error;
+      }
+    }
+    if (!res.ok) {
+      const error = new Error(data.error || "Erreur API (HTTP " + res.status + ")");
+      error.status = res.status;
+      throw error;
+    }
+    return data;
+  }
+
   function setToken(t) { token = t; try { t ? localStorage.setItem("lucide_admin_token", t) : localStorage.removeItem("lucide_admin_token"); } catch (e) {} }
 
   async function api(path, opts) {
     opts = opts || {};
     const res = await fetch(API_BASE + path, Object.assign({}, opts, { headers: { "content-type": "application/json", Authorization: "Bearer " + token } }));
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) { const e = new Error(data.error || "Erreur"); e.status = res.status; throw e; }
-    return data;
+    return readApiResponse(res);
   }
   const post = (p, body, method) => api(p, { method: method || "POST", body: JSON.stringify(body || {}) });
 
@@ -290,8 +334,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     ev.preventDefault();
     try {
       const r = await fetch(API_BASE + "/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("#em").value.trim(), password: $("#pw").value }) });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Erreur");
+      const d = await readApiResponse(r);
       setToken(d.token); boot();
     } catch (e) { showLogin(e.message); }
   });
@@ -327,7 +370,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     for (let i=1;i<lines.length;i++) { const a=lines[i].split(delim).map(x=>x.trim().replace(/^"|"$/g,"")); const stamp = di>=0 ? a[di]+" "+a[tmi] : a[ti]; let t=Number(stamp); if (!Number.isFinite(t)) t=parseTs(stamp); else if (t<1e12) t*=1000; const o=Number(a[oi]),h=Number(a[hi]),l=Number(a[li]),c=Number(a[ci]); if ([t,o,h,l,c].every(Number.isFinite)&&h>=Math.max(o,c,l)&&l<=Math.min(o,c)) bars.push({t:Math.floor(t),o,h,l,c}); }
     const map=new Map(); bars.forEach(b=>map.set(b.t,b)); return [...map.values()].sort((a,b)=>a.t-b.t);
   }
-  async function refreshBtDataStatus() { try { const r=await api("/api/admin/backtest/data?symbol="+encodeURIComponent($("#bt-symbol").value)); $("#bt-data-status").textContent = r.history.length ? "Historique D1 : "+r.history.map(x=>x.timeframe+" — "+x.bars+" bougies ("+x.first_month+" → "+x.last_month+")").join(" | ") : "Aucun historique importé dans D1 pour ce marché."; } catch(e) { $("#bt-data-status").textContent=e.message; } }
+  async function refreshBtDataStatus() { try { const r=await api("/api/admin/backtest/data?symbol="+encodeURIComponent($("#bt-symbol").value)); $("#bt-data-status").textContent = r.history.length ? "Historique importé : "+r.history.map(x=>x.timeframe+" — "+x.bars+" bougies ("+x.first_month+" → "+x.last_month+")").join(" | ") : "Aucun historique importé dans D1 pour ce marché."; } catch(e) { $("#bt-data-status").textContent=e.message; } }
   $("#bt-symbol").addEventListener("change", refreshBtDataStatus);
   $(".tab[data-t=bt]").addEventListener("click", refreshBtDataStatus);
   $("#bt-import").onclick = async () => { const f=$("#bt-price-file").files[0], out=$("#bt-import-status"), btn=$("#bt-import"); if(!f) return alert("Choisis un fichier CSV."); btn.disabled=true; out.textContent="Lecture du fichier…"; try { const bars=parsePriceCsv(await f.text()); if(!bars.length) throw new Error("Aucune bougie OHLC valide trouvée."); let sent=0; for(let i=0;i<bars.length;i+=3000) { const batch=bars.slice(i,i+3000); await api("/api/admin/backtest/data",{method:"POST",body:JSON.stringify({symbol:$("#bt-symbol").value,timeframe:$("#bt-import-tf").value,bars:batch})}); sent+=batch.length; out.textContent="Import en cours : "+sent+" / "+bars.length+" bougies…"; } out.textContent="Import terminé : "+sent+" bougies "+$("#bt-import-tf").value+" enregistrées."; await refreshBtDataStatus(); } catch(e) { out.textContent="Erreur : "+e.message; } finally { btn.disabled=false; } };
@@ -347,7 +390,17 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
         try { events = JSON.parse($("#bt-events").value || "[]"); if (!Array.isArray(events)) throw new Error("Le JSON doit être une liste d'annonces."); }
         catch (e) { throw new Error("Format JSON des annonces invalide : " + e.message); }
       }
-      const r = await api("/api/admin/backtest", { method: "POST", body: JSON.stringify({ symbol: $("#bt-symbol").value, profile: $("#bt-profile").value, days: Number($("#bt-days").value), costAtr: Number($("#bt-cost").value), mode: $("#bt-mode").value, events }) });
+      const base = { symbol: $("#bt-symbol").value, profile: $("#bt-profile").value, days: Number($("#bt-days").value), costAtr: Number($("#bt-cost").value), mode: $("#bt-mode").value, events };
+      let r, cursor = 104, state = null, calls = 0;
+      do {
+        r = await api("/api/admin/backtest", { method: "POST", body: JSON.stringify({ ...base, cursor, state }) });
+        calls++;
+        if (r.partial) {
+          cursor = r.cursor; state = r.state;
+          button.textContent = "Backtest… " + r.progress + "%";
+          out.innerHTML = '<p class="empty">Simulation par blocs pour respecter la limite CPU Cloudflare : ' + r.progress + '%</p>';
+        }
+      } while (r.partial);
       const m = r.metrics;
       const val = (v, suffix="") => v == null ? "—" : v + suffix;
       out.innerHTML = '<div class="stats">' + [
@@ -406,22 +459,37 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 
   async function loadSignals() {
     try {
-      const s = await api("/api/admin/signals");
-      $("#slist").innerHTML = s.length ? s.map((x) => {
+      const signals = await api("/api/admin/signals");
+      const active = signals.filter(x => !x.outcome || x.outcome === "open");
+      const closed = signals.filter(x => x.outcome && x.outcome !== "open");
+      const renderSignal = (x, isClosed) => {
         const hid = x.status === "hidden";
-        return '<div class="item' + (hid ? " dim" : "") + '"><div><b>' + esc(x.symbol) + " · " + esc(x.direction) + "</b><small>" + esc(x.source) + " · " + esc(x.outcome || "open") + " · " + (x.confidence == null ? "—" : x.confidence + "%") +
-          " · E " + (x.entry == null ? "—" : x.entry) + " SL " + (x.stop_loss == null ? "—" : x.stop_loss) + " TP1 " + (x.tp1 == null ? "—" : x.tp1) + "</small><small>" + fmtDT(x.created_at) + (hid ? " · masqué" : "") +
-          '</small></div><div class="acts">' + (x.outcome === "open" ? '<button class="btn ghost sm" data-close="' + esc(x.id) + '">Clôturer</button>' : "") + '<button class="btn ghost sm" data-tog="' + esc(x.id) + '" data-st="' + (hid ? "published" : "hidden") + '">' + (hid ? "Afficher" : "Masquer") +
+        const outcome = x.outcome || "open";
+        return '<div class="item' + (hid ? " dim" : "") + '"><div><b>' + esc(x.symbol) + " · " + esc(x.direction) + '</b><small>' + esc(x.source || "auto") + ' · ' + esc(outcome) + ' · ' + (x.confidence == null ? "—" : x.confidence + "%") +
+          " · E " + (x.entry == null ? "—" : x.entry) + " SL " + (x.stop_loss == null ? "—" : x.stop_loss) + " TP1 " + (x.tp1 == null ? "—" : x.tp1) + '</small><small>' + fmtDT(x.created_at) + (hid ? " · masqué" : "") +
+          '</small></div><div class="acts">' + (!isClosed ? '<button class="btn ghost sm" data-close="' + esc(x.id) + '">Clôturer</button>' : '<span class="badge off">Clôturé</span>') + '<button class="btn ghost sm" data-tog="' + esc(x.id) + '" data-st="' + (hid ? "published" : "hidden") + '">' + (hid ? "Afficher" : "Masquer") +
           '</button><button class="btn ghost sm danger" data-del="' + esc(x.id) + '">Supprimer</button></div></div>';
-      }).join("") : EMPTY;
+      };
+      $("#sactive").innerHTML = active.length ? '<div class="signal-list">' + active.map(x => renderSignal(x, false)).join("") + '</div>' : EMPTY;
+      $("#sclosed").innerHTML = closed.length ? '<div class="signal-list">' + closed.map(x => renderSignal(x, true)).join("") + '</div>' : EMPTY;
+      $("#active-count").textContent = active.length;
+      $("#closed-count").textContent = closed.length;
     } catch (e) { flash(e.message); }
   }
 
   $("#slist").addEventListener("click", async (ev) => {
-    const t = ev.target.dataset.tog, d = ev.target.dataset.del, c = ev.target.dataset.close;
+    const filter = ev.target.closest("[data-sfilter]");
+    if (filter) {
+      const showClosed = filter.dataset.sfilter === "closed";
+      $("#sactive").classList.toggle("hidden", showClosed);
+      $("#sclosed").classList.toggle("hidden", !showClosed);
+      document.querySelectorAll("[data-sfilter]").forEach(b => { const on = b === filter; b.classList.toggle("active", on); b.setAttribute("aria-selected", String(on)); });
+      return;
+    }
+    const t = ev.target.closest("[data-tog]")?.dataset.tog, d = ev.target.closest("[data-del]")?.dataset.del, c = ev.target.closest("[data-close]")?.dataset.close;
     try {
       if (c && confirm("Clôturer ce trade ? Il ne sera compté ni gagnant ni perdant et l'actif sera libéré pour un nouveau signal.")) { await post("/api/admin/signals/" + c, { outcome: "closed" }, "PATCH"); flash("Trade clôturé"); loadSignals(); }
-      if (t) { await post("/api/admin/signals/" + t, { status: ev.target.dataset.st }, "PATCH"); loadSignals(); }
+      if (t) { const target = ev.target.closest("[data-tog]"); await post("/api/admin/signals/" + t, { status: target.dataset.st }, "PATCH"); loadSignals(); }
       if (d && confirm("Supprimer définitivement ce signal ?")) { await api("/api/admin/signals/" + d, { method: "DELETE" }); flash("Signal supprimé"); loadSignals(); }
     } catch (e) { flash(e.message); }
   });
