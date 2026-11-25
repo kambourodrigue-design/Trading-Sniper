@@ -390,7 +390,17 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
         try { events = JSON.parse($("#bt-events").value || "[]"); if (!Array.isArray(events)) throw new Error("Le JSON doit être une liste d'annonces."); }
         catch (e) { throw new Error("Format JSON des annonces invalide : " + e.message); }
       }
-      const r = await api("/api/admin/backtest", { method: "POST", body: JSON.stringify({ symbol: $("#bt-symbol").value, profile: $("#bt-profile").value, days: Number($("#bt-days").value), costAtr: Number($("#bt-cost").value), mode: $("#bt-mode").value, events }) });
+      const base = { symbol: $("#bt-symbol").value, profile: $("#bt-profile").value, days: Number($("#bt-days").value), costAtr: Number($("#bt-cost").value), mode: $("#bt-mode").value, events };
+      let r, cursor = 104, state = null, calls = 0;
+      do {
+        r = await api("/api/admin/backtest", { method: "POST", body: JSON.stringify({ ...base, cursor, state }) });
+        calls++;
+        if (r.partial) {
+          cursor = r.cursor; state = r.state;
+          button.textContent = "Backtest… " + r.progress + "%";
+          out.innerHTML = '<p class="empty">Simulation par blocs pour respecter la limite CPU Cloudflare : ' + r.progress + '%</p>';
+        }
+      } while (r.partial);
       const m = r.metrics;
       const val = (v, suffix="") => v == null ? "—" : v + suffix;
       out.innerHTML = '<div class="stats">' + [
