@@ -1,29 +1,20 @@
-# Correctif Lucide Sniper — Admin / Dashboard / API
+# Trading Sniper / Lucide — dossier complet corrigé (23-11-2026)
 
-Base utilisée : Trading-Sniper-LUCIDE-Corrections-Signaux-Espace-Trading-2026-11-23.zip fourni dans cette conversation.
+Ce ZIP contient le projet complet basé sur `Trading-Sniper-LUCIDE-Corrections-Signaux-Espace-Trading-2026-11-23.zip`, avec les corrections API/Admin/Dashboard intégrées.
 
-## Fichiers à remplacer dans GitHub
-- `src/index.ts`
-- `public/admin.html`
-- `public/dashboard.html`
+## Fichiers modifiés dans cette livraison
+- `src/index.ts` : endpoint GET `/api/health` (vérification Worker, D1 et KV).
+- `public/admin.html` : lecture robuste des réponses API et libellés « Trades en cours » / « Historique des trades ».
+- `public/dashboard.html` : lecture robuste des réponses API, en conservant la présentation graphique de la version de base.
 
-## Inclus
-- `/api/health` : contrôle JSON de disponibilité du Worker, D1 et KV.
-- Routes GET login/register : réponse JSON 405 explicite (la connexion reste POST).
-- Lecture API robuste dans Admin et Dashboard : détection des réponses HTML, JSON invalide et erreurs HTTP, avec message explicite au lieu de `Unexpected token '<'`.
-- Onglets d'administration nommés « Trades en cours » et « Historique des trades » (les filtres et actions existants sont conservés).
-- Le design de l'espace de trading présent dans le ZIP de base est conservé.
+## Déploiement prudent
+1. Télécharger et décompresser le ZIP complet.
+2. Vérifier les fichiers et la configuration Cloudflare avant remplacement.
+3. Publier le projet complet selon le flux GitHub → Cloudflare habituel.
+4. Après déploiement, tester `/api/health`, `/api/signals/latest`, le Dashboard et l'administration.
 
-## Non modifié
-- `wrangler.toml`, identifiants D1/KV, schéma et données.
-- Moteur de signaux, confirmations M15, SL/TP/RR, cron et Telegram.
-- Pages et fonctionnalités hors des trois fichiers listés.
+## Préservation
+Aucun changement intentionnel aux fichiers du moteur de stratégie, aux confirmations M15, aux calculs SL/TP, à Telegram, au schéma SQL ou aux identifiants D1/KV. Les données Cloudflare ne sont pas incluses dans ce ZIP et ne sont pas modifiées par l'archive.
 
-## Déploiement
-Extraire les trois fichiers en conservant exactement les chemins, puis remplacer uniquement ces fichiers dans le dépôt GitHub. Attendre la fin du déploiement Cloudflare.
-Tester ensuite :
-- `/api/health`
-- `/api/signals/latest`
-- `/admin.html` puis une connexion réelle via le formulaire (ne pas ouvrir `/api/auth/login` comme une page : GET n'est pas la méthode de connexion).
-
-La compilation TypeScript complète et les tests sur le Worker Cloudflare déployé restent à effectuer après intégration.
+## Limites de validation
+Les fichiers HTML/JavaScript ont été vérifiés statiquement. La compilation TypeScript complète, la connexion réelle et les tests en production doivent être effectués dans l'environnement Cloudflare du projet. Ce ZIP n'a pas été déployé.
