@@ -40,7 +40,7 @@ OPENAI_EFFORT = "medium"
 
 # Secrets à créer dans le dashboard (Worker > Paramètres > Variables et secrets > type « Secret ») :
 #   JWT_SECRET, ADMIN_EMAILS
-#   Données marché : biquote (sans clé) ; replis crypto : Kraken et Binance (sans clé).
+#   Données marché : biquote uniquement (sans clé).
 #   OPENAI_API_KEY ou DEEPSEEK_API_KEY (Secrets facultatifs) : OpenAI est prioritaire, DeepSeek sert de repli pour le second avis.
 #   OPENAI_MODEL=gpt-6-luna et OPENAI_EFFORT=medium sont configurés ; l’API est facturée séparément de ChatGPT.
 #   HYBRID_GPT=true : le second avis IA enrichit le signal autonome, sans le bloquer ni modifier ses niveaux.

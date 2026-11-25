@@ -16,7 +16,7 @@ Le Worker Cloudflare sert le site, l’API, les abonnements, les signaux et le m
 |---|---|---|
 | Forex et Gold | biquote | Aucune clé |
 | Crypto – source principale | biquote | Aucune clé |
-| Crypto – secours | Kraken et Binance | Aucune clé |
+| Crypto | biquote uniquement | Aucune clé |
 | Calendrier économique | ShowMyTrades | Aucune clé |
 
 Les symboles sont configurés dans `src/engine/config.ts`. Les symboles de marché doivent être validés dans Admin → Signaux → **Tester les données**. Si un symbole n’est pas coté par le fournisseur, aucun signal n’est généré pour cet actif jusqu’à correction de son identifiant ou rétablissement du flux.
