@@ -32,3 +32,6 @@ Aucun déploiement Cloudflare n'a été effectué par cette préparation. Le tes
 
 ## Correctif complémentaire — repli de prix Forex
 Ce ZIP inclut aussi le correctif `CORRECTIF-REPLI-YAHOO-FR.md` : BiQuote reste prioritaire, Yahoo Finance est ajouté en secours gratuit pour les paires Forex et l'or. Aucun D1/KV n'est modifié. Voir ce guide pour les fichiers changés et les vérifications avant push.
+
+
+**Note XAU/USD :** le repli Yahoo est configuré sur `GC=F` (futures COMEX), car `XAUUSD=X` renvoie 404. `GC=F` est un proxy de l’or spot, pas une cotation exacte du broker. Vérifie l’écart avant d’exécuter les prix d’entrée, SL et TP.

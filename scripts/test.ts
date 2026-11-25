@@ -58,6 +58,8 @@ t("12 paires Forex + Gold + BTC/ETH configurés avec les seuls fournisseurs auto
     if (!(source.p === "biquote" || source.p === "binance" || source.p === "kraken" || source.p === "yahoo")) throw new Error(`fournisseur interdit : ${source.p}`);
   }
   for (const item of SYMBOLS.filter((x) => x.session === "fx")) if (!item.sources.some((source) => source.p === "yahoo")) throw new Error(`repli Yahoo absent : ${item.symbol}`);
+  const gold = SYMBOLS.find((x) => x.symbol === "XAU/USD");
+  if (!gold?.sources.some((source) => source.p === "yahoo" && source.id === "GC=F" && source.market === "metals-futures-proxy")) throw new Error("repli Yahoo XAU/USD incorrect : attendu GC=F (futures proxy), pas XAUUSD=X");
 });
 t("biais macro : surprise USD positive pénalise EUR/USD et favorise USD/JPY", () => {
   const now = Date.UTC(2026, 10, 19, 12, 0);

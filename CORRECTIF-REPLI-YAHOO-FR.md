@@ -28,7 +28,7 @@ Corriger l'échec commun observé sur toutes les paires Forex :
 ## Vérification
 - Transpilation syntaxique des 29 fichiers TypeScript : 0 diagnostic de syntaxe.
 - Le typecheck complet n'a pas pu être exécuté : les dépendances npm/`@cloudflare/workers-types` ne sont pas installées, et l'installation a expiré dans cet environnement.
-- La réponse Yahoo n'a pas pu être testée en direct depuis l'environnement de préparation (résolution DNS sortante indisponible). Il faut donc vérifier après déploiement que le fournisseur `yahoo` apparaît comme source dans les journaux et que les bougies sont fraîches.
+- Le symbole `GC=F` est bien référencé sur Yahoo Finance, mais la réponse OHLC intraday de l’endpoint utilisé n’a pas pu être testée depuis l’environnement de préparation. Vérifier après déploiement que Yahoo renvoie les bougies M15/H1/H4/D1 fraîches.
 
 ## Installation recommandée
 1. Fais une copie de sécurité du dépôt GitHub actuel.
@@ -36,4 +36,5 @@ Corriger l'échec commun observé sur toutes les paires Forex :
 3. Vérifie le diff : les changements doivent se limiter aux cinq fichiers listés ci-dessus et à ce guide.
 4. Lance `npm install`, puis `npm run typecheck` et `npm test` dans un environnement avec accès au registre npm.
 5. Commit/push seulement après vérification. Le déploiement GitHub→Cloudflare se fera alors selon ta configuration habituelle.
-6. Après déploiement, regarde les logs : si BiQuote est stale, le moteur doit essayer Yahoo. Si Yahoo est bloqué ou stale lui aussi, le moteur doit continuer à refuser le signal plutôt que d'utiliser de mauvaises données.
+6. Pour XAU/USD, Yahoo `GC=F` est un proxy futures et peut différer légèrement du prix spot du broker ; avant d’utiliser les niveaux d’entrée/SL/TP, vérifier l’écart avec la cotation broker.
+7. Après déploiement, regarde les logs : si BiQuote est stale, le moteur doit essayer Yahoo. Si Yahoo est bloqué ou stale lui aussi, le moteur doit continuer à refuser le signal plutôt que d'utiliser de mauvaises données.

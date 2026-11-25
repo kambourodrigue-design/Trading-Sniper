@@ -6,7 +6,7 @@ export interface SymbolCfg { symbol: string; label: string; currencies: string[]
 // Flux principal BiQuote (sans clé). Yahoo Finance est un repli gratuit pour Forex/metaux et crypto; Binance/Kraken restent des replis crypto.
 // Les symboles biquote suivent le catalogue MT5 documenté : EURUSD, XAUUSD, BTCUSD, etc.
 export const SYMBOLS: SymbolCfg[] = [
-  { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx", sources: [{ p: "biquote", market: "metals", id: "XAUUSD" }, { p: "yahoo", market: "metals", id: "XAUUSD=X" }] },
+  { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx", sources: [{ p: "biquote", market: "metals", id: "XAUUSD" }, { p: "yahoo", market: "metals-futures-proxy", id: "GC=F" }] },
   { symbol: "EUR/USD", label: "Euro / Dollar", currencies: ["EUR", "USD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "EURUSD" }, { p: "yahoo", market: "forex", id: "EURUSD=X" }] },
   { symbol: "GBP/USD", label: "Livre / Dollar", currencies: ["GBP", "USD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPUSD" }, { p: "yahoo", market: "forex", id: "GBPUSD=X" }] },
   { symbol: "USD/JPY", label: "Dollar / Yen", currencies: ["USD", "JPY"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "USDJPY" }, { p: "yahoo", market: "forex", id: "JPY=X" }] },
