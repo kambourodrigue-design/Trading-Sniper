@@ -20,3 +20,21 @@
 ## Correctifs pages de backtest
 - backtest-replay.html : plus de débordement horizontal sur petit mobile (champs « Fichier » limités à la largeur de l'écran).
 - backtest-replay.html et backtest-report.html : ces deux pages ont leur propre thème sombre ; lx-theme.css n'y est plus chargé (il rendait le titre quasi invisible en mode clair). Le bouton jour/nuit y est masqué, car il n'a pas d'effet sur ces pages.
+
+## Version ordinateur identique au mobile (2026-11-25)
+- Capsule du bas (.lx-nav) désormais visible sur ordinateur : centrée, plus grande et plus aérée (700 px max).
+- En-tête épuré sur tous les écrans : logo + bouton soleil ; les liens du haut sont masqués (la navigation est dans la capsule).
+- Bouton soleil centré verticalement dans l'en-tête.
+- Fichiers modifiés : public/lx-nav.css, public/lx-theme.css. Moteur, API, D1/KV : inchangés.
+
+## Effets visuels « cockpit néon » (lx-fx.css + lx-fx.js, 2026-11-25)
+- Fond aurore animé (3 halos qui dérivent + fine ligne radar), en pause quand l'onglet est caché.
+- Lumière qui suit le curseur (ordinateur), barre de progression de lecture en haut.
+- Entrée en scène (une fois par session) : en-tête qui descend, boutons compte qui apparaissent, capsule du bas qui monte.
+- Apparition progressive des blocs au défilement (flou → net), bandeau d'en-tête en cascade.
+- Boutons principaux : reflet qui traverse au survol ; cartes : halo néon au survol ; cartes d'abonnement : inclinaison 3D légère.
+- Capsule du bas : lueur qui respire, témoin cyan qui clignote, icône active qui rebondit, onde au toucher + vibration légère sur mobile.
+- Changement de page fluide (View Transitions, Chrome/Android) ; bascule clair/nuit en cercle qui s'étend depuis le soleil (repli : fondu des couleurs).
+- Respecte « réduire les animations » : aucun effet, aucun élément masqué. Sans JavaScript, le site reste intact.
+- Pages sans effets : backtest-report.html et backtest-replay.html (thème sombre propre).
+- Pour retirer un effet : supprimer son bloc dans public/lx-fx.css ; pour tout couper : retirer les balises lx-fx.css et lx-fx.js des pages.

@@ -34,13 +34,17 @@
     t.setAttribute("aria-pressed", String(dark));
     t.title = dark ? "Mode clair" : "Mode nuit";
   }
-  t.addEventListener("click", function () {
+  function toggleTheme() {
     var orig = document.getElementById("lucide-theme-toggle"); /* réutilise la logique existante de la page */
     if (orig) { orig.click(); return; }
     var next = root.dataset.theme === "dark" ? "light" : "dark";
     root.dataset.theme = next;
     root.style.colorScheme = next;
     try { localStorage.setItem("lucide_theme", next); } catch (e) { /* stockage indisponible */ }
+  }
+  t.addEventListener("click", function (ev) {
+    if (window.lxThemeTransition) window.lxThemeTransition(toggleTheme, ev, t); /* défini par lx-fx.js */
+    else toggleTheme();
   });
   new MutationObserver(label).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
   label();

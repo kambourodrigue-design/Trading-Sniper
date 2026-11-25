@@ -165,8 +165,9 @@ nav .navin, nav .wrap { padding-right: 62px; } /* réserve la place du bouton à
 
 .lx-theme {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 50%;
+  margin-top: -20px;
+  right: 14px;
   z-index: 2;
   width: 40px;
   height: 40px;
@@ -242,13 +243,10 @@ html:not(.lx-has-nav) #lucide-theme-toggle .theme-label { display: none; }
 }
 @media (max-width: 340px) { .lx-btn { font-size: .85rem; padding: 0 8px; gap: 6px; } .lx-btn svg { width: 17px; height: 17px; } }
 
-/* Menu du haut de l'accueil : liens sur une seule ligne */
-@media (min-width: 1000px) {
-  nav .navlinks { gap: clamp(10px, 1.4vw, 22px); }
-  nav .navlinks a { white-space: nowrap; }
-}
-/* Largeurs intermédiaires : on garde les pages, les ancres de l'accueil restent accessibles en défilant */
-@media (min-width: 769px) and (max-width: 999.98px) {
-  nav .navlinks a[href^="#"] { display: none; }
-  nav .navlinks a { white-space: nowrap; }
-}
+
+
+
+/* ---------- En-tête épuré, identique sur mobile et ordinateur ----------
+   Seuls restent le logo et le bouton soleil ; la navigation est portée par la capsule du bas (.lx-nav). */
+nav .navlinks, nav .links, nav .actions, nav .burger,
+nav .wrap > a:not(.brand), nav .navin > a:not(.brand) { display: none !important; }

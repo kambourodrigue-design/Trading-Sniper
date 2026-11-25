@@ -1,0 +1,129 @@
+/* Lucide — effets visuels « cockpit néon » (v1)
+   Couche d'effets partagée, chargée après lx-theme.css. Tout ce qui bouge est dans @media (prefers-reduced-motion: no-preference).
+   Les éléments cachés avant leur apparition ne le sont que si lx-fx.js tourne (classe html.lx-js) : sans JS, rien n'est masqué.
+   Pour couper un effet, supprimer son bloc ; pour tout couper, retirer la balise <link> de lx-fx.css. */
+
+:root { --lx-ease: cubic-bezier(.2, .8, .2, 1); }
+
+/* ---------- Finitions statiques (sans mouvement) ---------- */
+::selection { background: rgba(124, 58, 237, .28); }
+html { scrollbar-color: #8B5CF6 transparent; scrollbar-width: thin; }
+tbody tr { transition: background .2s ease; }
+tbody tr:hover td { background: rgba(124, 58, 237, .06); }
+:root[data-theme="dark"] tbody tr:hover td { background: rgba(183, 156, 255, .07); }
+
+/* ---------- Fond « aurore » (injecté par lx-fx.js) ---------- */
+.lx-aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.lx-aurora i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; opacity: .55; will-change: transform; }
+.lx-aurora i:nth-child(1) { left: -22vmax; top: -28vmax; background: radial-gradient(circle, rgba(124, 58, 237, .40), transparent 62%); animation: lx-drift-a 26s ease-in-out infinite alternate; }
+.lx-aurora i:nth-child(2) { right: -28vmax; top: 8vmax; background: radial-gradient(circle, rgba(217, 70, 239, .30), transparent 62%); animation: lx-drift-b 33s ease-in-out infinite alternate; }
+.lx-aurora i:nth-child(3) { left: 8vmax; bottom: -38vmax; background: radial-gradient(circle, rgba(34, 211, 238, .22), transparent 62%); animation: lx-drift-c 39s ease-in-out infinite alternate; }
+:root[data-theme="dark"] .lx-aurora i { opacity: .9; }
+/* Ligne de balayage très discrète, façon radar */
+.lx-aurora::after { content: ""; position: absolute; left: 0; right: 0; top: -2px; height: 2px; opacity: .5; background: linear-gradient(90deg, transparent, rgba(34, 211, 238, .4), transparent); animation: lx-sweep 12s linear infinite; }
+.lx-paused .lx-aurora i, .lx-paused .lx-aurora::after { animation-play-state: paused; }
+@keyframes lx-drift-a { to { transform: translate3d(14vmax, 10vmax, 0) scale(1.12); } }
+@keyframes lx-drift-b { to { transform: translate3d(-12vmax, 14vmax, 0) scale(.92); } }
+@keyframes lx-drift-c { to { transform: translate3d(16vmax, -10vmax, 0) scale(1.1); } }
+@keyframes lx-sweep { from { transform: translateY(0); } to { transform: translateY(100vh); } }
+
+/* ---------- Lumière qui suit le curseur (ordinateur uniquement) ---------- */
+.lx-cursor {
+  position: fixed; left: 0; top: 0; width: 520px; height: 520px; margin: -260px 0 0 -260px;
+  z-index: 3; pointer-events: none; border-radius: 50%; opacity: 0; transition: opacity .5s ease; will-change: transform;
+  background: radial-gradient(circle, rgba(167, 139, 250, .16), rgba(34, 211, 238, .05) 42%, transparent 68%);
+}
+.lx-cursor.on { opacity: 1; }
+:root[data-theme="dark"] .lx-cursor { background: radial-gradient(circle, rgba(167, 139, 250, .20), rgba(34, 211, 238, .07) 42%, transparent 68%); }
+
+/* ---------- Barre de progression de lecture ---------- */
+.lx-progress {
+  position: fixed; left: 0; top: 0; z-index: 200; width: 100%; height: 3px; pointer-events: none;
+  transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, #22D3EE, #7C3AED 55%, #E879F9);
+  box-shadow: 0 0 12px rgba(124, 58, 237, .6);
+}
+@supports (animation-timeline: scroll()) {
+  .lx-progress { animation: lx-progress linear both; animation-timeline: scroll(root block); }
+}
+@keyframes lx-progress { to { transform: scaleX(1); } }
+
+/* ---------- Boutons : reflet qui traverse au survol ---------- */
+.btn-primary, .btn.primary, button.primary, .btn-cta, .lx-btn-main,
+.btn:not(.ghost):not(.btn-ghost):not(.btn-primary):not(.primary):not(.danger) {
+  background-image: linear-gradient(110deg, transparent 32%, rgba(255, 255, 255, .42) 49%, transparent 66%), var(--lx-grad);
+  background-size: 260% 100%, 100% 100%;
+  background-position: 135% 0, 0 0;
+  background-repeat: no-repeat;
+}
+@media (hover: hover) {
+  .btn-primary:hover, .btn.primary:hover, button.primary:hover, .btn-cta:hover, .lx-btn-main:hover,
+  .btn:not(.ghost):not(.btn-ghost):not(.btn-primary):not(.primary):not(.danger):hover {
+    background-position: -35% 0, 0 0;
+    transition: background-position .85s var(--lx-ease), transform .18s ease, box-shadow .2s ease;
+  }
+  .card:hover, .plan:hover {
+    border-color: color-mix(in srgb, var(--violet) 45%, var(--line));
+    box-shadow: var(--lx-card-shadow), 0 0 0 1px rgba(124, 58, 237, .16), 0 30px 64px -28px rgba(192, 38, 211, .5);
+  }
+  .card, .plan { transition: box-shadow .35s ease, border-color .35s ease, transform .3s var(--lx-ease); }
+}
+
+/* ---------- Capsule du bas : détails ---------- */
+.lx-item { overflow: hidden; }
+.lx-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: rgba(255, 255, 255, .55); transform: scale(0); animation: lx-ripple .65s ease-out forwards; }
+:root[data-theme="dark"] .lx-ripple { background: rgba(183, 156, 255, .4); }
+@keyframes lx-ripple { to { transform: scale(1); opacity: 0; } }
+
+/* ---------- Tout ce qui bouge ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Apparition progressive des blocs (classes posées par lx-fx.js) */
+  html.lx-js [data-lx-reveal]:not(.lx-in) { opacity: 0; transform: translate3d(0, 22px, 0) scale(.985); filter: blur(8px); }
+  html.lx-js [data-lx-reveal].lx-in { animation: lx-rise .85s var(--lx-ease) var(--lx-d, 0ms) backwards; }
+  @keyframes lx-rise { from { opacity: 0; transform: translate3d(0, 22px, 0) scale(.985); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+
+  /* Texte en dégradé : reflet lent */
+  .gradient-text { background-size: 220% 100%; animation: lx-shimmer 7s ease-in-out infinite alternate; }
+  @keyframes lx-shimmer { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+  /* Pastille d'état du scanner : onde */
+  .pulse { animation: lx-ping 2.2s ease-out infinite; }
+  @keyframes lx-ping { 0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, .6); } 70%, 100% { box-shadow: 0 0 0 11px rgba(34, 211, 238, 0); } }
+
+  /* Entrée en scène, une seule fois par session (classe html.lx-intro) */
+  html.lx-intro nav { animation: lx-drop .8s var(--lx-ease) backwards; }
+  html.lx-intro .lx-auth .lx-btn:nth-child(1) { animation: lx-pop .7s var(--lx-ease) .2s backwards; }
+  html.lx-intro .lx-auth .lx-btn:nth-child(2) { animation: lx-pop .7s var(--lx-ease) .32s backwards; }
+  html.lx-intro .lx-nav { animation: lx-nav-in .95s cubic-bezier(.2, 1.15, .3, 1) .25s backwards; }
+  @keyframes lx-drop { from { opacity: 0; transform: translateY(-26px); } }
+  @keyframes lx-pop { from { opacity: 0; transform: translateY(14px) scale(.94); } }
+  @keyframes lx-nav-in { from { opacity: 0; transform: translateX(-50%) translateY(54px) scale(.94); } }
+
+  /* Capsule : respiration de la lueur, témoin qui clignote, icône qui rebondit */
+  .lx-pill { animation: lx-glow 3.8s ease-in-out infinite; }
+  @keyframes lx-glow { 50% { box-shadow: 0 20px 34px -10px rgba(192, 38, 211, .95), 0 0 0 1px rgba(255, 255, 255, .22) inset, 0 1px 0 rgba(255, 255, 255, .5) inset; } }
+  .lx-pill::after { animation: lx-led 2.6s ease-in-out infinite; }
+  @keyframes lx-led { 50% { opacity: .5; box-shadow: 0 0 6px 0 var(--lx-led), 0 0 14px 1px rgba(34, 211, 238, .4); } }
+  .lx-item[aria-current="page"] svg { animation: lx-icon-pop .8s var(--lx-ease) .4s backwards; }
+  @keyframes lx-icon-pop { from { transform: translateY(8px) scale(.7) rotate(-8deg); opacity: 0; } }
+  .lx-item:not([aria-current="page"]):hover svg { transform: translateY(-3px) scale(1.1); }
+
+  /* Changement de page : fondu flouté (navigateurs compatibles) */
+  ::view-transition-old(root) { animation: lx-vt-out .22s ease both; }
+  ::view-transition-new(root) { animation: lx-vt-in .4s var(--lx-ease) both; }
+  @keyframes lx-vt-out { to { opacity: 0; transform: translateY(-6px) scale(.996); filter: blur(3px); } }
+  @keyframes lx-vt-in { from { opacity: 0; transform: translateY(12px) scale(.996); filter: blur(5px); } }
+  ::view-transition-group(lx-nav) { animation-duration: .45s; animation-timing-function: var(--lx-ease); }
+
+  /* Bascule clair/nuit : cercle qui s'étend depuis le bouton soleil */
+  html.lx-theme-vt::view-transition-old(root), html.lx-theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+  html.lx-theme-vt::view-transition-old(root) { z-index: 1; }
+  html.lx-theme-vt::view-transition-new(root) { z-index: 2; }
+  /* Repli sans View Transitions : fondu des couleurs */
+  html.lx-theming *, html.lx-theming *::before, html.lx-theming *::after { transition: background-color .45s ease, color .45s ease, border-color .45s ease, fill .45s ease, stroke .45s ease !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-aurora, .lx-cursor, .lx-progress { display: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

@@ -160,14 +160,36 @@
   .lx-item svg { width: 23px; height: 23px; }
 }
 
-/* Réserve d'espace sous le contenu + masqué sur ordinateur (menu du haut) */
-@media (max-width: 899.98px) {
-  body { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important; }
-}
+/* Réserve d'espace sous le contenu pour que la capsule ne cache jamais la fin de page */
+body { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)) !important; }
+
+/* Ordinateur : même capsule que sur mobile, centrée, un peu plus grande et plus aérée */
 @media (min-width: 900px) {
-  .lx-nav { display: none; }
+  body { padding-bottom: 140px !important; }
+  .lx-nav {
+    --lx-pad: 10px;
+    bottom: 24px;
+    width: min(700px, calc(100% - 48px));
+    border-radius: 42px;
+  }
+  .lx-pill { border-radius: 32px; }
+  .lx-item {
+    min-height: 76px;
+    gap: 8px;
+    padding: 10px 4px 14px;
+    border-radius: 32px;
+    font-size: 13.5px;
+  }
+  .lx-item svg { width: 28px; height: 28px; }
+  .lx-pill::after { bottom: 8px; width: 20px; margin-left: -10px; }
+  .lx-item:not([aria-current="page"]):hover { background: rgba(124, 58, 237, .08); }
+  :root[data-theme="dark"] .lx-item:not([aria-current="page"]):hover { background: rgba(183, 156, 255, .10); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lx-pill, .lx-item, .lx-item svg { transition: none; }
 }
+
+/* Changement de page fluide (Chrome / Android) : la capsule reste en place pendant que le contenu s'efface */
+@view-transition { navigation: auto; }
+.lx-nav { view-transition-name: lx-nav; }
