@@ -13,6 +13,8 @@ import type { Candle, Dir } from "./engine/types";
 import { probeSources } from "./lib/prices";
 import { probeIntermarket } from "./lib/intermarket";
 import { fundamentalBias, newsBlock, type CalEvent } from "./lib/macro";
+import { learningReport } from "./engine/learning";
+import { learningV2Report } from "./engine/learning-v2";
 
 const PLANS = ["starter", "pro", "elite"];
 
@@ -328,6 +330,50 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     // Exécution synchrone (un actif à la fois) : l'analyse + les IA peuvent prendre 1 à 2 minutes.
     const results = await runAutoSignals(env, { force: true, symbol: b.symbol });
     return json({ results });
+  }
+
+  // --- Apprentissage V1 : rapport en lecture seule, mode observation ---
+  if (pathname === "/api/admin/learning" && m === "GET") {
+    return json(await learningReport(env));
+  }
+
+  // V2 progressive : recommandations en shadow mode, sans modifier le moteur live.
+  if (pathname === "/api/admin/learning/v2" && m === "GET") {
+    return json(await learningV2Report(env));
+  }
+
+  if (pathname === "/api/admin/learning/control" && m === "GET") {
+    const control = await env.DB.prepare("SELECT active_engine, updated_at, updated_by, reason FROM engine_control WHERE id=1").first();
+    const pending = await env.DB.prepare("SELECT COUNT(*) n FROM learning_recommendations WHERE status='pending'").first<{n:number}>();
+    return json({ control, pending: pending?.n ?? 0, fallback_available: true, note: "Les propositions ne changent jamais automatiquement le moteur de production." });
+  }
+  if (pathname === "/api/admin/learning/recommendations/generate" && m === "POST") {
+    const report = await learningV2Report(env); let created = 0;
+    for (const r of report.recommendations) {
+      if (r.status === "insufficient_data" || r.status === "neutral") continue;
+      const strategy = r.strategy ?? "Non classé";
+      const existing = await env.DB.prepare("SELECT id FROM learning_recommendations WHERE symbol=? AND strategy=? AND status='pending'").bind(r.symbol,strategy).first();
+      if (existing) continue;
+      const id = newId();
+      const recommendation = r.status === "promising" ? "Étudier un profil de validation dédié ; conserver les paramètres actuels jusqu'à validation hors-échantillon." : "Réexaminer cette configuration en backtest séparé ; ne pas la désactiver automatiquement.";
+      await env.DB.prepare("INSERT INTO learning_recommendations (id,symbol,strategy,recommendation,evidence_json,status,created_at) VALUES (?,?,?,?,?,'pending',?)").bind(id,r.symbol,strategy,recommendation,JSON.stringify(r),now).run(); created++;
+    }
+    return json({created,message:"Propositions enregistrées. Le moteur live reste inchangé."});
+  }
+  if (pathname === "/api/admin/learning/recommendations" && m === "GET") {
+    const rows = await env.DB.prepare("SELECT id,symbol,strategy,recommendation,evidence_json,status,created_at,decided_at,decision_note FROM learning_recommendations ORDER BY created_at DESC LIMIT 100").all();
+    return json(rows.results.map((r: any) => ({...r,evidence:JSON.parse(r.evidence_json)})));
+  }
+  const decisionRoute = pathname.match(/^\/api\/admin\/learning\/recommendations\/([\w-]+)\/(approve|reject)$/);
+  if (decisionRoute && m === "POST") {
+    const body = await req.json<{note?:string}>().catch(() => ({})); const status = decisionRoute[2] === "approve" ? "approved" : "rejected";
+    const result = await env.DB.prepare("UPDATE learning_recommendations SET status=?,decided_at=?,decided_by=?,decision_note=? WHERE id=? AND status='pending'").bind(status,now,user.email,(body.note??"").slice(0,500),decisionRoute[1]).run();
+    if (!result.meta.changes) return err("Proposition introuvable ou déjà traitée.",404);
+    return json({ok:true,status,applied_to_live_engine:false,message:status === "approved" ? "Recommandation approuvée et archivée ; non appliquée au moteur live." : "Recommandation refusée."});
+  }
+  if (pathname === "/api/admin/learning/rollback" && m === "POST") {
+    await env.DB.prepare("UPDATE engine_control SET active_engine='origin',updated_at=?,updated_by=?,reason=? WHERE id=1").bind(now,user.email,"Retour manuel demandé par l'administrateur").run();
+    return json({ok:true,active_engine:"origin",message:"Moteur d'origine défini comme moteur actif."});
   }
 
   // --- Journal d'analyse : pourquoi un signal a (ou n'a pas) été émis ---
