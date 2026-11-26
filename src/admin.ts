@@ -345,7 +345,14 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
   if (pathname === "/api/admin/learning/control" && m === "GET") {
     const control = await env.DB.prepare("SELECT active_engine, updated_at, updated_by, reason FROM engine_control WHERE id=1").first();
     const pending = await env.DB.prepare("SELECT COUNT(*) n FROM learning_recommendations WHERE status='pending'").first<{n:number}>();
-    return json({ control, pending: pending?.n ?? 0, fallback_available: true, note: "Les propositions ne changent jamais automatiquement le moteur de production." });
+    return json({ control, pending: pending?.n ?? 0, engines: [{id:"origin",label:"Moteur historique ICT/SMC/CRT",available:true},{id:"v2",label:"Variante expérimentale V2 (profil strict)",available:true}], fallback_available: true, note: "V2 est une variante de configuration du pipeline existant, pas encore un algorithme indépendant. Retour Origin automatique en cas d'erreur." });
+  }
+  if (pathname === "/api/admin/learning/engine" && m === "POST") {
+    const body = await req.json<{engine?:string;note?:string}>().catch(() => ({} as {engine?:string;note?:string}));
+    if (body.engine !== "origin" && body.engine !== "v2") return err("Moteur invalide. Valeurs autorisées : origin ou v2.");
+    const reason = (body.note || (body.engine === "origin" ? "Sélection manuelle du moteur historique" : "Activation manuelle de la variante expérimentale V2")).slice(0,500);
+    await env.DB.prepare("UPDATE engine_control SET active_engine=?,updated_at=?,updated_by=?,reason=? WHERE id=1").bind(body.engine,now,user.email,reason).run();
+    return json({ok:true,active_engine:body.engine,message:body.engine === "origin" ? "Moteur historique activé." : "Variante expérimentale V2 activée. Repli automatique vers Origin en cas d'erreur."});
   }
   if (pathname === "/api/admin/learning/recommendations/generate" && m === "POST") {
     const report = await learningV2Report(env); let created = 0;
