@@ -232,7 +232,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
         <hr style="margin:20px 0;border-color:var(--line)">
         <h2>Lucide V2 — recommandations sous contrôle humain</h2>
         <p style="color:var(--soft);font-size:.85rem">Le moteur historique reste actif. L'IA propose des pistes documentées ; une approbation archive la décision mais n'applique jamais automatiquement un changement de stratégie.</p>
-        <div class="acts"><button class="btn" id="learning-generate">Générer les recommandations</button><button class="btn ghost" id="learning-rollback">Revenir au moteur d'origine</button></div>
+        <div class="acts"><button class="btn" id="learning-generate">Générer les recommandations</button><button class="btn ghost" id="learning-origin">Activer Origin</button><button class="btn ghost" id="learning-v2-engine">Activer V2</button></div>
         <div id="learning-control" style="margin-top:12px"></div><div id="learning-recommendations" style="margin-top:12px"></div>
       </div>
     </section>
@@ -457,12 +457,13 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     try {
       const [control, rows] = await Promise.all([api("/api/admin/learning/control"), api("/api/admin/learning/recommendations")]);
       const c = control.control || {};
-      $("#learning-control").innerHTML = '<div class="item"><div><b>Moteur actif : ' + esc(c.active_engine === "origin" ? "ORIGINE (ICT/SMC/CRT)" : c.active_engine) + '</b><small>' + esc(control.pending) + ' proposition(s) en attente · V2 en mode recommandation</small></div><span class="badge">Protection active</span></div>';
+      $("#learning-control").innerHTML = '<div class="item"><div><b>Moteur actif : ' + esc(c.active_engine === "origin" ? "ORIGINE (ICT/SMC/CRT)" : c.active_engine === "v2" ? "V2 (profil strict)" : "INCONNU — repli Origin") + '</b><small>' + esc(control.pending) + ' proposition(s) en attente · ' + esc(c.reason || "Aucune raison enregistrée") + '</small><small>V2 = variante expérimentale du pipeline existant ; retour automatique à Origin si erreur.</small></div><span class="badge">Repli Origin actif</span></div>';
       $("#learning-recommendations").innerHTML = rows.length ? rows.map(x => '<div class="item"><div><b>' + esc(x.symbol) + ' · ' + esc(x.strategy) + '</b><small>' + esc(x.status) + ' · ' + esc(x.recommendation) + '</small><small>Échantillon : ' + esc(x.evidence.trades) + ' trades · Win rate : ' + esc(x.evidence.win_rate) + '% · R moyen : ' + esc(x.evidence.avg_r) + '</small></div>' + (x.status === 'pending' ? '<div class="acts"><button class="btn ghost sm" data-learning-approve="' + esc(x.id) + '">Approuver</button><button class="btn ghost sm danger" data-learning-reject="' + esc(x.id) + '">Refuser</button></div>' : '<span class="badge">' + esc(x.status) + '</span>') + '</div>').join('') : '<p class="empty">Aucune recommandation enregistrée. Génère une analyse après accumulation de données.</p>';
     } catch(e) { $("#learning-control").innerHTML = '<p class="empty">' + esc(e.message) + '</p>'; }
   }
   $("#learning-generate").addEventListener("click", async () => { try { const r=await post("/api/admin/learning/recommendations/generate",{}); flash(r.created + " nouvelle(s) recommandation(s)"); await loadLearningV2(); } catch(e) { flash(e.message); } });
-  $("#learning-rollback").addEventListener("click", async () => { if(!confirm("Confirmer le retour au moteur ICT/SMC/CRT d'origine ?")) return; try { await post("/api/admin/learning/rollback",{}); flash("Moteur d'origine sélectionné"); await loadLearningV2(); } catch(e) { flash(e.message); } });
+  $("#learning-origin").addEventListener("click", async () => { if(!confirm("Activer le moteur historique Origin ?")) return; try { await post("/api/admin/learning/engine",{engine:"origin"}); flash("Moteur Origin activé"); await loadLearningV2(); } catch(e) { flash(e.message); } });
+  $("#learning-v2-engine").addEventListener("click", async () => { if(!confirm("Activer la variante expérimentale V2 (profil strict) ? Origin restera disponible et le repli sera automatique en cas d'erreur.")) return; try { await post("/api/admin/learning/engine",{engine:"v2"}); flash("Variante V2 activée"); await loadLearningV2(); } catch(e) { flash(e.message); } });
   $("#learning-recommendations").addEventListener("click", async ev => { const id=ev.target.dataset.learningApprove || ev.target.dataset.learningReject; if(!id) return; const action=ev.target.dataset.learningApprove ? "approve" : "reject"; try { await post("/api/admin/learning/recommendations/"+encodeURIComponent(id)+"/"+action,{}); flash(action === "approve" ? "Recommandation approuvée (non appliquée)" : "Recommandation refusée"); await loadLearningV2(); } catch(e) { flash(e.message); } });
 
   async function loadStats() {
