@@ -11,6 +11,7 @@ import { getIntermarket } from "../lib/intermarket";
 import { cacheGet, cacheSet, cachePurge } from "../lib/cache";
 import { newId } from "../lib/auth";
 import { notify, signalMessage, outcomeMessage } from "../lib/telegram";
+import { captureSetup, recordLearningOutcome } from "./learning";
 
 export interface RunResult { symbol: string; status: string; score: number; note: string }
 
@@ -68,6 +69,7 @@ async function trackOutcomes(env: Env, now: number): Promise<boolean> {
       if (r.outcome !== "open" || r.tp !== s.tp_reached) {
         await env.DB.prepare("UPDATE signals SET tp_reached = ?, outcome = ?, progress_at = ?, closed_at = CASE WHEN ? = 'open' THEN NULL ELSE ? END WHERE id = ?")
           .bind(r.tp, r.outcome, r.progressAt ?? s.progress_at ?? null, r.outcome, Math.floor(now / 1000), s.id).run();
+        await recordLearningOutcome(env, s.id, r.outcome, r.tp, r.outcome === "open" ? null : Math.floor(now / 1000)).catch(e => console.error("learning outcome", e));
         changed = true;
         const msg = await outcomeMessage(env, s, s.tp_reached, r);
         if (msg) await notify(env, msg);
@@ -131,12 +133,14 @@ async function independentAnalysis(env: Env, s: SymbolCfg, an: Analysis, best: E
   const top = [...cons.agree].sort((a, b) => b.confidence - a.confidence)[0];
   const strategies = [...new Set(cons.agree.flatMap((x) => x.strategies))].slice(0, 4);
   try {
+    const signalId = newId();
     await env.DB.prepare(
       `INSERT INTO signals (id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy, rr_ratio, source, user_id, status, timeframe, score, reasoning, ai_votes, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai', NULL, 'published', 'H1', ?, ?, ?, ?)`
-    ).bind(newId(), s.symbol, cons.dir, roundP(an.price, an.price), v.sl, v.tps[0], v.tps[1], v.tps[2], conf, strategies.join(" + ") || "Analyse IA indépendante", v.rr,
+    ).bind(signalId, s.symbol, cons.dir, roundP(an.price, an.price), v.sl, v.tps[0], v.tps[1], v.tps[2], conf, strategies.join(" + ") || "Analyse IA indépendante", v.rr,
       best.score, `Analyse IA indépendante : ${top.reasoning}${verdicts.length === 1 ? SOLO : ""}`,
       JSON.stringify(cons.agree.map((x) => ({ provider: x.provider.split(":")[0], decision: x.decision, confidence: x.confidence, reasoning: x.reasoning.slice(0, 400) }))), Math.floor(now / 1000)).run();
+    await captureSetup(env, signalId, "ai", strategies.join(" + ") || "Analyse IA indépendante", best.score, conf, best, an, Math.floor(now / 1000)).catch(e => console.error("learning capture", e));
   } catch (e) {
     if (isUnique(e)) return { published: false, note: "un trade est déjà ouvert sur cet actif", log };
     throw e;
@@ -196,11 +200,13 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
           if (hybridVerdict) reasoning += `\nSecond avis IA (${hybridVerdict.provider.split(":")[0]} : ${hybridVerdict.decision}, confiance ${hybridVerdict.confidence}/100) : ${hybridVerdict.reasoning}`;
           else reasoning += `\nAvis IA indisponible : ${hybridError ?? "erreur inconnue"}. Le moteur autonome reste prioritaire.`;
         }
+        const signalId = newId();
         await env.DB.prepare(
           `INSERT INTO signals (id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy, rr_ratio, source, user_id, status, timeframe, score, reasoning, ai_votes, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'auto', NULL, 'published', 'H1', ?, ?, ?, ?)`
-        ).bind(newId(), s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], best.score, best.tags.join(" + "), best.rr,
+        ).bind(signalId, s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], best.score, best.tags.join(" + "), best.rr,
           best.score, reasoning, JSON.stringify(hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], decision: hybridVerdict.decision, confidence: hybridVerdict.confidence, macro: hybridVerdict.macro, reasoning: hybridVerdict.reasoning, risks: hybridVerdict.risks }] : []), Math.floor(now / 1000)).run();
+        await captureSetup(env, signalId, "auto", best.tags.join(" + "), best.score, best.score, best, an, Math.floor(now / 1000)).catch(e => console.error("learning capture", e));
         status = "published"; note = hybridVerdict ? `moteur autonome + second avis IA (${hybridVerdict.provider.split(":")[0]} : ${hybridVerdict.decision})` : hybridError ? `moteur autonome ; second avis IA indisponible (${hybridError})` : "setup validé par le moteur autonome gratuit";
         await notify(env, await signalMessage(env, { votes: hybridVerdict ? [{ provider: hybridVerdict.provider.split(":")[0], confidence: hybridVerdict.confidence, reasoning: `${hybridVerdict.decision} — ${hybridVerdict.reasoning}` }] : [], symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: best.score, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning, source: "auto" }));
       } catch (e) {
@@ -217,12 +223,14 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
         const conf = Math.min(99, Math.round(0.5 * best.score + 0.5 * avg));
         const top = [...cons.agree].sort((a, b) => b.confidence - a.confidence)[0];
         try {
+          const signalId = newId();
           await env.DB.prepare(
             `INSERT INTO signals (id, symbol, direction, entry, stop_loss, tp1, tp2, tp3, confidence, strategy, rr_ratio, source, user_id, status, timeframe, score, reasoning, ai_votes, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'auto', NULL, 'published', 'H1', ?, ?, ?, ?)`
-          ).bind(newId(), s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], conf, best.tags.join(" + "), best.rr,
+          ).bind(signalId, s.symbol, best.dir, best.entry, best.sl, best.tps[0], best.tps[1], best.tps[2], conf, best.tags.join(" + "), best.rr,
             best.score, `${best.reasons.join(" · ")}\nIA : ${top.reasoning}${verdicts.length === 1 ? SOLO : ""}`,
             JSON.stringify(cons.agree.map((v) => ({ provider: v.provider.split(":")[0], decision: v.decision, confidence: v.confidence, reasoning: v.reasoning.slice(0, 400) }))), Math.floor(now / 1000)).run();
+          await captureSetup(env, signalId, "auto", best.tags.join(" + "), best.score, conf, best, an, Math.floor(now / 1000)).catch(e => console.error("learning capture", e));
           status = "published"; note = cons.reason;
           await notify(env, await signalMessage(env, { votes: cons.agree.map((v) => ({ provider: v.provider.split(":")[0], confidence: v.confidence, reasoning: v.reasoning })), symbol: s.symbol, direction: best.dir, entry: best.entry, stop_loss: best.sl, tp1: best.tps[0], tp2: best.tps[1], tp3: best.tps[2], confidence: conf, rr_ratio: best.rr, strategy: best.tags.join(" + "), reasoning: `${best.reasons.join(" · ")}\nIA : ${top.reasoning}`, source: "auto" }));
         } catch (e) {
@@ -254,7 +262,7 @@ async function analyzeOne(env: Env, s0: SymbolCfg, now: number, cal: { ok: boole
 }
 
 // ---------- Point d'entrée (cron toutes les 5 min + admin) ----------
-export async function runEngine(env: Env, opts: { force?: boolean; symbol?: string } = {}): Promise<RunResult[]> {
+async function runEngineCore(env: Env, opts: { force?: boolean; symbol?: string } = {}): Promise<RunResult[]> {
   const now = Date.now(), hour = Math.floor(now / HOUR), minute = new Date(now).getUTCMinutes();
   const results: RunResult[] = [];
   let changed = false;
@@ -297,4 +305,38 @@ export async function runEngine(env: Env, opts: { force?: boolean; symbol?: stri
   }
   if (changed) await env.CACHE.delete("signals:latest"); // le flux public n'est invalidé que s'il a changé (économise les écritures KV)
   return results;
+}
+
+
+/** Sélecteur runtime des moteurs. Origin reste le repli immuable.
+ * V2 utilise le pipeline ICT/SMC existant avec le profil strict comme variante expérimentale ;
+ * aucune logique de génération n'est remplacée et les recommandations ML restent sans effet live. */
+export async function runEngine(env: Env, opts: { force?: boolean; symbol?: string } = {}): Promise<RunResult[]> {
+  let selected: string = "origin";
+  try {
+    const row = await env.DB.prepare("SELECT active_engine FROM engine_control WHERE id=1").first<{active_engine:string}>();
+    selected = row?.active_engine === "v2" ? "v2" : "origin";
+  } catch (e) {
+    console.error("engine control unavailable; safe fallback to origin", e);
+  }
+  if (selected === "origin") return runEngineCore(env, opts);
+  try {
+    const v2Env = Object.assign(Object.create(Object.getPrototypeOf(env)), env, { PROFILE: "strict" }) as Env;
+    const result = await runEngineCore(v2Env, opts);
+    const failures = result.filter(r => r.status === "error");
+    if (failures.length > 0) {
+      console.error("V2 execution degraded; fallback to origin", failures.map(x => x.symbol));
+      // L'échec V2 a posé un cooldown de données par actif : on le lève avant le retry Origin.
+      await Promise.all(failures.map(x => env.CACHE.delete(`dis:${x.symbol}`)));
+      await env.DB.prepare("UPDATE engine_control SET active_engine='origin',updated_at=?,updated_by='system',reason=? WHERE id=1")
+        .bind(Math.floor(Date.now()/1000), "Basculement de sécurité : erreur pendant l'exécution V2").run();
+      return runEngineCore(env, opts);
+    }
+    return result;
+  } catch (e) {
+    console.error("V2 engine failed; fallback to origin", e);
+    await env.DB.prepare("UPDATE engine_control SET active_engine='origin',updated_at=?,updated_by='system',reason=? WHERE id=1")
+      .bind(Math.floor(Date.now()/1000), "Basculement de sécurité : exception pendant l'exécution V2").run().catch(err => console.error("engine fallback state", err));
+    return runEngineCore(env, opts);
+  }
 }
