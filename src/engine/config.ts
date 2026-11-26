@@ -1,9 +1,9 @@
 export type Session = "fx" | "us" | "crypto";
-export type ProviderName = "biquote" | "binance" | "kraken" | "yahoo";
+export type ProviderName = "biquote" | "yahoo";
 export interface Src { p: ProviderName; market: string; id: string }
 export interface SymbolCfg { symbol: string; label: string; currencies: string[]; session: Session; sources: Src[] }
 
-// Flux principal BiQuote (sans clé). Yahoo Finance est un repli gratuit pour Forex/metaux et crypto; Binance/Kraken restent des replis crypto.
+// Flux principal BiQuote (sans clé), avec Yahoo Finance en unique repli.
 // Les symboles biquote suivent le catalogue MT5 documenté : EURUSD, XAUUSD, BTCUSD, etc.
 export const SYMBOLS: SymbolCfg[] = [
   { symbol: "XAU/USD", label: "Or", currencies: ["USD"], session: "fx", sources: [{ p: "biquote", market: "metals", id: "XAUUSD" }, { p: "yahoo", market: "metals-futures-proxy", id: "GC=F" }] },
@@ -20,10 +20,10 @@ export const SYMBOLS: SymbolCfg[] = [
   { symbol: "GBP/JPY", label: "Livre / Yen", currencies: ["GBP", "JPY"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPJPY" }, { p: "yahoo", market: "forex", id: "GBPJPY=X" }] },
   { symbol: "GBP/CAD", label: "Livre / Dollar canadien", currencies: ["GBP", "CAD"], session: "fx", sources: [{ p: "biquote", market: "forex", id: "GBPCAD" }, { p: "yahoo", market: "forex", id: "GBPCAD=X" }] },
   { symbol: "BTC/USD", label: "Bitcoin", currencies: ["BTC", "USD"], session: "crypto", sources: [
-    { p: "biquote", market: "crypto", id: "BTCUSD" }, { p: "kraken", market: "spot", id: "XBTUSD" }, { p: "binance", market: "spot", id: "BTCUSDT" }, { p: "yahoo", market: "crypto", id: "BTC-USD" },
+    { p: "biquote", market: "crypto", id: "BTCUSD" }, { p: "yahoo", market: "crypto", id: "BTC-USD" },
   ] },
   { symbol: "ETH/USD", label: "Ethereum", currencies: ["ETH", "USD"], session: "crypto", sources: [
-    { p: "biquote", market: "crypto", id: "ETHUSD" }, { p: "kraken", market: "spot", id: "XETHZUSD" }, { p: "binance", market: "spot", id: "ETHUSDT" }, { p: "yahoo", market: "crypto", id: "ETH-USD" },
+    { p: "biquote", market: "crypto", id: "ETHUSD" }, { p: "yahoo", market: "crypto", id: "ETH-USD" },
   ] },
 ];
 

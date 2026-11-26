@@ -25,7 +25,38 @@ export async function captureSetup(
     .bind(strategy, score, confidence, JSON.stringify(setup), signalId).run();
 }
 
+/** Garantit une ligne d'apprentissage même si la capture détaillée initiale a échoué.
+ * La ligne de secours est explicitement marquée comme minimale : elle ne prétend pas
+ * contenir les indicateurs techniques qui n'ont pas pu être capturés à la création. */
+export async function ensureLearningRecord(env: Env, signalId?: string): Promise<void> {
+  await env.DB.prepare(`INSERT OR IGNORE INTO signal_learning
+    (signal_id,symbol,source,direction,strategy,score,confidence,entry,stop_loss,tp1,tp2,tp3,
+     setup_json,outcome,tp_reached,r_multiple,created_at,closed_at)
+    SELECT id,symbol,source,direction,strategy,score,confidence,entry,stop_loss,tp1,tp2,tp3,
+      json_object('capture_quality','recovered_minimal',
+        'reasoning',COALESCE(reasoning,''),
+        'timeframe',COALESCE(timeframe,''),
+        'rr_ratio',COALESCE(rr_ratio,'')),
+      CASE
+        WHEN outcome='closed' AND tp_reached>=3 THEN 'tp3'
+        WHEN outcome='closed' AND tp_reached=2 THEN 'tp2'
+        WHEN outcome='closed' AND tp_reached=1 THEN 'tp1'
+        ELSE outcome
+      END,
+      tp_reached,
+      CASE
+        WHEN outcome='sl' THEN -1.0
+        WHEN outcome='tp1' OR (outcome='closed' AND tp_reached=1) THEN ABS(tp1-entry)/NULLIF(ABS(entry-stop_loss),0)
+        WHEN outcome='tp2' OR (outcome='closed' AND tp_reached=2) THEN ABS(tp2-entry)/NULLIF(ABS(entry-stop_loss),0)
+        WHEN outcome='tp3' OR (outcome='closed' AND tp_reached>=3) THEN ABS(tp3-entry)/NULLIF(ABS(entry-stop_loss),0)
+        ELSE NULL
+      END,
+      created_at,closed_at
+    FROM signals WHERE (? IS NULL OR id=?)`).bind(signalId ?? null, signalId ?? null).run();
+}
+
 export async function recordLearningOutcome(env: Env, signalId: string, outcome: string, tpReached: number, closedAt: number | null): Promise<void> {
+  await ensureLearningRecord(env, signalId);
   await env.DB.prepare(`UPDATE signal_learning SET outcome=?,tp_reached=?,closed_at=?,r_multiple=
     CASE WHEN entry IS NULL OR stop_loss IS NULL OR entry=stop_loss THEN NULL
     WHEN direction='BUY' THEN CASE WHEN ?='sl' THEN -1 WHEN ?='tp1' THEN ABS(tp1-entry)/ABS(entry-stop_loss) WHEN ?='tp2' THEN ABS(tp2-entry)/ABS(entry-stop_loss) WHEN ?='tp3' THEN ABS(tp3-entry)/ABS(entry-stop_loss) ELSE r_multiple END

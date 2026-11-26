@@ -21,7 +21,7 @@ export async function learningV2Report(env: Env) {
       SUM(CASE WHEN outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END) wins,
       SUM(CASE WHEN outcome='sl' THEN 1 ELSE 0 END) losses,
       ROUND(AVG(r_multiple),3) avg_r
-    FROM signal_learning
+    FROM shadow_signals
     WHERE outcome IN ('tp1','tp2','tp3','sl') AND r_multiple IS NOT NULL
     GROUP BY symbol, COALESCE(NULLIF(strategy,''),'Non classé')
     ORDER BY symbol, trades DESC
@@ -50,9 +50,9 @@ export async function learningV2Report(env: Env) {
       SUM(CASE WHEN outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END) wins,
       SUM(CASE WHEN outcome='sl' THEN 1 ELSE 0 END) losses,
       ROUND(AVG(r_multiple),3) avg_r
-    FROM signal_learning WHERE outcome IN ('tp1','tp2','tp3','sl') AND r_multiple IS NOT NULL
+    FROM shadow_signals WHERE outcome IN ('tp1','tp2','tp3','sl') AND r_multiple IS NOT NULL
   `).first();
-  return { version: 2, mode: "recommendation_only", live_parameters_modified: false,
+  return { version: 2, mode: "shadow_recommendation_only", live_parameters_modified: false,
     minimum_trades_per_bucket: MIN_TRADES,
     safety: ["Aucun changement automatique des signaux", "Résultats clôturés uniquement",
       "Minimum de 30 trades par actif/configuration", "Validation hors-échantillon obligatoire avant activation"],

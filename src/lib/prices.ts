@@ -6,7 +6,7 @@ const H = 3_600_000, D = 86_400_000;
 export type Iv = "15m" | "1h" | "4h" | "1d";
 const BIQUOTE_URL = "https://biquote.io";
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-const SPACING: Record<string, number> = { biquote: 250, binance: 150, kraken: 1_100, yahoo: 350 };
+const SPACING: Record<string, number> = { biquote: 250, yahoo: 350 };
 const lastCall: Record<string, number> = {};
 const cooldownUntil: Record<string, number> = {};
 function assertProviderReady(provider: string): void {
@@ -67,43 +67,6 @@ export async function biquoteCandles(src: Src, iv: Iv, fromMs?: number, toMs?: n
   return toCandleRows(body.bars, "openTime").filter((bar) => (fromMs === undefined || bar.t >= fromMs) && (toMs === undefined || bar.t <= toMs));
 }
 
-const BINANCE_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"];
-export async function binanceCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
-  const out: Candle[] = [];
-  let start = fromMs, last = "";
-  for (let page = 0; page < 20 && start < toMs; page++) {
-    const qs = new URLSearchParams({ symbol: src.id, interval: iv, startTime: String(Math.floor(start)), endTime: String(Math.floor(toMs)), limit: "1000" });
-    let rows: unknown[][] | null = null;
-    for (const host of BINANCE_HOSTS) {
-      await throttle("binance");
-      try {
-        const res = await fetch(`${host}/api/v3/klines?${qs}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12_000) });
-        if (res.ok) { rows = await res.json() as unknown[][]; break; }
-        last = `Binance ${src.id} ${iv} HTTP ${res.status}`;
-      } catch (error) { last = `Binance : ${(error as Error).message.slice(0, 100)}`; }
-    }
-    if (!rows) throw new Error(last || "Binance indisponible");
-    for (const row of rows) {
-      const t = Number(row[0]), o = Number(row[1]), h = Number(row[2]), l = Number(row[3]), c = Number(row[4]);
-      if (Number.isFinite(t) && [o, h, l, c].every(Number.isFinite)) out.push({ t, o, h, l, c });
-    }
-    if (rows.length < 1000) break;
-    start = Number(rows[rows.length - 1][0]) + 1;
-  }
-  return out.filter((bar) => bar.t <= toMs).sort((a, b) => a.t - b.t);
-}
-
-const KRAKEN_IV: Record<Iv, number> = { "15m": 15, "1h": 60, "4h": 240, "1d": 1440 };
-export async function krakenCandles(src: Src, iv: Iv, fromMs: number, toMs: number): Promise<Candle[]> {
-  const qs = new URLSearchParams({ pair: src.id, interval: String(KRAKEN_IV[iv]), since: String(Math.max(0, Math.floor(fromMs / 1000) - 1)) });
-  const body = await readJson(`https://api.kraken.com/0/public/OHLC?${qs}`, "kraken");
-  if (Array.isArray(body.error) && body.error.length) throw new Error(`Kraken : ${body.error.join(", ")}`);
-  const key = Object.keys(body.result ?? {}).find((name) => name !== "last");
-  const rows = key ? body.result[key] as unknown[][] : [];
-  return rows.map((row) => ({ t: Number(row[0]) * 1000, o: Number(row[1]), h: Number(row[2]), l: Number(row[3]), c: Number(row[4]) }))
-    .filter((bar) => bar.t <= toMs && Number.isFinite(bar.t) && [bar.o, bar.h, bar.l, bar.c].every(Number.isFinite)).sort((a, b) => a.t - b.t);
-}
-
 // Repli gratuit Yahoo Finance (chart API publique, sans clé). Les timestamps retournés sont en Unix UTC.
 const YAHOO_INTERVAL: Record<Iv, string> = { "15m": "15m", "1h": "1h", "4h": "4h", "1d": "1d" };
 async function yahooChartRows(src: Src, interval: string, fromMs: number, toMs: number): Promise<Candle[]> {
@@ -162,9 +125,7 @@ async function rawSeries(src: Src, iv: Iv, now: number, fromMs?: number): Promis
   const yahooH4From = iv === "4h" ? now - 120 * D : undefined;
   const from = fromMs ?? yahooH4From ?? now - HORIZON[iv] * D;
   if (src.p === "biquote") return biquoteCandles(src, iv, from, now + H);
-  if (src.p === "kraken") return krakenCandles(src, iv, from, now + H);
-  if (src.p === "yahoo") return yahooCandles(src, iv, from, now + H);
-  return binanceCandles(src, iv, from, now + H);
+  return yahooCandles(src, iv, from, now + H);
 }
 
 async function bundleFrom(env: Env, symbol: SymbolCfg, src: Src, now: number): Promise<Bundle> {

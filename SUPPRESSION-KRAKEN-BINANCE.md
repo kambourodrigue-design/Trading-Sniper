@@ -1,6 +1,6 @@
 # Suppression de Kraken et Binance
 
-- Kraken et Binance ont été retirés des fournisseurs de marché du moteur.
+- Kraken et Binance sont absents du code applicatif et des fournisseurs configurés.
 - BTC/USD et ETH/USD utilisent désormais uniquement biquote, comme les autres actifs.
 - Le chargement du backtest distant et le test administrateur utilisent également biquote uniquement.
 - Les fonctions de récupération OHLC Kraken/Binance et leurs temporisations ont été supprimées de `src/lib/prices.ts`.

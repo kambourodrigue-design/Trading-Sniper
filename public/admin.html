@@ -137,7 +137,71 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 </style><script>(function(){const KEY='lucide_theme';let saved=null;try{saved=localStorage.getItem(KEY)}catch(e){}const initial=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=initial;document.documentElement.style.colorScheme=initial;})();</script>
 
 
-<link rel="stylesheet" href="/lx-nav.css"><link rel="stylesheet" href="/lx-theme.css"><link rel="stylesheet" href="/lx-fx.css"></head>
+<link rel="stylesheet" href="/lx-nav.css"><link rel="stylesheet" href="/lx-theme.css"><link rel="stylesheet" href="/lx-fx.css">
+<style id="lucide-admin-mobile-overflow-fix">
+  /* Empêche le débordement horizontal de l'administration sur mobile */
+  html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .wrap, main.wrap, #app {
+    width: 100%;
+    min-width: 0;
+    max-width: 820px;
+  }
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+  .tab {
+    min-width: 0;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.2;
+    padding: 10px 6px;
+  }
+  .stats, .cols, .cols3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+  }
+  .card, .stat, .stats > *, .cols > *, .cols3 > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  img, svg, video, canvas, table {
+    max-width: 100%;
+  }
+  @media (max-width: 700px) {
+    .tabs {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .tab {
+      font-size: clamp(.68rem, 2.7vw, .82rem);
+      padding: 10px 5px;
+    }
+    .card { padding: 16px; }
+    .stats { gap: 9px; }
+    .stat { padding: 13px; }
+  }
+  @media (max-width: 380px) {
+    .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wrap { padding-left: 14px; padding-right: 14px; }
+    .card { padding: 13px; }
+  }
+</style>
+
+</head>
 <body>
 <nav><div class="wrap">
   <div class="brand"><span class="brand-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></svg></span><span>Lu<span class="g">cide</span></span><span class="tag">Admin</span></div>
@@ -231,9 +295,9 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
         <h3 style="margin-top:18px">Résultats par configuration</h3><div id="learning-strategies"></div>
         <hr style="margin:20px 0;border-color:var(--line)">
         <h2>Lucide V2 — recommandations sous contrôle humain</h2>
-        <p style="color:var(--soft);font-size:.85rem">Le moteur historique reste actif. L'IA propose des pistes documentées ; une approbation archive la décision mais n'applique jamais automatiquement un changement de stratégie.</p>
-        <div class="acts"><button class="btn" id="learning-generate">Générer les recommandations</button><button class="btn ghost" id="learning-origin">Activer Origin</button><button class="btn ghost" id="learning-v2-engine">Activer V2</button></div>
-        <div id="learning-control" style="margin-top:12px"></div><div id="learning-recommendations" style="margin-top:12px"></div>
+        <p style="color:var(--soft);font-size:.85rem">Le moteur historique reste actif. Les statistiques V2 proposent des pistes documentées ; une approbation archive la décision mais ne modifie jamais le moteur live.</p>
+        <div class="acts"><button class="btn" id="learning-generate">Générer les recommandations</button><button class="btn ghost" id="learning-origin">Activer Origin</button></div>
+        <div id="learning-control" style="margin-top:12px"></div><div id="v2-shadow-report" style="margin-top:12px"></div><div id="learning-recommendations" style="margin-top:12px"></div>
       </div>
     </section>
 
@@ -455,15 +519,16 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
   $("#learning-refresh").addEventListener("click", () => { loadLearning(); loadLearningV2(); });
   async function loadLearningV2() {
     try {
-      const [control, rows] = await Promise.all([api("/api/admin/learning/control"), api("/api/admin/learning/recommendations")]);
+      const [control, rows, shadow] = await Promise.all([api("/api/admin/learning/control"), api("/api/admin/learning/recommendations"), api("/api/admin/learning/v2")]);
       const c = control.control || {};
-      $("#learning-control").innerHTML = '<div class="item"><div><b>Moteur actif : ' + esc(c.active_engine === "origin" ? "ORIGINE (ICT/SMC/CRT)" : c.active_engine === "v2" ? "V2 (profil strict)" : "INCONNU — repli Origin") + '</b><small>' + esc(control.pending) + ' proposition(s) en attente · ' + esc(c.reason || "Aucune raison enregistrée") + '</small><small>V2 = variante expérimentale du pipeline existant ; retour automatique à Origin si erreur.</small></div><span class="badge">Repli Origin actif</span></div>';
+      $("#learning-control").innerHTML = '<div class="item"><div><b>Moteur actif : ' + esc(c.active_engine === "origin" ? "ORIGINE (ICT/SMC/CRT)" : c.active_engine === "v2" ? "V2 (profil strict)" : "INCONNU — repli Origin") + '</b><small>' + esc(control.pending) + ' proposition(s) en attente · ' + esc(c.reason || "Aucune raison enregistrée") + '</small><small>V2 observe les mêmes marchés en parallèle ; ses signaux sont virtuels et ne sont jamais publiés.</small></div><span class="badge">Repli Origin actif</span></div>';
+      const st = shadow.totals || {};
+      $("#v2-shadow-report").innerHTML = '<div class="item"><div><b>Lucide V2 — observation parallèle</b><small>' + esc(st.total || 0) + ' candidats virtuels · ' + esc(st.open || 0) + ' ouverts · ' + esc(st.wins || 0) + ' TP · ' + esc(st.losses || 0) + ' SL · R moyen clôturé : ' + esc(st.avg_r == null ? "—" : st.avg_r) + '</small><small>Aucun signal réel ni notification n’est émis par V2.</small></div><span class="badge">SHADOW</span></div>' + ((shadow.bySymbol||[]).length ? '<div class="table-wrap"><table><thead><tr><th>Actif</th><th>Virtuels</th><th>Ouverts</th><th>TP</th><th>SL</th><th>R moyen</th></tr></thead><tbody>' + shadow.bySymbol.map(x=>'<tr><td>'+esc(x.symbol)+'</td><td>'+esc(x.total)+'</td><td>'+esc(x.open)+'</td><td>'+esc(x.wins||0)+'</td><td>'+esc(x.losses||0)+'</td><td>'+esc(x.avg_r==null?"—":x.avg_r)+'</td></tr>').join('') + '</tbody></table></div>' : '<p class="empty">Les premiers candidats apparaîtront après les prochaines analyses de marché.</p>');
       $("#learning-recommendations").innerHTML = rows.length ? rows.map(x => '<div class="item"><div><b>' + esc(x.symbol) + ' · ' + esc(x.strategy) + '</b><small>' + esc(x.status) + ' · ' + esc(x.recommendation) + '</small><small>Échantillon : ' + esc(x.evidence.trades) + ' trades · Win rate : ' + esc(x.evidence.win_rate) + '% · R moyen : ' + esc(x.evidence.avg_r) + '</small></div>' + (x.status === 'pending' ? '<div class="acts"><button class="btn ghost sm" data-learning-approve="' + esc(x.id) + '">Approuver</button><button class="btn ghost sm danger" data-learning-reject="' + esc(x.id) + '">Refuser</button></div>' : '<span class="badge">' + esc(x.status) + '</span>') + '</div>').join('') : '<p class="empty">Aucune recommandation enregistrée. Génère une analyse après accumulation de données.</p>';
     } catch(e) { $("#learning-control").innerHTML = '<p class="empty">' + esc(e.message) + '</p>'; }
   }
   $("#learning-generate").addEventListener("click", async () => { try { const r=await post("/api/admin/learning/recommendations/generate",{}); flash(r.created + " nouvelle(s) recommandation(s)"); await loadLearningV2(); } catch(e) { flash(e.message); } });
   $("#learning-origin").addEventListener("click", async () => { if(!confirm("Activer le moteur historique Origin ?")) return; try { await post("/api/admin/learning/engine",{engine:"origin"}); flash("Moteur Origin activé"); await loadLearningV2(); } catch(e) { flash(e.message); } });
-  $("#learning-v2-engine").addEventListener("click", async () => { if(!confirm("Activer la variante expérimentale V2 (profil strict) ? Origin restera disponible et le repli sera automatique en cas d'erreur.")) return; try { await post("/api/admin/learning/engine",{engine:"v2"}); flash("Variante V2 activée"); await loadLearningV2(); } catch(e) { flash(e.message); } });
   $("#learning-recommendations").addEventListener("click", async ev => { const id=ev.target.dataset.learningApprove || ev.target.dataset.learningReject; if(!id) return; const action=ev.target.dataset.learningApprove ? "approve" : "reject"; try { await post("/api/admin/learning/recommendations/"+encodeURIComponent(id)+"/"+action,{}); flash(action === "approve" ? "Recommandation approuvée (non appliquée)" : "Recommandation refusée"); await loadLearningV2(); } catch(e) { flash(e.message); } });
 
   async function loadStats() {

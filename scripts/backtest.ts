@@ -13,7 +13,7 @@ import { buildAnalysis, evaluate } from "../src/engine/analyze";
 import { isMarketOpen } from "../src/engine/sessions";
 import { evaluateOutcome, Sig } from "../src/engine/outcome";
 import { summarize, rOf } from "../src/engine/metrics";
-import { aggregate, biquoteCandles, binanceCandles, krakenCandles, yahooCandles } from "../src/lib/prices";
+import { aggregate, biquoteCandles, yahooCandles } from "../src/lib/prices";
 import type { Src } from "../src/engine/config";
 import type { Candle, Dir } from "../src/engine/types";
 
@@ -38,9 +38,7 @@ const tradeRows: Array<Record<string, unknown>> = [];
 // Télécharge l’historique disponible. biquote expose une fenêtre glissante limitée ; ce test évalue uniquement les bougies réellement disponibles.
 async function providerHist(src: Src, interval: "15m" | "1h" | "4h" | "1d", fromMs: number, toMs: number): Promise<Candle[]> {
   if (src.p === "biquote") return biquoteCandles(src, interval, fromMs, toMs);
-  if (src.p === "kraken") return krakenCandles(src, interval, fromMs, toMs);
-  if (src.p === "yahoo") return yahooCandles(src, interval, fromMs, toMs);
-  return binanceCandles(src, interval, fromMs, toMs);
+  return yahooCandles(src, interval, fromMs, toMs);
 }
 
 async function localCandles(symbol: string, timeframe: "M15" | "H1" | "H4" | "D1"): Promise<Candle[] | null> {

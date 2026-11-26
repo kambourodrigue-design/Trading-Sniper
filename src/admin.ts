@@ -8,13 +8,14 @@ import { adaptiveProfile } from "./engine/run";
 import { isMarketOpen } from "./engine/sessions";
 import { evaluateOutcome, Sig } from "./engine/outcome";
 import { summarize, summarizeCounts } from "./engine/metrics";
-import { biquoteCandles, binanceCandles, krakenCandles, yahooCandles } from "./lib/prices";
+import { biquoteCandles, yahooCandles } from "./lib/prices";
 import type { Candle, Dir } from "./engine/types";
 import { probeSources } from "./lib/prices";
 import { probeIntermarket } from "./lib/intermarket";
 import { fundamentalBias, newsBlock, type CalEvent } from "./lib/macro";
 import { learningReport } from "./engine/learning";
 import { learningV2Report } from "./engine/learning-v2";
+import { shadowReport } from "./engine/shadow";
 
 const PLANS = ["starter", "pro", "elite"];
 
@@ -200,7 +201,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     // La période doit être ancrée sur la dernière bougie H1 clôturée disponible,
     // pas sur Date.now(). Les imports historiques peuvent s'arrêter avant aujourd'hui.
     let from = nowMs - days * D;
-    const fetcher = async (src: Src, iv: "1h" | "4h" | "1d", start: number) => src.p === "biquote" ? biquoteCandles(src, iv, start, nowMs) : src.p === "kraken" ? krakenCandles(src, iv, start, nowMs) : src.p === "yahoo" ? yahooCandles(src, iv, start, nowMs) : binanceCandles(src, iv, start, nowMs);
+    const fetcher = async (src: Src, iv: "1h" | "4h" | "1d", start: number) => src.p === "biquote" ? biquoteCandles(src, iv, start, nowMs) : yahooCandles(src, iv, start, nowMs);
     // Charger la période demandée + marge D1 pour le warm-up (205 bougies).
     // La marge évite de charger systématiquement 2 ans pour un test de 30 jours.
     const historyDays = Math.min(1000, days + 220);
@@ -311,7 +312,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     return json({ symbol: cfg.symbol, profile: profileName, mode, source, days, events_loaded: events.length, news_blocked_decisions: newsBlocked, macro_direction_rejections: macroRejected, coverage_start: firstEval ? new Date(firstEval).toISOString() : null, coverage_end: lastEval ? new Date(lastEval).toISOString() : null, requested_start: new Date(from).toISOString(), available_end: new Date(effectiveEnd).toISOString(), coverage_complete: !!firstEval && firstEval <= from + 3 * D && lastEval >= effectiveEnd - 3 * D, decisions, setups, cost_atr: costAtr, metrics, trades: seq.map((x) => ({ date: new Date(x.t).toISOString(), result: x.outcome, cost_r: Math.round(x.costR * 100) / 100 })), note: `${mode === "technical" ? "Mode technique seul : aucun événement économique historique n’est appliqué." : "Mode événementiel : seuls les événements fournis dans le fichier importé sont appliqués. Filtre High avant/après publication ; le mode fondamental ajoute un filtre directionnel sur les surprises actual/prévision disponibles dans les 6 heures. Couverture incomplète ou données manquantes = pas de biais inventé."} Confirmations M15, structure et displacement évalués avec les bougies M15 clôturées. Les sorties TP/SL restent rejouées en H1 pour conserver une comparaison homogène. Ce test ne reproduit pas les révisions de données ni l’exécution IA.` });
   }
 
-  // --- Test des sources de données (biquote / Kraken / Binance) ---
+  // --- Test des sources de données (BiQuote / Yahoo) ---
   if (pathname === "/api/admin/datatest" && m === "POST") {
     const b = await req.json<{ symbol?: string }>().catch(() => ({} as { symbol?: string }));
     const cfg = SYMBOLS.find((x) => x.symbol === b.symbol) ?? SYMBOLS[0];
@@ -337,22 +338,25 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
     return json(await learningReport(env));
   }
 
-  // V2 progressive : recommandations en shadow mode, sans modifier le moteur live.
+  // V2 shadow : performances des signaux virtuels, isolées des résultats Origin.
   if (pathname === "/api/admin/learning/v2" && m === "GET") {
+    return json(await shadowReport(env));
+  }
+  if (pathname === "/api/admin/learning/v2/recommendations" && m === "GET") {
     return json(await learningV2Report(env));
   }
 
   if (pathname === "/api/admin/learning/control" && m === "GET") {
     const control = await env.DB.prepare("SELECT active_engine, updated_at, updated_by, reason FROM engine_control WHERE id=1").first();
     const pending = await env.DB.prepare("SELECT COUNT(*) n FROM learning_recommendations WHERE status='pending'").first<{n:number}>();
-    return json({ control, pending: pending?.n ?? 0, engines: [{id:"origin",label:"Moteur historique ICT/SMC/CRT",available:true},{id:"v2",label:"Variante expérimentale V2 (profil strict)",available:true}], fallback_available: true, note: "V2 est une variante de configuration du pipeline existant, pas encore un algorithme indépendant. Retour Origin automatique en cas d'erreur." });
+    return json({ control: {...(control as Record<string,unknown> ?? {}), active_engine:"origin"}, pending: pending?.n ?? 0, engines: [{id:"origin",label:"Moteur historique ICT/SMC/CRT",available:true,mode:"production"},{id:"v2",label:"Lucide V2",available:true,mode:"shadow_only"}], fallback_available: true, note: "Origin publie les signaux réels. V2 analyse en parallèle et suit des signaux virtuels ; aucune publication, notification ou modification des paramètres live." });
   }
   if (pathname === "/api/admin/learning/engine" && m === "POST") {
     const body = await req.json<{engine?:string;note?:string}>().catch(() => ({} as {engine?:string;note?:string}));
-    if (body.engine !== "origin" && body.engine !== "v2") return err("Moteur invalide. Valeurs autorisées : origin ou v2.");
-    const reason = (body.note || (body.engine === "origin" ? "Sélection manuelle du moteur historique" : "Activation manuelle de la variante expérimentale V2")).slice(0,500);
-    await env.DB.prepare("UPDATE engine_control SET active_engine=?,updated_at=?,updated_by=?,reason=? WHERE id=1").bind(body.engine,now,user.email,reason).run();
-    return json({ok:true,active_engine:body.engine,message:body.engine === "origin" ? "Moteur historique activé." : "Variante expérimentale V2 activée. Repli automatique vers Origin en cas d'erreur."});
+    if (body.engine !== "origin") return err("V2 fonctionne uniquement en shadow. Son activation en production est verrouillée jusqu'à validation statistique et hors-échantillon.", 409);
+    const reason = (body.note || "Confirmation du moteur historique Origin en production").slice(0,500);
+    await env.DB.prepare("UPDATE engine_control SET active_engine='origin',updated_at=?,updated_by=?,reason=? WHERE id=1").bind(now,user.email,reason).run();
+    return json({ok:true,active_engine:"origin",message:"Origin reste le seul moteur de production ; V2 continue son observation parallèle."});
   }
   if (pathname === "/api/admin/learning/recommendations/generate" && m === "POST") {
     const report = await learningV2Report(env); let created = 0;
