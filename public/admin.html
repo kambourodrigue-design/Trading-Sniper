@@ -171,6 +171,7 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
       <div class="tab" data-t="us">Utilisateurs</div>
       <div class="tab" data-t="sg">Signaux</div>
       <div class="tab" data-t="bt">Backtest</div>
+      <div class="tab" data-t="learn">Apprentissage</div>
     </div>
 
     <section id="ov"><div class="stats" id="stats"></div><div class="card" style="margin-top:16px"><h2>Dernières analyses du moteur</h2><div id="alist"></div></div></section>
@@ -218,6 +219,21 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
         </details>
         <button class="btn" id="bt-run" style="width:100%;margin-top:14px">Lancer le backtest</button>
         <div id="bt-result" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <section id="learn" class="hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>Apprentissage autonome — V1</h2><button class="btn ghost sm" id="learning-refresh">Actualiser</button></div>
+        <p style="color:var(--soft);font-size:.85rem">Mode observation actif : Lucide mémorise les caractéristiques des setups et leurs résultats. Aucun seuil, signal ou paramètre de production n'est modifié.</p>
+        <div id="learning-summary" class="stats"></div>
+        <h3 style="margin-top:18px">Résultats par actif</h3><div id="learning-assets"></div>
+        <h3 style="margin-top:18px">Résultats par configuration</h3><div id="learning-strategies"></div>
+        <hr style="margin:20px 0;border-color:var(--line)">
+        <h2>Lucide V2 — recommandations sous contrôle humain</h2>
+        <p style="color:var(--soft);font-size:.85rem">Le moteur historique reste actif. L'IA propose des pistes documentées ; une approbation archive la décision mais n'applique jamais automatiquement un changement de stratégie.</p>
+        <div class="acts"><button class="btn" id="learning-generate">Générer les recommandations</button><button class="btn ghost" id="learning-rollback">Revenir au moteur d'origine</button></div>
+        <div id="learning-control" style="margin-top:12px"></div><div id="learning-recommendations" style="margin-top:12px"></div>
       </div>
     </section>
 
@@ -342,8 +358,8 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
 
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on")); t.classList.add("on");
-    ["ov", "us", "sg", "bt"].forEach((id) => $("#" + id).classList.toggle("hidden", id !== t.dataset.t));
-    if (t.dataset.t === "ov") loadStats(); if (t.dataset.t === "us") loadUsers(); if (t.dataset.t === "sg") loadSignals();
+    ["ov", "us", "sg", "bt", "learn"].forEach((id) => $("#" + id).classList.toggle("hidden", id !== t.dataset.t));
+    if (t.dataset.t === "ov") loadStats(); if (t.dataset.t === "us") loadUsers(); if (t.dataset.t === "sg") loadSignals(); if (t.dataset.t === "learn") loadLearning();
   }));
 
   function parseTs(v) {
@@ -425,8 +441,32 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))!important}
     } catch (e) { flash(e.message); }
   }
 
+  async function loadLearning() {
+    try {
+      const r = await api("/api/admin/learning");
+      const m = (r.totals && r.totals[0]) || {};
+      const val = v => v == null ? "—" : v;
+      $("#learning-summary").innerHTML = [["Setups capturés",m.total||0],["Gagnants (TP1+)",m.wins||0],["Pertes (SL)",m.losses||0],["Encore ouverts",m.open||0],["R moyen",val(m.avg_r)]] .map(x=>'<div class="stat"><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join("");
+      const table = rows => rows.length ? '<div style="overflow:auto"><table><thead><tr><th>Groupe</th><th>Trades</th><th>Gagnants</th><th>SL</th><th>R moyen</th></tr></thead><tbody>'+rows.map(x=>'<tr><td>'+esc(x.symbol||x.strategy||"—")+'</td><td>'+esc(x.trades)+'</td><td>'+esc(x.wins||0)+'</td><td>'+esc(x.losses||0)+'</td><td>'+esc(x.avg_r==null?"—":x.avg_r)+'</td></tr>').join("")+'</tbody></table></div>' : '<p class="empty">Pas encore assez de signaux enregistrés.</p>';
+      $("#learning-assets").innerHTML = table(r.byAsset||[]);
+      $("#learning-strategies").innerHTML = table(r.byStrategy||[]);
+    } catch(e) { $("#learning-summary").innerHTML='<p class="empty">'+esc(e.message)+'</p>'; }
+  }
+  $("#learning-refresh").addEventListener("click", () => { loadLearning(); loadLearningV2(); });
+  async function loadLearningV2() {
+    try {
+      const [control, rows] = await Promise.all([api("/api/admin/learning/control"), api("/api/admin/learning/recommendations")]);
+      const c = control.control || {};
+      $("#learning-control").innerHTML = '<div class="item"><div><b>Moteur actif : ' + esc(c.active_engine === "origin" ? "ORIGINE (ICT/SMC/CRT)" : c.active_engine) + '</b><small>' + esc(control.pending) + ' proposition(s) en attente · V2 en mode recommandation</small></div><span class="badge">Protection active</span></div>';
+      $("#learning-recommendations").innerHTML = rows.length ? rows.map(x => '<div class="item"><div><b>' + esc(x.symbol) + ' · ' + esc(x.strategy) + '</b><small>' + esc(x.status) + ' · ' + esc(x.recommendation) + '</small><small>Échantillon : ' + esc(x.evidence.trades) + ' trades · Win rate : ' + esc(x.evidence.win_rate) + '% · R moyen : ' + esc(x.evidence.avg_r) + '</small></div>' + (x.status === 'pending' ? '<div class="acts"><button class="btn ghost sm" data-learning-approve="' + esc(x.id) + '">Approuver</button><button class="btn ghost sm danger" data-learning-reject="' + esc(x.id) + '">Refuser</button></div>' : '<span class="badge">' + esc(x.status) + '</span>') + '</div>').join('') : '<p class="empty">Aucune recommandation enregistrée. Génère une analyse après accumulation de données.</p>';
+    } catch(e) { $("#learning-control").innerHTML = '<p class="empty">' + esc(e.message) + '</p>'; }
+  }
+  $("#learning-generate").addEventListener("click", async () => { try { const r=await post("/api/admin/learning/recommendations/generate",{}); flash(r.created + " nouvelle(s) recommandation(s)"); await loadLearningV2(); } catch(e) { flash(e.message); } });
+  $("#learning-rollback").addEventListener("click", async () => { if(!confirm("Confirmer le retour au moteur ICT/SMC/CRT d'origine ?")) return; try { await post("/api/admin/learning/rollback",{}); flash("Moteur d'origine sélectionné"); await loadLearningV2(); } catch(e) { flash(e.message); } });
+  $("#learning-recommendations").addEventListener("click", async ev => { const id=ev.target.dataset.learningApprove || ev.target.dataset.learningReject; if(!id) return; const action=ev.target.dataset.learningApprove ? "approve" : "reject"; try { await post("/api/admin/learning/recommendations/"+encodeURIComponent(id)+"/"+action,{}); flash(action === "approve" ? "Recommandation approuvée (non appliquée)" : "Recommandation refusée"); await loadLearningV2(); } catch(e) { flash(e.message); } });
+
   async function loadStats() {
-    loadAnalysis();
+    loadAnalysis(); loadLearningV2();
     const s = await api("/api/admin/stats");
     const plans = Object.keys(s.by_plan).map((k) => k + " " + s.by_plan[k]).join(" · ");
     const cards = [["Utilisateurs", s.users, ""], ["Abonnés actifs", s.active_subscribers, plans], ["Signaux (24 h)", s.signals_24h, ""], ["Signaux ouverts", s.open_signals, ""], ["Taux de réussite (90 j)", s.win_rate == null ? "—" : s.win_rate + " %", s.wins + " gagnants (TP1/TP2/TP3) · " + s.losses + " stoppés · règles " + (s.rules_rate == null ? "—" : s.rules_rate + " %") + " · IA seule " + (s.ai_rate == null ? "—" : s.ai_rate + " %")]];
