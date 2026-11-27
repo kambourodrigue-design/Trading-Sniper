@@ -1,3 +1,4 @@
+import { adaptiveLearningReport } from "./adaptive-learning";
 /** Lucide Sniper V2 progressive: shadow recommendations only. */
 export interface LearningV2Row {
   symbol: string; strategy: string | null; trades: number; wins: number;
@@ -52,7 +53,8 @@ export async function learningV2Report(env: Env) {
       ROUND(AVG(r_multiple),3) avg_r
     FROM shadow_signals WHERE outcome IN ('tp1','tp2','tp3','sl') AND r_multiple IS NOT NULL
   `).first();
-  return { version: 2, mode: "shadow_recommendation_only", live_parameters_modified: false,
+  const adaptive = await adaptiveLearningReport(env);
+  return { version: 2, mode: "shadow_recommendation_only", live_parameters_modified: false, adaptive,
     minimum_trades_per_bucket: MIN_TRADES,
     safety: ["Aucun changement automatique des signaux", "Résultats clôturés uniquement",
       "Minimum de 30 trades par actif/configuration", "Validation hors-échantillon obligatoire avant activation"],

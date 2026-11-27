@@ -1,6 +1,8 @@
+import { refreshAdaptiveLearning } from "./adaptive-learning";
 import { SYMBOLS, CFG } from "./config";
 import { getBundle, getOutcomeCandles } from "../lib/prices";
-import { getCalendar, newsBlock } from "../lib/macro";
+import { getCalendar, getMacroContext, newsBlock } from "../lib/macro";
+import { assessFundamentals } from "./fundamental-engine";
 import { isMarketOpen } from "./sessions";
 import { evaluateOutcome, Sig } from "./outcome";
 import { newId } from "../lib/auth";
@@ -19,6 +21,10 @@ const SLOT = 15 * 60_000; // cadence de détection M15
 export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?: string } = {}) {
   const now = Date.now();
   const cal = await getCalendar(env);
+  // Le contexte fondamental est mis en cache par macro.ts ; si les sources sont indisponibles,
+  // le moteur conserve une évaluation technique sans inventer de données macro.
+  let macroText = "";
+  try { macroText = await getMacroContext(env); } catch (e) { console.error("V2 fundamentals unavailable", String(e)); }
   const results: Array<{symbol:string;status:string;score:number;note:string}> = [];
   for (const s of SYMBOLS) {
     if (opts.symbol && opts.symbol !== s.symbol) continue;
@@ -45,19 +51,26 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
         marketOpen: isMarketOpen(s,now),
         hasOpen: (open?.n ?? 0)>0,
       });
-      if (!setup.passed) {
-        const note = setup.rejection || "Aucun setup V2 validé.";
-        results.push({symbol:s.symbol,status:"rejected",score:setup.score,note});
-        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'rejected',?,?)").bind(s.symbol,bucket,setup.score,Math.floor(now/1000)).run();
+      const fundamental = setup.passed
+        ? assessFundamentals(s.symbol, setup.dir, macroText)
+        : null;
+      const finalScore = fundamental ? Math.max(0, Math.min(100, setup.score + fundamental.adjustment)) : setup.score;
+      const finalPassed = setup.passed && finalScore >= 82 && !(fundamental?.veto ?? false);
+      if (fundamental) setup.reasons.push(fundamental.summary);
+      if (!finalPassed) {
+        const note = (fundamental?.veto ? "Contradiction fondamentale forte ; " : "") +
+          (setup.passed ? `Score final ${finalScore}/100 inférieur au seuil V2 82/100.` : setup.rejection || "Aucun setup V2 validé.");
+        results.push({symbol:s.symbol,status:"rejected",score:finalScore,note});
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'rejected',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
         continue;
       }
       const id = newId();
       await env.DB.prepare(`INSERT OR IGNORE INTO shadow_signals
         (id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,reasoning,outcome,tp_reached,r_multiple,created_at,bucket_hour,telegram_sent_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',0,NULL,?,?,NULL)`)
-        .bind(id,s.symbol,setup.dir,setup.entry,setup.sl,setup.tps[0],setup.tps[1],setup.tps[2],setup.score,setup.strategy,setup.reasons.join(" · ").slice(0,1200),Math.floor(now/1000),bucket).run();
-      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'candidate',?,?)").bind(s.symbol,bucket,setup.score,Math.floor(now/1000)).run();
-      results.push({symbol:s.symbol,status:"shadow_candidate",score:setup.score,note:"Candidat virtuel Liquidity Intelligence enregistré ; aucun signal réel publié."});
+        .bind(id,s.symbol,setup.dir,setup.entry,setup.sl,setup.tps[0],setup.tps[1],setup.tps[2],finalScore,setup.strategy,setup.reasons.join(" · ").slice(0,1200),Math.floor(now/1000),bucket).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'candidate',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
+      results.push({symbol:s.symbol,status:"shadow_candidate",score:finalScore,note:"Setup V2 validé après filtres techniques et fondamentaux ; signal virtuel uniquement."});
     } catch(e) {
       const note=String((e as Error).message??e).slice(0,250);
       console.error("V2 shadow",s.symbol,note);
@@ -70,6 +83,7 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
     await cacheSet(env,"shadow:track:last",String(now),30*60);
     await trackShadowOutcomes(env,now);
   }
+  await refreshAdaptiveLearning(env).catch(e => console.error("V2 adaptive learning", String(e)));
   await flushShadowTelegramNotifications(env, now);
   return results;
 }
