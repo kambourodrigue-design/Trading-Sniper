@@ -15,6 +15,7 @@ import { probeIntermarket } from "./lib/intermarket";
 import { fundamentalBias, newsBlock, type CalEvent } from "./lib/macro";
 import { learningReport } from "./engine/learning";
 import { learningV2Report } from "./engine/learning-v2";
+import { adaptiveLearningReport } from "./engine/adaptive-learning";
 import { shadowReport } from "./engine/shadow";
 
 const PLANS = ["starter", "pro", "elite"];
@@ -344,6 +345,9 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
   }
   if (pathname === "/api/admin/learning/v2/recommendations" && m === "GET") {
     return json(await learningV2Report(env));
+  }
+  if (pathname === "/api/admin/learning/v2/adaptive" && m === "GET") {
+    return json(await adaptiveLearningReport(env));
   }
 
   if (pathname === "/api/admin/learning/control" && m === "GET") {
