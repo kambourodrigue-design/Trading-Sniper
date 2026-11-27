@@ -9,6 +9,9 @@ import { PROFILES } from "../src/engine/config";
 import { detectCRT, getKillzone, detectBreakerBlocks } from "../src/engine/ictcrt";
 import { pipUnit, estimatedUsd } from "../src/lib/telegram";
 import { detectPoolSweeps } from "../src/engine/smc";
+import { detectLiquiditySetup } from "../src/engine/liquidity-engine";
+import { detectRangeSetup } from "../src/engine/range-engine";
+
 
 const M = 900_000, t0 = 1_700_000_000_000;
 const k = (i: number, l: number, h: number) => ({ t: t0 + i * M, o: 0, c: 0, l, h });
@@ -187,4 +190,74 @@ t("classification des unités et estimation 0,01 lot : Forex, or et crypto", () 
   assert.strictEqual(pipUnit("EUR/JPY"), 0.01);
   assert.strictEqual(pipUnit("ABC/DEF"), null);
 });
+
+t("V2 Liquidity Intelligence : les 15 actifs configurés sont traités par la même interface multi-actifs", () => {
+  const candles = (count: number, step: number) => Array.from({ length: count }, (_, i) => {
+    const o = 100 + i * step, c = o + step * 0.5;
+    return { t: t0 + i * M, o, h: c + step * 0.5, l: o - step * 0.5, c };
+  });
+  const m15 = candles(80, 0.01), h1 = candles(100, 0.04), h4 = candles(100, 0.12), d1 = candles(100, 0.3);
+  for (const cfg of SYMBOLS) {
+    const result = detectLiquiditySetup(cfg, m15, h1, h4, d1, t0 + 100 * M, { newsBlocked: false, marketOpen: true, hasOpen: false });
+    assert.strictEqual(result.passed, false); // une simple tendance sans sweep ne doit jamais créer de signal V2
+    assert.strictEqual(result.rejection.includes("Sweep"), true);
+  }
+});
+t("V2 Liquidity Intelligence : refuse un historique trop court sans produire de signal", () => {
+  const cfg = SYMBOLS[0];
+  const result = detectLiquiditySetup(cfg, [], [], [], [], t0, { newsBlocked: false, marketOpen: true, hasOpen: false });
+  assert.strictEqual(result.passed, false);
+  assert.strictEqual(result.rejection.includes("Historique insuffisant"), true);
+});
+
+
+t("V2 Range Intelligence : détecte un range multi-actifs et un rejet propre sur la borne basse", () => {
+  const h1 = Array.from({ length: 60 }, (_, i) => {
+    let o = 100, c = 100.1, h = 100.5, l = 99.5;
+    if ([36, 42, 48].includes(i)) h = 105;
+    if ([39, 45, 51].includes(i)) l = 95;
+    if (i === 59) { o = 96; c = 96.2; h = 96.5; l = 95.5; }
+    return { t: t0 + 15 * 3_600_000 + i * 3_600_000, o, h, l, c };
+  });
+  const m15 = Array.from({ length: 60 }, (_, i) => {
+    let o = 96, c = 96.1, h = 96.4, l = 95.7;
+    if (i === 59) { o = 95.7; c = 96.2; h = 96.4; l = 95.3; }
+    return { t: t0 + 75 * 3_600_000 + i * M, o, h, l, c };
+  });
+  const setup = detectRangeSetup(SYMBOLS[1], m15, h1, t0 + 90 * 3_600_000,
+    { newsBlocked: false, marketOpen: true, hasOpen: false });
+  assert.strictEqual(setup?.strategy, "Range Boundary Rejection");
+  assert.strictEqual(setup?.dir, "BUY");
+  assert.strictEqual(setup?.passed, true);
+});
+
+t("V2 Range Intelligence : refuse un historique insuffisant", () => {
+  const setup = detectRangeSetup(SYMBOLS[0], [], [], t0,
+    { newsBlocked: false, marketOpen: true, hasOpen: false });
+  assert.strictEqual(setup, null);
+});
+
+
+
+t("V2 Range Intelligence : attend une cassure H1 impulsive et un retest M15 avant le breakout", () => {
+  const h1 = Array.from({ length: 60 }, (_, i) => {
+    let o = 100, c = 100.1, h = 100.5, l = 99.5;
+    if ([36, 42, 48].includes(i)) h = 105;
+    if ([39, 45, 51].includes(i)) l = 95;
+    if (i === 59) { o = 105; c = 106.5; h = 107; l = 104.8; }
+    return { t: t0 + 15 * 3_600_000 + i * 3_600_000, o, h, l, c };
+  });
+  const m15 = Array.from({ length: 60 }, (_, i) => {
+    let o = 105.2, c = 105.3, h = 105.6, l = 104.9;
+    if (i === 59) { o = 105.1; c = 105.5; h = 105.7; l = 104.8; }
+    return { t: t0 + 75 * 3_600_000 + i * M, o, h, l, c };
+  });
+  const setup = detectRangeSetup(SYMBOLS[1], m15, h1, t0 + 90 * 3_600_000,
+    { newsBlocked: false, marketOpen: true, hasOpen: false });
+  assert.strictEqual(setup?.strategy, "Range Breakout + Retest");
+  assert.strictEqual(setup?.dir, "BUY");
+  assert.strictEqual(setup?.passed, true);
+});
+
 console.log(`\n${n} tests réussis`);
+
