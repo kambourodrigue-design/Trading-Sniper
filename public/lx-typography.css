@@ -1,0 +1,63 @@
+/* Lucide Typography System — moderne, lisible et responsive
+   Corps : Plus Jakarta Sans / Inter. Titres : Space Grotesk.
+   Les tailles sont volontairement modérées et s'adaptent à chaque écran. */
+:root {
+  --lx-font-body: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --lx-font-heading: "Space Grotesk", "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --lx-font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --lx-text-xs: clamp(0.70rem, 0.67rem + 0.10vw, 0.76rem);
+  --lx-text-sm: clamp(0.78rem, 0.74rem + 0.12vw, 0.84rem);
+  --lx-text-base: clamp(0.86rem, 0.82rem + 0.16vw, 0.94rem);
+  --lx-text-lg: clamp(1.00rem, 0.94rem + 0.22vw, 1.12rem);
+  --lx-title-sm: clamp(1.05rem, 0.98rem + 0.30vw, 1.24rem);
+  --lx-title-md: clamp(1.25rem, 1.12rem + 0.55vw, 1.62rem);
+  --lx-title-lg: clamp(1.48rem, 1.28rem + 0.90vw, 2.00rem);
+}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  font-family: var(--lx-font-body) !important;
+  font-size: var(--lx-text-base);
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+body :where(p, li, label, input, select, textarea, button, .btn, .tab, .filter, small) {
+  font-family: var(--lx-font-body);
+}
+body :where(h1, h2, h3, h4, h5, h6, .page-title, .section-title, .hero-title, .card-title) {
+  font-family: var(--lx-font-heading) !important;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+body :where(h1, .hero-title) { font-size: var(--lx-title-lg); font-weight: 700; }
+body :where(h2, .page-title) { font-size: var(--lx-title-md); font-weight: 700; }
+body :where(h3, .section-title, .card-title) { font-size: var(--lx-title-sm); font-weight: 650; }
+body :where(h4, h5, h6) { font-size: var(--lx-text-lg); font-weight: 650; }
+body :where(p, li) { line-height: 1.55; }
+body :where(button, .btn, input, select, textarea) {
+  font-size: var(--lx-text-sm);
+  line-height: 1.35;
+}
+body :where(th, .table th, .label, .form-label, .field-label) {
+  font-size: var(--lx-text-xs);
+  font-weight: 650;
+  letter-spacing: .015em;
+}
+body :where(td, .table td) { font-size: var(--lx-text-sm); }
+body :where(.lx-nav .lx-item) {
+  font-family: var(--lx-font-body);
+  font-size: clamp(0.64rem, 2.5vw, 0.75rem);
+  letter-spacing: -.015em;
+}
+body :where(.metric-value, .stat-value, .price, .signal-price, .score, .number, code, pre, .mono, .monospace) {
+  font-variant-numeric: tabular-nums;
+}
+body :where(code, pre, .mono, .monospace) { font-family: var(--lx-font-mono); }
+body :where(.muted, .hint, .help-text, .subtitle, .caption) { line-height: 1.45; }
+@media (max-width: 480px) {
+  body { line-height: 1.5; letter-spacing: -0.01em; }
+  body :where(th, .table th) { letter-spacing: 0; }
+}
