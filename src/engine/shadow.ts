@@ -1,20 +1,19 @@
-import { SYMBOLS, CFG, PROFILES } from "./config";
-import { buildAnalysis, evaluate } from "./analyze";
+import { SYMBOLS, CFG } from "./config";
 import { getBundle, getOutcomeCandles } from "../lib/prices";
-import { getCalendar, newsBlock, fundamentalBias } from "../lib/macro";
-import { getIntermarket } from "../lib/intermarket";
+import { getCalendar, newsBlock } from "../lib/macro";
 import { isMarketOpen } from "./sessions";
 import { evaluateOutcome, Sig } from "./outcome";
 import { newId } from "../lib/auth";
-import type { Dir } from "./types";
+import { detectLiquiditySetup } from "./liquidity-engine";
 import { cacheGet, cacheSet } from "../lib/cache";
 
 const HOUR = 3_600_000;
+const SLOT = 15 * 60_000; // cadence de détection M15
 
 /**
- * V2 shadow is deliberately isolated from the live signal pipeline:
- * it writes only shadow_signals, never signals, notifications, KV live cache,
- * analysis_state or Origin learning records.
+ * V2 Liquidity Intelligence is an independent rule-based detector.
+ * It consumes the same market candles as Origin but does not call Origin's evaluate()
+ * and writes only to shadow_signals / shadow_runs.
  */
 export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?: string } = {}) {
   const now = Date.now();
@@ -23,49 +22,46 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
   for (const s of SYMBOLS) {
     if (opts.symbol && opts.symbol !== s.symbol) continue;
     if (!opts.force && !isMarketOpen(s, now)) continue;
-    const hour = Math.floor(now / HOUR);
-    const seen = await env.DB.prepare("SELECT symbol FROM shadow_runs WHERE symbol=? AND bucket_hour=?").bind(s.symbol,hour).first();
+    const bucket = Math.floor(now / SLOT);
+    const seen = await env.DB.prepare("SELECT symbol FROM shadow_runs WHERE symbol=? AND bucket_hour=?").bind(s.symbol,bucket).first();
     if (seen) continue;
     try {
       const maxAge = s.session === "us" ? 9_000_000 : 7_500_000;
       const bundle = await getBundle(env,s,now,maxAge);
       const {m15,h1,h4,d1} = bundle;
-      if (!h1.length || now-h1[h1.length-1].t>maxAge || m15.length<40 || now-m15[m15.length-1].t>30*60_000) {
-        results.push({symbol:s.symbol,status:"stale",score:0,note:"Données de marché trop anciennes pour l'observation V2."});
-        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?,'stale',0,?)").bind(s.symbol,hour,Math.floor(now/1000)).run();
+      if (!h1.length || !h4.length || !d1.length ||
+          h1.length < 60 || h4.length < 60 || d1.length < 60 || m15.length < 50 ||
+          now-h1[h1.length-1].t>maxAge || now-m15[m15.length-1].t>30*60_000 ||
+          now-h4[h4.length-1].t>12*HOUR || now-d1[d1.length-1].t>48*HOUR) {
+        results.push({symbol:s.symbol,status:"stale",score:0,note:"Données de marché trop anciennes ou historique M15 insuffisant."});
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?,'stale',0,?)").bind(s.symbol,bucket,Math.floor(now/1000)).run();
         continue;
       }
-      const an = buildAnalysis(s.symbol,h1,h4,d1,now,m15);
       const open = await env.DB.prepare("SELECT COUNT(*) n FROM shadow_signals WHERE symbol=? AND outcome='open'").bind(s.symbol).first<{n:number}>();
-      const inter = await getIntermarket(env,s,now);
-      const fundamental = fundamentalBias(cal.events,s.symbol,now);
-      const combinedBias = Math.max(-1,Math.min(1,0.5*inter.bias+0.5*fundamental.bias));
-      const ctx = {
-        inter: combinedBias,
-        newsBlock: cal.ok ? newsBlock(cal.events,s.currencies,now,CFG.newsBeforeMin,CFG.newsAfterMin) : "calendrier économique indisponible : observation suspendue",
+      const news = cal.ok ? newsBlock(cal.events,s.currencies,now,CFG.newsBeforeMin,CFG.newsAfterMin) : "calendrier économique indisponible : observation suspendue";
+      const setup = detectLiquiditySetup(s,m15,h1,h4,d1,now,{
+        newsBlocked: news !== null,
         marketOpen: isMarketOpen(s,now),
         hasOpen: (open?.n ?? 0)>0,
-        p: PROFILES.strict,
-      };
-      const evals = (["BUY","SELL"] as Dir[]).map(d=>evaluate(an,d,ctx)).sort((a,b)=>Number(b.passed)-Number(a.passed)||b.score-a.score);
-      const best = evals[0];
-      if (!best?.passed) {
-        results.push({symbol:s.symbol,status:"rejected",score:best?.score??0,note:best?.gates.filter(g=>!g.ok).map(g=>g.name).join(", ")||"Aucun setup V2 strict."});
-        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'rejected',?,?)").bind(s.symbol,hour,best?.score??0,Math.floor(now/1000)).run();
+      });
+      if (!setup.passed) {
+        const note = setup.rejection || "Aucun setup V2 validé.";
+        results.push({symbol:s.symbol,status:"rejected",score:setup.score,note});
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'rejected',?,?)").bind(s.symbol,bucket,setup.score,Math.floor(now/1000)).run();
         continue;
       }
       const id = newId();
       await env.DB.prepare(`INSERT OR IGNORE INTO shadow_signals
         (id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,reasoning,outcome,tp_reached,r_multiple,created_at,bucket_hour)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',0,NULL,?,?)`)
-        .bind(id,s.symbol,best.dir,best.entry,best.sl,best.tps[0],best.tps[1],best.tps[2],best.score,best.tags.join(" + "),best.reasons.join(" · ").slice(0,1200),Math.floor(now/1000),hour).run();
-      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'candidate',?,?)").bind(s.symbol,hour,best.score,Math.floor(now/1000)).run();
-      results.push({symbol:s.symbol,status:"shadow_candidate",score:best.score,note:"Candidat virtuel V2 enregistré ; aucun signal réel publié."});
+        .bind(id,s.symbol,setup.dir,setup.entry,setup.sl,setup.tps[0],setup.tps[1],setup.tps[2],setup.score,setup.strategy,setup.reasons.join(" · ").slice(0,1200),Math.floor(now/1000),bucket).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'candidate',?,?)").bind(s.symbol,bucket,setup.score,Math.floor(now/1000)).run();
+      results.push({symbol:s.symbol,status:"shadow_candidate",score:setup.score,note:"Candidat virtuel Liquidity Intelligence enregistré ; aucun signal réel publié."});
     } catch(e) {
       const note=String((e as Error).message??e).slice(0,250);
       console.error("V2 shadow",s.symbol,note);
       results.push({symbol:s.symbol,status:"error",score:0,note});
-      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'error',0,?)").bind(s.symbol,hour,Math.floor(now/1000)).run().catch(()=>{});
+      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'error',0,?)").bind(s.symbol,bucket,Math.floor(now/1000)).run().catch(()=>{});
     }
   }
   const lastTrack=Number(await cacheGet(env,"shadow:track:last")??0);
@@ -103,5 +99,6 @@ export async function shadowReport(env: Env) {
   const totals=await env.DB.prepare("SELECT COUNT(*) total,SUM(CASE WHEN outcome='open' THEN 1 ELSE 0 END) open,SUM(CASE WHEN outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END) wins,SUM(CASE WHEN outcome='sl' THEN 1 ELSE 0 END) losses,ROUND(AVG(r_multiple),3) avg_r FROM shadow_signals").first();
   const bySymbol=await env.DB.prepare("SELECT symbol,COUNT(*) total,SUM(CASE WHEN outcome='open' THEN 1 ELSE 0 END) open,SUM(CASE WHEN outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END) wins,SUM(CASE WHEN outcome='sl' THEN 1 ELSE 0 END) losses,ROUND(AVG(r_multiple),3) avg_r FROM shadow_signals GROUP BY symbol ORDER BY symbol").all();
   const recent=await env.DB.prepare("SELECT id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,outcome,tp_reached,r_multiple,created_at,closed_at FROM shadow_signals ORDER BY created_at DESC LIMIT 50").all();
-  return {version:2,mode:"shadow_only",live_engine:"origin",live_signals_modified:false,notifications_enabled:false,totals,bySymbol:bySymbol.results,recent:recent.results};
+  const runs=await env.DB.prepare("SELECT status,COUNT(*) total FROM shadow_runs GROUP BY status ORDER BY status").all();
+  return {version:2,mode:"shadow_only",algorithm:"liquidity_intelligence_ict_smc",live_engine:"origin",live_signals_modified:false,notifications_enabled:false,totals,bySymbol:bySymbol.results,recent:recent.results,runs:runs.results};
 }
