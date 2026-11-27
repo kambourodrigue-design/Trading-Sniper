@@ -153,12 +153,23 @@ CREATE TABLE IF NOT EXISTS shadow_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_shadow_runs_created ON shadow_runs(created_at DESC);
 
+-- Outbox Telegram V2 : une ligne unique par signal et événement, sans toucher aux historiques.
+CREATE TABLE IF NOT EXISTS shadow_telegram_events (
+  event_key TEXT PRIMARY KEY, signal_id TEXT NOT NULL, event_type TEXT NOT NULL,
+  payload TEXT NOT NULL, created_at INTEGER NOT NULL, sent_at INTEGER,
+  FOREIGN KEY(signal_id) REFERENCES shadow_signals(id)
+);
+CREATE INDEX IF NOT EXISTS idx_shadow_telegram_pending ON shadow_telegram_events(sent_at,created_at);
+
 
 -- V2 adaptive learning: chronological validation insights (non-destructive)
 CREATE TABLE IF NOT EXISTS v2_adaptive_insights (
-  symbol TEXT NOT NULL, strategy TEXT NOT NULL, total_trades INTEGER NOT NULL,
-  train_trades INTEGER NOT NULL, holdout_trades INTEGER NOT NULL,
-  train_avg_r REAL, holdout_avg_r REAL, status TEXT NOT NULL,
-  recommendation TEXT NOT NULL, updated_at INTEGER NOT NULL,
-  PRIMARY KEY(symbol,strategy)
+  id TEXT PRIMARY KEY NOT NULL,
+  symbol TEXT NOT NULL, strategy TEXT NOT NULL,
+  status TEXT NOT NULL, trade_count INTEGER NOT NULL DEFAULT 0,
+  total_trades INTEGER NOT NULL DEFAULT 0,
+  train_trades INTEGER NOT NULL DEFAULT 0, holdout_trades INTEGER NOT NULL DEFAULT 0,
+  train_avg_r REAL, holdout_avg_r REAL, recommendation TEXT,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(symbol,strategy)
 );

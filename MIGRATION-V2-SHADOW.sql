@@ -16,6 +16,19 @@ CREATE TABLE IF NOT EXISTS shadow_runs (
   PRIMARY KEY(symbol,bucket_hour)
 );
 CREATE INDEX IF NOT EXISTS idx_shadow_runs_created ON shadow_runs(created_at DESC);
-\n-- Notification Telegram V2 : colonne ajoutée sans toucher aux données historiques.\n-- Pour une base déjà migrée, exécuter une seule fois :\n-- ALTER TABLE shadow_signals ADD COLUMN telegram_sent_at INTEGER;\n
+
+-- Notification Telegram V2 : colonne ajoutée sans toucher aux données historiques.
+-- Pour une base déjà migrée, exécuter une seule fois :
+-- ALTER TABLE shadow_signals ADD COLUMN telegram_sent_at INTEGER;
+
 -- Si shadow_signals existait déjà avant cette version, src/lib/schema.ts ajoute
 -- automatiquement telegram_sent_at via une migration ALTER TABLE tolérante.
+
+
+-- Outbox des notifications de progression V2 (TP1/TP2/TP3/SL/expiration).
+CREATE TABLE IF NOT EXISTS shadow_telegram_events (
+  event_key TEXT PRIMARY KEY, signal_id TEXT NOT NULL, event_type TEXT NOT NULL,
+  payload TEXT NOT NULL, created_at INTEGER NOT NULL, sent_at INTEGER,
+  FOREIGN KEY(signal_id) REFERENCES shadow_signals(id)
+);
+CREATE INDEX IF NOT EXISTS idx_shadow_telegram_pending ON shadow_telegram_events(sent_at,created_at);
