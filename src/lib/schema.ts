@@ -28,7 +28,7 @@ export const SCHEMA: string[] = [
   "CREATE UNIQUE INDEX IF NOT EXISTS uniq_shadow_symbol_hour ON shadow_signals(symbol,bucket_hour)",
   "CREATE TABLE IF NOT EXISTS shadow_runs (symbol TEXT NOT NULL, bucket_hour INTEGER NOT NULL, status TEXT NOT NULL, score INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, PRIMARY KEY(symbol,bucket_hour))",
   "CREATE INDEX IF NOT EXISTS idx_shadow_runs_created ON shadow_runs(created_at DESC)",
-  "CREATE TABLE IF NOT EXISTS v2_adaptive_insights (symbol TEXT NOT NULL, strategy TEXT NOT NULL, total_trades INTEGER NOT NULL, train_trades INTEGER NOT NULL, holdout_trades INTEGER NOT NULL, train_avg_r REAL, holdout_avg_r REAL, status TEXT NOT NULL, recommendation TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(symbol,strategy))"
+  "CREATE TABLE IF NOT EXISTS v2_adaptive_insights (id TEXT PRIMARY KEY NOT NULL, symbol TEXT NOT NULL, strategy TEXT NOT NULL, status TEXT NOT NULL, trade_count INTEGER NOT NULL DEFAULT 0, total_trades INTEGER NOT NULL DEFAULT 0, train_trades INTEGER NOT NULL DEFAULT 0, holdout_trades INTEGER NOT NULL DEFAULT 0, train_avg_r REAL, holdout_avg_r REAL, recommendation TEXT, updated_at INTEGER NOT NULL, UNIQUE(symbol,strategy))"
 ];
 
 // Colonnes ajoutées au fil des versions : ajoutées si elles manquent (l'erreur « colonne déjà existante » est ignorée).
