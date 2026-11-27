@@ -349,7 +349,7 @@ export async function handleAdmin(req: Request, env: Env, ctx: ExecutionContext,
   if (pathname === "/api/admin/learning/control" && m === "GET") {
     const control = await env.DB.prepare("SELECT active_engine, updated_at, updated_by, reason FROM engine_control WHERE id=1").first();
     const pending = await env.DB.prepare("SELECT COUNT(*) n FROM learning_recommendations WHERE status='pending'").first<{n:number}>();
-    return json({ control: {...(control as Record<string,unknown> ?? {}), active_engine:"origin"}, pending: pending?.n ?? 0, engines: [{id:"origin",label:"Moteur historique ICT/SMC/CRT",available:true,mode:"production"},{id:"v2",label:"Lucide V2",available:true,mode:"shadow_only"}], fallback_available: true, note: "Origin publie les signaux réels. V2 analyse en parallèle et suit des signaux virtuels ; aucune publication, notification ou modification des paramètres live." });
+    return json({ control: {...(control as Record<string,unknown> ?? {}), active_engine:"origin"}, pending: pending?.n ?? 0, engines: [{id:"origin",label:"Moteur historique ICT/SMC/CRT",available:true,mode:"production"},{id:"v2",label:"Lucide V2 Liquidity Intelligence",available:true,mode:"shadow_only"}], fallback_available: true, note: "Origin publie les signaux réels. V2 analyse en parallèle et suit des signaux virtuels ; aucune publication, notification ou modification des paramètres live." });
   }
   if (pathname === "/api/admin/learning/engine" && m === "POST") {
     const body = await req.json<{engine?:string;note?:string}>().catch(() => ({} as {engine?:string;note?:string}));
