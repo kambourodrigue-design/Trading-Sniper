@@ -152,3 +152,13 @@ CREATE TABLE IF NOT EXISTS shadow_runs (
   PRIMARY KEY(symbol,bucket_hour)
 );
 CREATE INDEX IF NOT EXISTS idx_shadow_runs_created ON shadow_runs(created_at DESC);
+
+
+-- V2 adaptive learning: chronological validation insights (non-destructive)
+CREATE TABLE IF NOT EXISTS v2_adaptive_insights (
+  symbol TEXT NOT NULL, strategy TEXT NOT NULL, total_trades INTEGER NOT NULL,
+  train_trades INTEGER NOT NULL, holdout_trades INTEGER NOT NULL,
+  train_avg_r REAL, holdout_avg_r REAL, status TEXT NOT NULL,
+  recommendation TEXT NOT NULL, updated_at INTEGER NOT NULL,
+  PRIMARY KEY(symbol,strategy)
+);
