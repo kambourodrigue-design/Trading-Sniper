@@ -247,7 +247,15 @@ t("V2 Range Intelligence : détecte un range multi-actifs et un rejet propre sur
     { newsBlocked: false, marketOpen: true, hasOpen: false });
   assert.strictEqual(setup?.strategy, "Range Boundary Rejection");
   assert.strictEqual(setup?.dir, "BUY");
-  assert.strictEqual(setup?.passed, true);
+  assert.strictEqual(setup?.passed, false); // espace insuffisant pour les 8R après SL structurel
+  assert.ok(setup?.rejection.includes("espace libre"));
+  // BUY : le SL doit se trouver sous la borne basse H1 (95), pas seulement sous la mèche M15.
+  assert.ok((setup?.sl ?? 95) < 95, "SL structurel doit être sous la borne basse H1");
+  const risk = (setup?.entry ?? 0) - (setup?.sl ?? 0);
+  assert.ok(risk > 0);
+  assert.ok(Math.abs(((setup?.tps[0] ?? 0) - (setup?.entry ?? 0)) / risk - 2) < 0.001, "TP1 doit viser 2R");
+  assert.ok(Math.abs(((setup?.tps[1] ?? 0) - (setup?.entry ?? 0)) / risk - 5) < 0.001, "TP2 doit viser 5R");
+  assert.ok(Math.abs(((setup?.tps[2] ?? 0) - (setup?.entry ?? 0)) / risk - 8) < 0.001, "TP3 doit viser 8R");
 });
 
 t("V2 Range Intelligence : refuse un historique insuffisant", () => {
