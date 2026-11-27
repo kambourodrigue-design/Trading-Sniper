@@ -22,7 +22,7 @@ export const SCHEMA: string[] = [
   "CREATE TABLE IF NOT EXISTS analysis_log ( id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT NOT NULL, ts INTEGER NOT NULL, status TEXT NOT NULL, dir TEXT, score INTEGER, gates TEXT, ai TEXT, note TEXT )",
   "CREATE INDEX IF NOT EXISTS idx_log_symbol_ts ON analysis_log(symbol, ts DESC)",
   "CREATE UNIQUE INDEX IF NOT EXISTS uniq_open_per_symbol ON signals(symbol) WHERE outcome = 'open' AND user_id IS NULL",
-  "CREATE TABLE IF NOT EXISTS shadow_signals (id TEXT PRIMARY KEY, symbol TEXT NOT NULL, direction TEXT NOT NULL, entry REAL NOT NULL, stop_loss REAL NOT NULL, tp1 REAL NOT NULL, tp2 REAL, tp3 REAL, score INTEGER NOT NULL, strategy TEXT, reasoning TEXT, outcome TEXT NOT NULL DEFAULT 'open', tp_reached INTEGER NOT NULL DEFAULT 0, r_multiple REAL, created_at INTEGER NOT NULL, bucket_hour INTEGER NOT NULL, progress_at INTEGER, closed_at INTEGER)",
+  "CREATE TABLE IF NOT EXISTS shadow_signals (id TEXT PRIMARY KEY, symbol TEXT NOT NULL, direction TEXT NOT NULL, entry REAL NOT NULL, stop_loss REAL NOT NULL, tp1 REAL NOT NULL, tp2 REAL, tp3 REAL, score INTEGER NOT NULL, strategy TEXT, reasoning TEXT, outcome TEXT NOT NULL DEFAULT 'open', tp_reached INTEGER NOT NULL DEFAULT 0, r_multiple REAL, created_at INTEGER NOT NULL, bucket_hour INTEGER NOT NULL, progress_at INTEGER, closed_at INTEGER, telegram_sent_at INTEGER)",
   "CREATE INDEX IF NOT EXISTS idx_shadow_open ON shadow_signals(outcome,symbol)",
   "CREATE INDEX IF NOT EXISTS idx_shadow_created ON shadow_signals(created_at DESC)",
   "CREATE UNIQUE INDEX IF NOT EXISTS uniq_shadow_symbol_hour ON shadow_signals(symbol,bucket_hour)",
@@ -41,6 +41,7 @@ const COLUMNS: string[] = [
   "ALTER TABLE signals ADD COLUMN outcome TEXT NOT NULL DEFAULT 'open'",
   "ALTER TABLE signals ADD COLUMN closed_at INTEGER",
   "ALTER TABLE signals ADD COLUMN progress_at INTEGER",
+  "ALTER TABLE shadow_signals ADD COLUMN telegram_sent_at INTEGER",
 ];
 
 let ready = false;
