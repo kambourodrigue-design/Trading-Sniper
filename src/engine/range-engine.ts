@@ -168,8 +168,16 @@ function buildRangeSetup(
       "Range détecté : attendre un rejet propre sur une borne ou une cassure confirmée.");
   }
 
-  const riskBuffer = Math.max(a15 * 0.18, bounds.atr * 0.08);
-  const sl = dir === "BUY" ? wickExtreme - riskBuffer : wickExtreme + riskBuffer;
+  // SL structurel : il doit être derrière la mèche ET derrière la borne H1.
+  // Une simple marge sous la mèche peut laisser le stop à quelques ticks du support/résistance.
+  // Le buffer combine la volatilité d'entrée M15 et celle du range H1.
+  const structuralExtreme = dir === "BUY"
+    ? Math.min(wickExtreme, bounds.low)
+    : Math.max(wickExtreme, bounds.high);
+  const riskBuffer = Math.max(a15 * 0.25, bounds.atr * 0.08);
+  const sl = dir === "BUY"
+    ? structuralExtreme - riskBuffer
+    : structuralExtreme + riskBuffer;
   const risk = Math.abs(price - sl);
   const riskAtr = risk / a15;
   if (!(risk > 0) || riskAtr < 0.25 || riskAtr > 1.8) {
@@ -177,7 +185,7 @@ function buildRangeSetup(
       `Risque invalide pour le setup de range (${riskAtr.toFixed(2)} ATR M15).`);
   }
   score += 15;
-  reasons.push(`SL protégé derrière la mèche ; risque ${riskAtr.toFixed(2)} ATR M15`);
+  reasons.push(`SL structurel derrière la mèche et la borne H1 ; marge ${riskBuffer.toFixed(5)} ; risque ${riskAtr.toFixed(2)} ATR M15`);
 
   const room = regime === "breakout" ? bounds.high - bounds.low : (dir === "BUY" ? bounds.high - price : price - bounds.low);
   const roomR = room / risk;
@@ -214,7 +222,7 @@ function buildRangeSetup(
   ))) as [number, number, number];
 
   const gates = [
-    { ok: score >= 75, label: "score ≥ 75/100" },
+    { ok: score >= 82, label: "score ≥ 82/100" },
     { ok: roomR >= 8.8, label: "espace libre suffisant pour TP3 ≥ 8R" },
     { ok: !context.newsBlocked, label: "actualité" },
     { ok: context.marketOpen, label: "marché ouvert" },

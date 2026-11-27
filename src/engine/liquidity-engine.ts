@@ -202,11 +202,13 @@ export function detectLiquiditySetup(
   const rn = roundLevel(price, aH1);
   if (rn.near) { score += 5; reasons.push(`Confluence chiffre psychologique ${fmt(rn.level, price)} (pas ${fmt(rn.step, price)})`); }
 
-  // SL derrière l'extrême du sweep, avec marge de volatilité.
-  const sl = dir === "BUY" ? sweep.wick - 0.20 * a15 : sweep.wick + 0.20 * a15;
+  // SL derrière l'extrême du sweep avec une marge qui tient compte de M15 et H1.
+  // Le stop reste fondé sur l'invalidation du sweep, jamais sur un risque artificiellement serré.
+  const sweepBuffer = Math.max(0.25 * a15, 0.05 * aH1);
+  const sl = dir === "BUY" ? sweep.wick - sweepBuffer : sweep.wick + sweepBuffer;
   const risk = Math.abs(price - sl);
   const riskAtr = risk / a15;
-  if (riskAtr >= 0.40 && riskAtr <= 2.50) reasons.push(`Risque maîtrisé : ${riskAtr.toFixed(2)} ATR M15`);
+  if (riskAtr >= 0.40 && riskAtr <= 2.50) reasons.push(`SL derrière le sweep avec marge ${sweepBuffer.toFixed(5)} ; risque ${riskAtr.toFixed(2)} ATR M15`);
   else return fail(dir, score, reasons, `Distance SL invalide (${riskAtr.toFixed(2)} ATR M15).`);
 
   const sg = dir === "BUY" ? 1 : -1;
@@ -231,7 +233,7 @@ export function detectLiquiditySetup(
     { ok: context.marketOpen, label: "marché ouvert" },
     { ok: !context.hasOpen, label: "aucun shadow trade ouvert" },
     { ok: bias !== (dir === "BUY" ? "SELL" : "BUY"), label: "biais HTF non contradictoire" },
-    { ok: score >= 75, label: "score ≥ 75/100" },
+    { ok: score >= 82, label: "score ≥ 82/100" },
   ];
   if (context.newsBlocked) reasons.push("Entrée suspendue : fenêtre de news à fort impact.");
   if (!context.marketOpen) reasons.push("Marché fermé.");
