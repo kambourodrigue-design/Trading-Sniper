@@ -44,7 +44,9 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
         await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?,'stale',0,?)").bind(s.symbol,bucket,Math.floor(now/1000)).run();
         continue;
       }
-      const open = await env.DB.prepare("SELECT COUNT(*) n FROM shadow_signals WHERE symbol=? AND outcome='open'").bind(s.symbol).first<{n:number}>();
+      // Une seule position Shadow ouverte pour l'ensemble des actifs.
+      // Le contrôle est répété dans l'INSERT conditionnel pour éviter les courses concurrentes.
+      const open = await env.DB.prepare("SELECT COUNT(*) n FROM shadow_signals WHERE outcome='open'").first<{n:number}>();
       const news = cal.ok ? newsBlock(cal.events,s.currencies,now,CFG.newsBeforeMin,CFG.newsAfterMin) : "calendrier économique indisponible : observation suspendue";
       const setup = detectLiquiditySetup(s,m15,h1,h4,d1,now,{
         newsBlocked: news !== null,
@@ -71,12 +73,20 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
         continue;
       }
       const id = newId();
-      await env.DB.prepare(`INSERT OR IGNORE INTO shadow_signals
+      const inserted = await env.DB.prepare(`INSERT OR IGNORE INTO shadow_signals
         (id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,reasoning,outcome,tp_reached,r_multiple,created_at,bucket_hour,telegram_sent_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,'open',0,NULL,?,?,NULL)`)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,'open',0,NULL,?,?,NULL
+        WHERE NOT EXISTS (SELECT 1 FROM shadow_signals WHERE outcome='open')`)
         .bind(id,s.symbol,setup.dir,setup.entry,setup.sl,setup.tps[0],setup.tps[1],setup.tps[2],finalScore,setup.strategy,setup.reasons.join(" · ").slice(0,1200),Math.floor(now/1000),bucket).run();
+      const created = Number(inserted.meta?.changes ?? 0) > 0;
+      if (!created) {
+        const note = "Un autre signal Shadow est déjà ouvert ; candidat ignoré pour respecter la limite globale d'une position.";
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'blocked_open_position',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
+        results.push({symbol:s.symbol,status:"blocked_open_position",score:finalScore,note});
+        continue;
+      }
       await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'candidate',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
-      results.push({symbol:s.symbol,status:"shadow_candidate",score:finalScore,note:"Setup V2 validé après filtres techniques et fondamentaux ; signal virtuel uniquement."});
+      results.push({symbol:s.symbol,status:"shadow_candidate",score:finalScore,note:"Setup V2 validé ; position Shadow unique ouverte après filtres techniques et fondamentaux."});
     } catch(e) {
       const note=String((e as Error).message??e).slice(0,250);
       console.error("V2 shadow",s.symbol,note);
@@ -91,13 +101,14 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
   }
   await refreshAdaptiveLearning(env).catch(e => console.error("V2 adaptive learning", String(e)));
   await flushShadowTelegramNotifications(env, now);
+  await flushShadowOutcomeEvents(env);
   return results;
 }
 
 async function flushShadowTelegramNotifications(env: Env, now: number): Promise<void> {
   if (env.TELEGRAM_V2_ENABLED === "false" || !tgConfigured(env)) return;
   const configured = Number(env.TELEGRAM_V2_MIN_SCORE);
-  const minScore = Number.isFinite(configured) && configured >= 0 ? Math.min(100, configured) : 75;
+  const minScore = Number.isFinite(configured) && configured >= 0 ? Math.min(100, configured) : 82;
   const pending = await env.DB.prepare(
     "SELECT id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,reasoning,created_at FROM shadow_signals WHERE telegram_sent_at IS NULL AND score>=? AND created_at>=? ORDER BY created_at ASC LIMIT 10"
   ).bind(minScore, Math.floor(now / 1000) - 86400).all<{
@@ -164,6 +175,67 @@ async function flushShadowTelegramNotifications(env: Env, now: number): Promise<
   }
 }
 
+type ShadowTelegramEvent = {
+  event_key: string; signal_id: string; event_type: string; payload: string; created_at: number;
+};
+
+async function queueShadowTelegramEvent(env: Env, signalId: string, eventType: string, payload: Record<string, unknown>, now: number): Promise<void> {
+  const eventKey = `${signalId}:${eventType}`;
+  await env.DB.prepare(`INSERT OR IGNORE INTO shadow_telegram_events
+    (event_key,signal_id,event_type,payload,created_at,sent_at)
+    VALUES (?,?,?,?,?,NULL)`)
+    .bind(eventKey, signalId, eventType, JSON.stringify(payload), Math.floor(now / 1000)).run();
+}
+
+async function flushShadowOutcomeEvents(env: Env): Promise<void> {
+  if (env.TELEGRAM_V2_ENABLED === "false" || !tgConfigured(env)) return;
+  const pending = await env.DB.prepare(`SELECT e.event_key,e.signal_id,e.event_type,e.payload,e.created_at,
+      s.symbol,s.direction,s.entry,s.stop_loss,s.tp1,s.tp2,s.tp3,s.score,s.strategy,s.r_multiple,s.outcome
+    FROM shadow_telegram_events e JOIN shadow_signals s ON s.id=e.signal_id
+    WHERE e.sent_at IS NULL ORDER BY e.created_at ASC LIMIT 25`).all<ShadowTelegramEvent & {
+      symbol:string;direction:string;entry:number;stop_loss:number;tp1:number;tp2:number|null;tp3:number|null;
+      score:number;strategy:string|null;r_multiple:number|null;outcome:string;
+    }>();
+  const esc = (v: string) => v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  for (const e of pending.results) {
+    let details: Record<string, unknown> = {};
+    try { details = JSON.parse(e.payload) as Record<string, unknown>; } catch { /* payload optionnel */ }
+    const labels: Record<string,string> = {
+      tp1:"🎯 TP1 ATTEINT", tp2:"🎯 TP2 ATTEINT", tp3:"🏆 TP3 ATTEINT",
+      sl:"🛑 STOP LOSS ATTEINT", trailing_sl:"🛡️ STOP DE PROTECTION TOUCHÉ",
+      expired:"⌛ SIGNAL EXPIRÉ / INVALIDÉ"
+    };
+    const eventTitle = labels[e.event_type] ?? "📍 MISE À JOUR DU SIGNAL";
+    const eventR = typeof details.r_multiple === "number" ? `${details.r_multiple.toFixed(2)}R` : "—";
+    const exitLabel = typeof details.exit_label === "string" ? details.exit_label : "";
+    const date = new Date(e.created_at * 1000).toLocaleString("fr-FR", {timeZone:"Africa/Ouagadougou",dateStyle:"medium",timeStyle:"short"});
+    const lines = [
+      "🧪 <b>LUCIDE SNIPER V2 — SUIVI</b>",
+      `<b>${eventTitle}</b>`,
+      "━━━━━━━━━━━━━━━━━━",
+      `• Signal : <code>${esc(e.signal_id)}</code>`,
+      `• Actif : <b>${esc(e.symbol)}</b>`,
+      `• Direction : <b>${e.direction === "BUY" ? "🟢 BUY" : "🔴 SELL"}</b>`,
+      `• Score initial : <b>${e.score}/100</b>`,
+      `• Stratégie : <b>${esc(e.strategy ?? "ICT / SMC")}</b>`,
+      `• Niveau atteint : <b>${esc(String(details.level ?? "—"))}</b>`,
+      `• Résultat / progression : <b>${eventR}</b>`,
+      ...(exitLabel ? [`• Sortie : <b>${esc(exitLabel)}</b>`] : []),
+      `• Statut : <b>VIRTUEL — SHADOW</b>`,
+      `• Heure : ${esc(date)} UTC`,
+      "━━━━━━━━━━━━━━━━━━",
+      "<i>Suivi simulé par Lucide Sniper V2. Aucune position réelle n'est ouverte.</i>"
+    ];
+    const sent = await tgSend(env, lines.join("\n"));
+    if (sent.ok) {
+      await env.DB.prepare("UPDATE shadow_telegram_events SET sent_at=? WHERE event_key=? AND sent_at IS NULL")
+        .bind(Math.floor(Date.now()/1000), e.event_key).run();
+    } else {
+      console.error("telegram V2 outcome", e.event_key, sent.errors.join(" | "));
+    }
+  }
+}
+
 async function trackShadowOutcomes(env: Env, now: number): Promise<void> {
   const rows=(await env.DB.prepare("SELECT id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,tp_reached,created_at,progress_at FROM shadow_signals WHERE outcome='open' AND entry IS NOT NULL AND stop_loss IS NOT NULL AND tp1 IS NOT NULL").all<Sig>()).results;
   const grouped=new Map<string,Sig[]>();
@@ -176,11 +248,28 @@ async function trackShadowOutcomes(env: Env, now: number): Promise<void> {
         const result=evaluateOutcome(sig,history.candles,now,history.candleMs);
         if(result.outcome!=="open" || result.tp!==sig.tp_reached) {
           const risk=Math.abs(sig.entry-sig.stop_loss);
-          const target=result.outcome==="sl" ? (result.tp===2 ? sig.tp1 : null) : result.tp>=3 ? sig.tp3 : result.tp===2 ? sig.tp2 : result.tp===1 ? sig.tp1 : null;
+          const targets=[sig.tp1,sig.tp2,sig.tp3];
+          // Enregistrer chaque palier nouvellement franchi, même si plusieurs sont atteints entre deux scans.
+          for(let level=sig.tp_reached+1; level<=result.tp && level<=3; level++) {
+            const target=targets[level-1];
+            const r=target==null || !risk ? null : (sig.direction==="BUY" ? target-sig.entry : sig.entry-target)/risk;
+            await queueShadowTelegramEvent(env,sig.id,`tp${level}`,{level:`TP${level}`,r_multiple:r},now);
+          }
+          const target=result.tp>=3 ? sig.tp3 : result.tp===2 ? sig.tp2 : result.tp===1 ? sig.tp1 : null;
           const signedReward=target==null || !risk ? null : (sig.direction==="BUY" ? target-sig.entry : sig.entry-target)/risk;
-          const r=result.outcome==="sl" ? (result.tp===0 ? -1 : result.tp===1 ? 0 : signedReward) : result.outcome==="tp1" || result.outcome==="tp2" || result.outcome==="tp3" ? signedReward : null;
+          const r=result.outcome==="sl" ? (result.tp===0 ? -1 : 0) : result.outcome==="tp1" || result.outcome==="tp2" || result.outcome==="tp3" ? signedReward : null;
           await env.DB.prepare("UPDATE shadow_signals SET tp_reached=?,outcome=?,progress_at=?,closed_at=CASE WHEN ?='open' THEN NULL ELSE ? END,r_multiple=CASE WHEN ?='open' THEN NULL ELSE ? END WHERE id=?")
             .bind(result.tp,result.outcome,result.progressAt??sig.progress_at??null,result.outcome,Math.floor(now/1000),result.outcome,r,sig.id).run();
+          if(result.outcome==="sl") {
+            await queueShadowTelegramEvent(env,sig.id,"sl",{level:"SL initial",r_multiple:-1,exit_label:"Stop Loss initial"},now);
+          } else if(result.outcome==="tp3") {
+            await queueShadowTelegramEvent(env,sig.id,"tp3",{level:"TP3",r_multiple:signedReward,exit_label:"Objectif final atteint"},now);
+          } else if(result.exitReason==="expired") {
+            await queueShadowTelegramEvent(env,sig.id,"expired",{level:`TP${result.tp} maximum`,r_multiple:r,exit_label:"Durée maximale du setup dépassée"},now);
+          } else if(result.exitReason==="trailing_sl" && result.tp>0) {
+            // Le moteur applique un stop suiveur à l'entrée après TP1, puis à TP1 après TP2.
+            await queueShadowTelegramEvent(env,sig.id,"trailing_sl",{level:`Protection après TP${result.tp}`,r_multiple:signedReward,exit_label:"Stop suiveur déclenché"},now);
+          }
         }
       }
     } catch(e) { console.error("V2 shadow outcome",symbol,(e as Error).message); }
@@ -192,5 +281,5 @@ export async function shadowReport(env: Env) {
   const bySymbol=await env.DB.prepare("SELECT symbol,COUNT(*) total,SUM(CASE WHEN outcome='open' THEN 1 ELSE 0 END) open,SUM(CASE WHEN outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END) wins,SUM(CASE WHEN outcome='sl' THEN 1 ELSE 0 END) losses,ROUND(AVG(r_multiple),3) avg_r FROM shadow_signals GROUP BY symbol ORDER BY symbol").all();
   const recent=await env.DB.prepare("SELECT id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,outcome,tp_reached,r_multiple,created_at,closed_at FROM shadow_signals ORDER BY created_at DESC LIMIT 50").all();
   const runs=await env.DB.prepare("SELECT status,COUNT(*) total FROM shadow_runs GROUP BY status ORDER BY status").all();
-  return {version:2,mode:"shadow_only",algorithm:"liquidity_intelligence_ict_smc",live_engine:"origin",live_signals_modified:false,notifications_enabled:env.TELEGRAM_V2_ENABLED !== "false" && tgConfigured(env),telegram_min_score:Number(env.TELEGRAM_V2_MIN_SCORE)||75,totals,bySymbol:bySymbol.results,recent:recent.results,runs:runs.results};
+  return {version:2,mode:"shadow_only",algorithm:"liquidity_intelligence_ict_smc",live_engine:"origin",live_signals_modified:false,notifications_enabled:env.TELEGRAM_V2_ENABLED !== "false" && tgConfigured(env),telegram_min_score:Number(env.TELEGRAM_V2_MIN_SCORE)||82,totals,bySymbol:bySymbol.results,recent:recent.results,runs:runs.results};
 }

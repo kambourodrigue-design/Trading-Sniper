@@ -8,7 +8,7 @@ export interface Sig { id: string; symbol: string; direction: string; entry: num
 //   at         = début de la bougie qui a clos le trade (backtest) ;
 //   progressAt = début de la bougie du dernier palier atteint (à stocker : le prochain passage repart APRÈS cette bougie,
 //                sinon un repli vers l'entrée survenu avant TP1 déclencherait à tort le stop suiveur).
-export function evaluateOutcome(s: Sig, c15: Candle[], now: number, candleMs = 900_000): { tp: number; outcome: string; at?: number; progressAt?: number } {
+export function evaluateOutcome(s: Sig, c15: Candle[], now: number, candleMs = 900_000): { tp: number; outcome: string; at?: number; progressAt?: number; exitReason?: "initial_sl" | "trailing_sl" | "expired" | "tp3" } {
   const buy = s.direction === "BUY", lv = [s.tp1, s.tp2, s.tp3];
   let tp = s.tp_reached;
   // Après TP1 le SL passe à l'entrée, après TP2 il passe à TP1.
@@ -18,15 +18,15 @@ export function evaluateOutcome(s: Sig, c15: Candle[], now: number, candleMs = 9
   for (const k of c15) {
     if (k.t < from) continue;
     if (k.t + candleMs > now) break;
-    if (buy ? k.l <= sl : k.h >= sl) return { tp, outcome: tp === 0 ? "sl" : `tp${tp}`, at: k.t }; // ordre pessimiste : le stop est testé en premier
+    if (buy ? k.l <= sl : k.h >= sl) return { tp, outcome: tp === 0 ? "sl" : `tp${tp}`, at: k.t, exitReason: tp === 0 ? "initial_sl" : "trailing_sl" }; // ordre pessimiste : le stop est testé en premier
     for (;;) {
       const next = lv[tp];
       if (next == null || !(buy ? k.h >= next : k.l <= next)) break;
       tp++; progressAt = k.t;
-      if (tp === 3) return { tp, outcome: "tp3", at: k.t, progressAt };
+      if (tp === 3) return { tp, outcome: "tp3", at: k.t, progressAt, exitReason: "tp3" };
       sl = tp === 1 ? s.entry : (lv[tp - 2] as number);
     }
   }
-  if (now - s.created_at * 1000 > CFG.expiryHours * 3_600_000) return { tp, outcome: tp === 0 ? "expired" : `tp${tp}`, progressAt };
+  if (now - s.created_at * 1000 > CFG.expiryHours * 3_600_000) return { tp, outcome: tp === 0 ? "expired" : `tp${tp}`, progressAt, exitReason: "expired" };
   return { tp, outcome: "open", progressAt };
 }
