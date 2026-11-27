@@ -25,6 +25,8 @@ declare global {
     AI_PREFILTER_SCORE?: string;
     TELEGRAM_BOT_TOKEN?: string;
     TELEGRAM_CHAT_ID?: string;
+    TELEGRAM_V2_ENABLED?: string; // true pour notifier les setups virtuels V2
+    TELEGRAM_V2_MIN_SCORE?: string; // score minimal, 75 par défaut
     STRIPE_SECRET_KEY?: string;
     STRIPE_WEBHOOK_SECRET?: string;
     CINETPAY_API_KEY?: string;
