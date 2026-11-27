@@ -219,12 +219,14 @@ export function detectLiquiditySetup(
   if (roomR >= 2) { score += 5; reasons.push(nearest === null ? "Aucun obstacle structurel proche" : `Espace libre jusqu'à ${fmt(nearest, price)} (${roomR.toFixed(1)}R)`); }
   else reasons.push(`Liquidité opposée trop proche (${roomR.toFixed(1)}R)`);
 
+  // Profil sniper : les trois objectifs doivent offrir au minimum 2R / 5R / 8R.
+  // On exige aussi une zone libre suffisante avant l'obstacle structurel.
   const gates = [
     { ok: mss.ok, label: "MSS après sweep" },
     { ok: disp, label: "Displacement M15" },
     { ok: !!fvg, label: "FVG retest" },
     { ok: riskAtr >= 0.40 && riskAtr <= 2.50, label: "SL/risque" },
-    { ok: roomR >= 2, label: "espace libre ≥ 2R" },
+    { ok: roomR >= 8.8, label: "espace libre suffisant pour TP3 ≥ 8R" },
     { ok: !context.newsBlocked, label: "actualité" },
     { ok: context.marketOpen, label: "marché ouvert" },
     { ok: !context.hasOpen, label: "aucun shadow trade ouvert" },
@@ -235,7 +237,7 @@ export function detectLiquiditySetup(
   if (!context.marketOpen) reasons.push("Marché fermé.");
   if (context.hasOpen) reasons.push("Un trade virtuel V2 est déjà ouvert sur cet actif.");
   const rejection = gates.filter(g => !g.ok).map(g => g.label).join(", ");
-  const tps = [1.5, 2.5, 4].map(r => Number((price + sg * risk * r).toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5))) as [number, number, number];
+  const tps = [2, 5, 8].map(r => Number((price + sg * risk * r).toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5))) as [number, number, number];
   return {
     dir, score: Math.min(100, score), entry: price, sl: Number(sl.toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5)),
     tps, strategy: "Liquidity Sweep + MSS + Displacement + FVG Retest",

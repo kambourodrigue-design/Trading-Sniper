@@ -55,11 +55,17 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
         ? assessFundamentals(s.symbol, setup.dir, macroText)
         : null;
       const finalScore = fundamental ? Math.max(0, Math.min(100, setup.score + fundamental.adjustment)) : setup.score;
-      const finalPassed = setup.passed && finalScore >= 82 && !(fundamental?.veto ?? false);
+      const initialRisk = Math.abs(setup.entry - setup.sl);
+      const targetR = setup.tps.map(tp => initialRisk > 0
+        ? (setup.dir === "BUY" ? tp - setup.entry : setup.entry - tp) / initialRisk
+        : 0);
+      const rrValid = targetR.length === 3 && targetR[0] >= 2 && targetR[1] >= 5 && targetR[2] >= 8;
+      const finalPassed = setup.passed && rrValid && finalScore >= 82 && !(fundamental?.veto ?? false);
+      if (setup.passed && !rrValid) setup.rejection = `Objectifs insuffisants après arrondi : TP1 ${targetR[0]?.toFixed(2)}R / TP2 ${targetR[1]?.toFixed(2)}R / TP3 ${targetR[2]?.toFixed(2)}R ; minimum 2R / 5R / 8R.`;
       if (fundamental) setup.reasons.push(fundamental.summary);
       if (!finalPassed) {
         const note = (fundamental?.veto ? "Contradiction fondamentale forte ; " : "") +
-          (setup.passed ? `Score final ${finalScore}/100 inférieur au seuil V2 82/100.` : setup.rejection || "Aucun setup V2 validé.");
+          (setup.passed && !rrValid ? setup.rejection : setup.passed ? `Score final ${finalScore}/100 inférieur au seuil V2 82/100.` : setup.rejection || "Aucun setup V2 validé.");
         results.push({symbol:s.symbol,status:"rejected",score:finalScore,note});
         await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'rejected',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
         continue;
@@ -98,23 +104,57 @@ async function flushShadowTelegramNotifications(env: Env, now: number): Promise<
     id:string;symbol:string;direction:string;entry:number;stop_loss:number;tp1:number;tp2:number|null;tp3:number|null;
     score:number;strategy:string|null;reasoning:string|null;created_at:number;
   }>();
+  const esc = (v: string) => v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const price = (v:number|null) => v == null ? "—" : String(v);
+  const rr = (entry:number, sl:number, target:number|null, direction:string) => {
+    if (target == null) return "—";
+    const risk = Math.abs(entry - sl);
+    if (!(risk > 0)) return "—";
+    const reward = direction === "BUY" ? target - entry : entry - target;
+    return `${(reward / risk).toFixed(2)}R`;
+  };
   for (const s of pending.results) {
-    const esc = (v: string) => v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    const price = (v:number|null) => v == null ? "—" : String(v);
-    const text = [
-      "🧪 <b>SETUP V2 — SHADOW (VIRTUEL)</b>",
-      `📊 <b>${esc(s.symbol)}</b> · ${s.direction === "BUY" ? "🟢 BUY" : "🔴 SELL"}`,
-      `⭐ Score : <b>${s.score}/100</b>`,
-      `🧭 Stratégie : <b>${esc(s.strategy ?? "ICT/SMC")}</b>`,
-      `🎯 Entrée : <b>${price(s.entry)}</b>`,
-      `🛡️ Stop Loss : <b>${price(s.stop_loss)}</b>`,
-      `🏁 TP1 : <b>${price(s.tp1)}</b> · TP2 : <b>${price(s.tp2)}</b> · TP3 : <b>${price(s.tp3)}</b>`,
-      s.reasoning ? `📋 <i>${esc(s.reasoning.slice(0,650))}</i>` : "",
-      `🕒 ${new Date(s.created_at*1000).toISOString()}`,
+    const reasons = (s.reasoning ?? "").split(" · ").map(x => x.trim()).filter(Boolean);
+    const technical = reasons.filter(x => /sweep|liquidit|MSS|CHoCH|displacement|FVG|premium|discount|range|borne|rejet|breakout|cassure|kill zone|asiatique|mèche|ATR|obstacle|structure|biais H/i.test(x));
+    const fundamental = reasons.filter(x => /fondamental|macro|USD|EUR|GBP|JPY|news|actualité|calendrier|taux|CFTC|VIX/i.test(x) && !technical.includes(x));
+    const other = reasons.filter(x => !technical.includes(x) && !fundamental.includes(x));
+    const date = new Date(s.created_at * 1000).toLocaleString("fr-FR", { timeZone: "Africa/Ouagadougou", dateStyle: "medium", timeStyle: "short" });
+    const lines = [
+      "🧪 <b>LUCIDE SNIPER V2</b>",
+      "<b>ALERTE DE SETUP — MODE SHADOW</b>",
+      "━━━━━━━━━━━━━━━━━━",
+      "<b>1. IDENTIFICATION</b>",
+      `• Actif : <b>${esc(s.symbol)}</b>`,
+      `• Direction : <b>${s.direction === "BUY" ? "🟢 ACHAT (BUY)" : "🔴 VENTE (SELL)"}</b>`,
+      `• Score de sélection : <b>${s.score}/100</b>`,
+      `• Stratégie : <b>${esc(s.strategy ?? "ICT / SMC")}</b>`,
       "",
-      "⚠️ Signal virtuel : aucune position réelle n'est ouverte. Vérifie le setup avant toute décision."
-    ].filter(Boolean).join("\\n");
-    const sent = await tgSend(env, text);
+      "<b>2. PLAN DE TRADE</b>",
+      `• Entrée : <code>${price(s.entry)}</code>`,
+      `• Stop Loss : <code>${price(s.stop_loss)}</code>`,
+      `• Risque initial : <b>1R</b>`,
+      "",
+      "<b>3. OBJECTIFS &amp; RENDEMENT</b>",
+      `• TP1 : <code>${price(s.tp1)}</code> — <b>${rr(s.entry,s.stop_loss,s.tp1,s.direction)}</b>`,
+      `• TP2 : <code>${price(s.tp2)}</code> — <b>${rr(s.entry,s.stop_loss,s.tp2,s.direction)}</b>`,
+      `• TP3 : <code>${price(s.tp3)}</code> — <b>${rr(s.entry,s.stop_loss,s.tp3,s.direction)}</b>`,
+      "• Extension : <b>jusqu’à 30R</b> si la liquidité et la structure le permettent ; non garantie.",
+      "",
+      "<b>4. CONFIRMATIONS TECHNIQUES</b>",
+      ...(technical.length ? technical.slice(0,7).map(x => `• ${esc(x.slice(0,180))}`) : ["• Détails techniques non fournis."]),
+      "",
+      "<b>5. CONTEXTE FONDAMENTAL</b>",
+      ...(fundamental.length ? fundamental.slice(0,3).map(x => `• ${esc(x.slice(0,180))}`) : ["• Aucun élément fondamental distinct enregistré dans ce signal."]),
+      ...(other.length ? ["", "<b>6. NOTES DU MOTEUR</b>", ...other.slice(0,2).map(x => `• ${esc(x.slice(0,160))}`)] : []),
+      "",
+      "<b>7. STATUT &amp; HORODATAGE</b>",
+      "• Statut : <b>VIRTUEL — SHADOW</b>",
+      `• Détecté : ${esc(date)} (UTC)`,
+      "• Moteur Origin : inchangé ; aucune position réelle ouverte.",
+      "━━━━━━━━━━━━━━━━━━",
+      "⚠️ <i>Signal expérimental de V2. Les objectifs sont des projections, pas des gains garantis. Vérifier spread, exécution et risque avant toute décision.</i>"
+    ];
+    const sent = await tgSend(env, lines.join("\n"));
     if (sent.ok) {
       await env.DB.prepare("UPDATE shadow_signals SET telegram_sent_at=? WHERE id=? AND telegram_sent_at IS NULL")
         .bind(Math.floor(now/1000), s.id).run();

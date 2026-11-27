@@ -205,18 +205,17 @@ function buildRangeSetup(
   if (context.marketOpen) score += 5;
   if (!context.hasOpen) score += 5;
 
-  // Objectifs graduels, plafonnés avant la borne opposée pour éviter des TP irréalistes.
-  const r1 = Math.min(0.8, roomR * 0.40);
-  const r2 = Math.min(1.2, roomR * 0.68);
-  const r3 = Math.min(2.0, roomR * 0.90);
+  // Profil sniper : aucun objectif ne doit être rapproché artificiellement.
+  // Les trois TP sont fixés à 2R / 5R / 8R ; le setup est rejeté si la
+  // structure du range ne laisse pas au moins 8,8R avant la borne opposée.
   const sg = dir === "BUY" ? 1 : -1;
-  const tps = [r1, r2, r3].map(r => Number((price + sg * risk * r).toFixed(
+  const tps = [2, 5, 8].map(r => Number((price + sg * risk * r).toFixed(
     Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5
   ))) as [number, number, number];
 
   const gates = [
     { ok: score >= 75, label: "score ≥ 75/100" },
-    { ok: roomR >= 1.5, label: "espace ≥ 1.5R" },
+    { ok: roomR >= 8.8, label: "espace libre suffisant pour TP3 ≥ 8R" },
     { ok: !context.newsBlocked, label: "actualité" },
     { ok: context.marketOpen, label: "marché ouvert" },
     { ok: !context.hasOpen, label: "aucun trade V2 ouvert" }
