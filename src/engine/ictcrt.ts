@@ -32,6 +32,43 @@ export function detectCRT(c: Candle[], lookback = 8, maxBarsAfter = 3): CRTSetup
 }
 
 export interface KillzoneInfo { active: boolean; name: "London" | "New York" | "none"; localTime: string }
+export interface AsianRange { high: number; low: number; sessionDate: string; candles: number }
+
+// Range asiatique ICT : 20:00–00:00 heure de New York. On utilise le fuseau IANA
+// afin que le calcul reste juste lors des changements d'heure été/hiver.
+export function getAsianRange(candles: Candle[], now: number): AsianRange | null {
+  const sessions = new Map<string, { high: number; low: number; candles: number; lastTime: number }>();
+  for (const candle of candles) {
+    if (!Number.isFinite(candle.t) || candle.t > now || !(candle.h >= candle.l)) continue;
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23"
+    }).formatToParts(new Date(candle.t));
+    const get = (type: string) => parts.find(part => part.type === type)?.value ?? "00";
+    const hour = Number(get("hour"));
+    if (hour < 20) continue;
+    const key = `${get("year")}-${get("month")}-${get("day")}`;
+    const existing = sessions.get(key);
+    if (!existing) sessions.set(key, { high: candle.h, low: candle.l, candles: 1, lastTime: candle.t });
+    else {
+      existing.high = Math.max(existing.high, candle.h);
+      existing.low = Math.min(existing.low, candle.l);
+      existing.candles++;
+      existing.lastTime = Math.max(existing.lastTime, candle.t);
+    }
+  }
+  const latest = [...sessions.entries()].sort((a, b) => b[1].lastTime - a[1].lastTime)[0];
+  if (!latest || latest[1].candles < 2 || !(latest[1].high > latest[1].low)) return null;
+  return { high: latest[1].high, low: latest[1].low, sessionDate: latest[0], candles: latest[1].candles };
+}
+
+// Confirme uniquement un balayage de l'extrême asiatique suivi d'une réintégration.
+// Cette information ajoute du contexte ; elle ne constitue jamais un prérequis au setup.
+export function sweptAsianRange(candles: Candle[], range: AsianRange | null, dir: "BUY" | "SELL", lookback = 8): boolean {
+  if (!range || candles.length === 0) return false;
+  return candles.slice(-lookback).some(candle => dir === "BUY"
+    ? candle.l < range.low && candle.c > range.low
+    : candle.h > range.high && candle.c < range.high);
+}
 function localClock(ts: number, timeZone: string): { hour: number; minute: number; weekday: string; text: string } {
   const parts = new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(ts));
   const get = (type: string) => parts.find(p => p.type === type)?.value ?? "00";

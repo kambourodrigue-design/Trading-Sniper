@@ -1,6 +1,6 @@
 import type { Candle, Dir, Pivot } from "./types";
 import type { SymbolCfg } from "./config";
-import { getKillzone } from "./ictcrt";
+import { getAsianRange, getKillzone, sweptAsianRange } from "./ictcrt";
 import { detectRangeSetup } from "./range-engine";
 
 export interface LiquiditySetup {
@@ -189,8 +189,15 @@ export function detectLiquiditySetup(
   if (pdOk) { score += 5; reasons.push(`${dir === "BUY" ? "Discount" : "Premium"} du dealing range H1 (${Math.round(pos * 100)} %)`); }
 
   const kz = getKillzone(now);
-  const sessionOk = cfg.session === "crypto" ? kz.active : kz.active;
-  if (sessionOk) { score += 5; reasons.push(`Fenêtre de liquidité ${kz.name} active`); }
+  // Bonus contextuel uniquement : hors Kill Zone, aucun point n'est retiré et aucun setup n'est bloqué.
+  if (kz.active) { score += 5; reasons.push(`Contexte temporel favorable : Kill Zone ${kz.name}`); }
+  const asia = getAsianRange(m15, now);
+  if (sweptAsianRange(m15.slice(0, sweep.index + 1), asia, dir)) {
+    score += 5;
+    reasons.push(`Balayage de la liquidité asiatique (${dir === "BUY" ? "SSL / bas" : "BSL / haut"}) puis réintégration`);
+  } else if (asia) {
+    reasons.push(`Repères de session asiatique suivis : H ${fmt(asia.high, price)} / B ${fmt(asia.low, price)} (sans confirmation de sweep)`);
+  }
 
   const rn = roundLevel(price, aH1);
   if (rn.near) { score += 5; reasons.push(`Confluence chiffre psychologique ${fmt(rn.level, price)} (pas ${fmt(rn.step, price)})`); }

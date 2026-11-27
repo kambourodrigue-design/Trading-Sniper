@@ -1,6 +1,6 @@
 import type { Candle, Dir } from "./types";
 import type { SymbolCfg } from "./config";
-import { getKillzone } from "./ictcrt";
+import { getAsianRange, getKillzone, sweptAsianRange } from "./ictcrt";
 
 export interface RangeContext {
   newsBlocked: boolean;
@@ -187,7 +187,20 @@ function buildRangeSetup(
   } else reasons.push(`Espace restant dans le range insuffisant : ${roomR.toFixed(2)}R`);
 
   const kz = getKillzone(now);
-  if (cfg.session === "crypto" || kz.active) { score += 5; reasons.push(cfg.session === "crypto" ? "Marché crypto ouvert en continu" : `Fenêtre ${kz.name} active`); }
+  if (cfg.session === "crypto") {
+    score += 5;
+    reasons.push("Marché crypto ouvert en continu : bonus de disponibilité conservé");
+  } else if (kz.active) {
+    score += 5;
+    reasons.push(`Contexte temporel favorable : Kill Zone ${kz.name}`);
+  }
+  const asia = getAsianRange(m15, now);
+  if (sweptAsianRange(m15, asia, dir)) {
+    score += 5;
+    reasons.push(`Balayage de l'extrême asiatique puis réintégration (${dir})`);
+  } else if (asia) {
+    reasons.push(`Repères asiatiques : H ${asia.high.toFixed(5)} / B ${asia.low.toFixed(5)}`);
+  }
   if (!context.newsBlocked) { score += 5; reasons.push("Aucune fenêtre de news bloquante"); }
   if (context.marketOpen) score += 5;
   if (!context.hasOpen) score += 5;
