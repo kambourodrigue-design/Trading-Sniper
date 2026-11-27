@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS shadow_runs (
   status TEXT NOT NULL,
   score INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
+  note TEXT,
   PRIMARY KEY(symbol,bucket_hour)
 );
 CREATE INDEX IF NOT EXISTS idx_shadow_runs_created ON shadow_runs(created_at DESC);
