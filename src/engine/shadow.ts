@@ -176,30 +176,34 @@ async function flushShadowTelegramNotifications(env: Env, now: number): Promise<
 }
 
 type ShadowTelegramEvent = {
-  event_key: string; signal_id: string; event_type: string; payload: string; created_at: number;
+  id: string; signal_id: string; event_type: string; symbol: string;
+  status: string; r_multiple: number | null; message: string | null; created_at: number;
 };
 
-async function queueShadowTelegramEvent(env: Env, signalId: string, eventType: string, payload: Record<string, unknown>, now: number): Promise<void> {
-  const eventKey = `${signalId}:${eventType}`;
+async function queueShadowTelegramEvent(env: Env, signalId: string, symbol: string, eventType: string, payload: Record<string, unknown>, now: number): Promise<void> {
+  // Schéma D1 déjà présent en production : id, signal_id, event_type, symbol,
+  // status, r_multiple, message, created_at, sent_at.
+  // La contrainte UNIQUE(signal_id,event_type) assure la déduplication.
+  const rMultiple = typeof payload.r_multiple === "number" ? payload.r_multiple : null;
   await env.DB.prepare(`INSERT OR IGNORE INTO shadow_telegram_events
-    (event_key,signal_id,event_type,payload,created_at,sent_at)
-    VALUES (?,?,?,?,?,NULL)`)
-    .bind(eventKey, signalId, eventType, JSON.stringify(payload), Math.floor(now / 1000)).run();
+    (id,signal_id,event_type,symbol,status,r_multiple,message,created_at,sent_at)
+    VALUES (?,?,?,?, 'pending',?,?,?,NULL)`)
+    .bind(newId(), signalId, eventType, symbol, rMultiple, JSON.stringify(payload), Math.floor(now / 1000)).run();
 }
 
 async function flushShadowOutcomeEvents(env: Env): Promise<void> {
   if (env.TELEGRAM_V2_ENABLED === "false" || !tgConfigured(env)) return;
-  const pending = await env.DB.prepare(`SELECT e.event_key,e.signal_id,e.event_type,e.payload,e.created_at,
-      s.symbol,s.direction,s.entry,s.stop_loss,s.tp1,s.tp2,s.tp3,s.score,s.strategy,s.r_multiple,s.outcome
+  const pending = await env.DB.prepare(`SELECT e.id,e.signal_id,e.event_type,e.symbol,e.status,e.r_multiple,e.message,e.created_at,
+      s.direction,s.entry,s.stop_loss,s.tp1,s.tp2,s.tp3,s.score,s.strategy,s.r_multiple AS signal_r_multiple,s.outcome
     FROM shadow_telegram_events e JOIN shadow_signals s ON s.id=e.signal_id
-    WHERE e.sent_at IS NULL ORDER BY e.created_at ASC LIMIT 25`).all<ShadowTelegramEvent & {
+    WHERE e.status='pending' AND e.sent_at IS NULL ORDER BY e.created_at ASC LIMIT 25`).all<ShadowTelegramEvent & {
       symbol:string;direction:string;entry:number;stop_loss:number;tp1:number;tp2:number|null;tp3:number|null;
       score:number;strategy:string|null;r_multiple:number|null;outcome:string;
     }>();
   const esc = (v: string) => v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   for (const e of pending.results) {
     let details: Record<string, unknown> = {};
-    try { details = JSON.parse(e.payload) as Record<string, unknown>; } catch { /* payload optionnel */ }
+    try { details = e.message ? JSON.parse(e.message) as Record<string, unknown> : {}; } catch { /* payload optionnel */ }
     const labels: Record<string,string> = {
       tp1:"🎯 TP1 ATTEINT", tp2:"🎯 TP2 ATTEINT", tp3:"🏆 TP3 ATTEINT",
       sl:"🛑 STOP LOSS ATTEINT", trailing_sl:"🛡️ STOP DE PROTECTION TOUCHÉ",
@@ -228,10 +232,10 @@ async function flushShadowOutcomeEvents(env: Env): Promise<void> {
     ];
     const sent = await tgSend(env, lines.join("\n"));
     if (sent.ok) {
-      await env.DB.prepare("UPDATE shadow_telegram_events SET sent_at=? WHERE event_key=? AND sent_at IS NULL")
-        .bind(Math.floor(Date.now()/1000), e.event_key).run();
+      await env.DB.prepare("UPDATE shadow_telegram_events SET status='sent',sent_at=? WHERE id=? AND sent_at IS NULL")
+        .bind(Math.floor(Date.now()/1000), e.id).run();
     } else {
-      console.error("telegram V2 outcome", e.event_key, sent.errors.join(" | "));
+      console.error("telegram V2 outcome", e.id, sent.errors.join(" | "));
     }
   }
 }
@@ -253,7 +257,7 @@ async function trackShadowOutcomes(env: Env, now: number): Promise<void> {
           for(let level=sig.tp_reached+1; level<=result.tp && level<=3; level++) {
             const target=targets[level-1];
             const r=target==null || !risk ? null : (sig.direction==="BUY" ? target-sig.entry : sig.entry-target)/risk;
-            await queueShadowTelegramEvent(env,sig.id,`tp${level}`,{level:`TP${level}`,r_multiple:r},now);
+            await queueShadowTelegramEvent(env,sig.id,sig.symbol,`tp${level}`,{level:`TP${level}`,r_multiple:r},now);
           }
           const target=result.tp>=3 ? sig.tp3 : result.tp===2 ? sig.tp2 : result.tp===1 ? sig.tp1 : null;
           const signedReward=target==null || !risk ? null : (sig.direction==="BUY" ? target-sig.entry : sig.entry-target)/risk;
@@ -261,14 +265,14 @@ async function trackShadowOutcomes(env: Env, now: number): Promise<void> {
           await env.DB.prepare("UPDATE shadow_signals SET tp_reached=?,outcome=?,progress_at=?,closed_at=CASE WHEN ?='open' THEN NULL ELSE ? END,r_multiple=CASE WHEN ?='open' THEN NULL ELSE ? END WHERE id=?")
             .bind(result.tp,result.outcome,result.progressAt??sig.progress_at??null,result.outcome,Math.floor(now/1000),result.outcome,r,sig.id).run();
           if(result.outcome==="sl") {
-            await queueShadowTelegramEvent(env,sig.id,"sl",{level:"SL initial",r_multiple:-1,exit_label:"Stop Loss initial"},now);
+            await queueShadowTelegramEvent(env,sig.id,sig.symbol,"sl",{level:"SL initial",r_multiple:-1,exit_label:"Stop Loss initial"},now);
           } else if(result.outcome==="tp3") {
-            await queueShadowTelegramEvent(env,sig.id,"tp3",{level:"TP3",r_multiple:signedReward,exit_label:"Objectif final atteint"},now);
+            await queueShadowTelegramEvent(env,sig.id,sig.symbol,"tp3",{level:"TP3",r_multiple:signedReward,exit_label:"Objectif final atteint"},now);
           } else if(result.exitReason==="expired") {
-            await queueShadowTelegramEvent(env,sig.id,"expired",{level:`TP${result.tp} maximum`,r_multiple:r,exit_label:"Durée maximale du setup dépassée"},now);
+            await queueShadowTelegramEvent(env,sig.id,sig.symbol,"expired",{level:`TP${result.tp} maximum`,r_multiple:r,exit_label:"Durée maximale du setup dépassée"},now);
           } else if(result.exitReason==="trailing_sl" && result.tp>0) {
             // Le moteur applique un stop suiveur à l'entrée après TP1, puis à TP1 après TP2.
-            await queueShadowTelegramEvent(env,sig.id,"trailing_sl",{level:`Protection après TP${result.tp}`,r_multiple:signedReward,exit_label:"Stop suiveur déclenché"},now);
+            await queueShadowTelegramEvent(env,sig.id,sig.symbol,"trailing_sl",{level:`Protection après TP${result.tp}`,r_multiple:signedReward,exit_label:"Stop suiveur déclenché"},now);
           }
         }
       }
