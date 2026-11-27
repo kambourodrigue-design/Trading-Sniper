@@ -11,6 +11,7 @@ import { pipUnit, estimatedUsd } from "../src/lib/telegram";
 import { detectPoolSweeps } from "../src/engine/smc";
 import { detectLiquiditySetup } from "../src/engine/liquidity-engine";
 import { detectRangeSetup } from "../src/engine/range-engine";
+import { assessFundamentals } from "../src/engine/fundamental-engine";
 
 
 const M = 900_000, t0 = 1_700_000_000_000;
@@ -257,6 +258,29 @@ t("V2 Range Intelligence : attend une cassure H1 impulsive et un retest M15 avan
   assert.strictEqual(setup?.strategy, "Range Breakout + Retest");
   assert.strictEqual(setup?.dir, "BUY");
   assert.strictEqual(setup?.passed, true);
+});
+
+
+t("V2 fondamental : ajoute une confluence lorsque le biais macro est aligné et suffisamment couvert", () => {
+  const macro = "EUR 65/100 (couverture 80/100 ; 3 surprises macro sur 30 j)\nUSD 40/100 (couverture 80/100 ; 2 surprises macro sur 30 j)\nBIAIS RELATIFS INDICATIFS :\nEUR/USD : haussier (écart indicatif 25 points)";
+  const a = assessFundamentals("EUR/USD", "BUY", macro);
+  assert.strictEqual(a.bias, "BUY");
+  assert.strictEqual(a.coverage, 80);
+  assert.strictEqual(a.adjustment, 5);
+  assert.strictEqual(a.veto, false);
+});
+t("V2 fondamental : bloque une contradiction forte avec une couverture élevée", () => {
+  const macro = "EUR 35/100 (couverture 90/100 ; 3 surprises macro sur 30 j)\nUSD 70/100 (couverture 90/100 ; 2 surprises macro sur 30 j)\nBIAIS RELATIFS INDICATIFS :\nEUR/USD : baissier (écart indicatif -35 points)";
+  const a = assessFundamentals("EUR/USD", "BUY", macro);
+  assert.strictEqual(a.veto, true);
+  assert.strictEqual(a.adjustment, -11);
+});
+t("V2 fondamental : données absentes = neutre, jamais inventées", () => {
+  const a = assessFundamentals("EUR/USD", "BUY", "Données macro indisponibles");
+  assert.strictEqual(a.bias, "NEUTRAL");
+  assert.strictEqual(a.coverage, 0);
+  assert.strictEqual(a.adjustment, 0);
+  assert.strictEqual(a.veto, false);
 });
 
 console.log(`\n${n} tests réussis`);
