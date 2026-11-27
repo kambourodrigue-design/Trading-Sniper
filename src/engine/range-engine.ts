@@ -5,7 +5,6 @@ import { getAsianRange, getKillzone, sweptAsianRange } from "./ictcrt";
 export interface RangeContext {
   newsBlocked: boolean;
   marketOpen: boolean;
-  hasOpen: boolean;
 }
 
 export interface RangeSetup {
@@ -180,7 +179,7 @@ function buildRangeSetup(
     : structuralExtreme + riskBuffer;
   const risk = Math.abs(price - sl);
   const riskAtr = risk / a15;
-  if (!(risk > 0) || riskAtr < 0.25 || riskAtr > 1.8) {
+  if (!(risk > 0) || riskAtr < 0.25 || riskAtr > 2.0) {
     return result(dir, score, price, sl, [0, 0, 0], strategy, reasons, false,
       `Risque invalide pour le setup de range (${riskAtr.toFixed(2)} ATR M15).`);
   }
@@ -211,7 +210,6 @@ function buildRangeSetup(
   }
   if (!context.newsBlocked) { score += 5; reasons.push("Aucune fenêtre de news bloquante"); }
   if (context.marketOpen) score += 5;
-  if (!context.hasOpen) score += 5;
 
   // Profil sniper : aucun objectif ne doit être rapproché artificiellement.
   // Les trois TP sont fixés à 2R / 5R / 8R ; le setup est rejeté si la
@@ -225,8 +223,7 @@ function buildRangeSetup(
     { ok: score >= 82, label: "score ≥ 82/100" },
     { ok: roomR >= 8.8, label: "espace libre suffisant pour TP3 ≥ 8R" },
     { ok: !context.newsBlocked, label: "actualité" },
-    { ok: context.marketOpen, label: "marché ouvert" },
-    { ok: !context.hasOpen, label: "aucun trade V2 ouvert" }
+    { ok: context.marketOpen, label: "marché ouvert" }
   ];
   const rejection = gates.filter(x => !x.ok).map(x => x.label).join(", ");
   return result(dir, score, price, Number(sl.toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5)),

@@ -57,7 +57,7 @@ function structureBias(c: Candle[]): Bias {
   return "NEUTRAL";
 }
 
-function htfBias(h4: Candle[], d1: Candle[]): Bias {
+export function htfBias(h4: Candle[], d1: Candle[]): Bias {
   const a = structureBias(h4), b = structureBias(d1);
   if (a !== "NEUTRAL" && b !== "NEUTRAL") return a === b ? a : "NEUTRAL";
   return a !== "NEUTRAL" ? a : b;
@@ -134,6 +134,73 @@ function fmt(n: number, price: number): string {
   return n.toFixed(digits);
 }
 
+/**
+ * Stratégie indépendante de continuation : tendance HTF, pullback vers SMA20
+ * puis bougie de reprise M15. Elle ne requiert ni sweep ni FVG.
+ * Les filtres communs (news, score, RR et position unique) restent appliqués.
+ */
+export function detectTrendContinuation(
+  cfg: SymbolCfg, m15: Candle[], h1: Candle[], h4: Candle[], d1: Candle[], now: number,
+  context: { newsBlocked: boolean; marketOpen: boolean }
+): LiquiditySetup | null {
+  if (m15.length < 55 || h1.length < 60 || h4.length < 60 || d1.length < 60) return null;
+  const price = m15[m15.length - 1].c;
+  const last = m15[m15.length - 1];
+  const a15 = atr(m15);
+  if (!(a15 > 0) || !(price > 0)) return null;
+  const bias = htfBias(h4, d1);
+  if (bias === "NEUTRAL") return null;
+  const dir: Dir = bias;
+  const ma20 = smaClose(m15, 20), ma50 = smaClose(m15, 50);
+  if (!Number.isFinite(ma20) || !Number.isFinite(ma50)) return null;
+  const trendAligned = dir === "BUY" ? ma20 > ma50 && price > ma50 : ma20 < ma50 && price < ma50;
+  if (!trendAligned) return null;
+
+  const recent = m15.slice(-7, -1);
+  const pullback = dir === "BUY"
+    ? recent.some(x => x.l <= ma20 + 0.25 * a15 && x.l >= ma50 - 0.35 * a15) && last.c > ma20
+    : recent.some(x => x.h >= ma20 - 0.25 * a15 && x.h <= ma50 + 0.35 * a15) && last.c < ma20;
+  if (!pullback) return null;
+  const range = last.h - last.l;
+  const body = Math.abs(last.c - last.o);
+  const confirmation = range > 0 && body >= 0.35 * a15 && body / range >= 0.55 &&
+    (dir === "BUY" ? last.c > last.o && (last.h - last.c) / range <= 0.30
+      : last.c < last.o && (last.c - last.l) / range <= 0.30);
+  if (!confirmation) return null;
+
+  const swing = m15.slice(-7, -1);
+  const extreme = dir === "BUY" ? Math.min(...swing.map(x => x.l)) : Math.max(...swing.map(x => x.h));
+  const buffer = Math.max(0.20 * a15, 0.04 * atr(h1));
+  const rawSl = dir === "BUY" ? extreme - buffer : extreme + buffer;
+  const risk = Math.abs(price - rawSl);
+  const riskAtr = risk / a15;
+  if (!(risk > 0) || riskAtr < 0.40 || riskAtr > 2.50) return null;
+
+  const p15 = pivots(m15, 2);
+  const obstacles = [...p15, ...pivots(h1, 3)].filter(p => dir === "BUY" ? p.isHigh && p.price > price : !p.isHigh && p.price < price).map(p => p.price);
+  const nearest = obstacles.length ? (dir === "BUY" ? Math.min(...obstacles) : Math.max(...obstacles)) : null;
+  const roomR = nearest === null ? Infinity : Math.abs(nearest - price) / risk;
+
+  let score = 20; // biais HTF H4/D1 aligné
+  const reasons = [`Continuation ${dir} : biais H4/D1 aligné`, `Tendance M15 confirmée par SMA20/SMA50`, `Pullback contrôlé vers SMA20 puis reprise M15`, `Bougie de confirmation directionnelle (${(body / a15).toFixed(2)} ATR)`];
+  score += 20;
+  score += 20;
+  score += 15;
+  if (dir === "BUY" ? price > ma20 && ma20 > ma50 : price < ma20 && ma20 < ma50) score += 10;
+  const kz = getKillzone(now);
+  if (kz.active) { score += 5; reasons.push(`Kill Zone ${kz.name} : bonus contextuel`); }
+  if (!context.newsBlocked) { score += 5; reasons.push("Aucune fenêtre de news bloquante"); }
+  if (context.marketOpen) score += 5;
+  if (roomR >= 8.8) reasons.push(nearest === null ? "Aucun obstacle structurel proche" : `Espace libre jusqu'à ${nearest.toFixed(5)} (${roomR.toFixed(1)}R)`);
+  else reasons.push(`Obstacle structurel trop proche (${roomR.toFixed(1)}R)`);
+  reasons.push(`SL structurel derrière le swing M15 ; buffer ${buffer.toFixed(5)} ; risque ${riskAtr.toFixed(2)} ATR`);
+
+  const tps = [2, 5, 8].map(r => Number((price + (dir === "BUY" ? 1 : -1) * risk * r).toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5))) as [number, number, number];
+  const passed = score >= 82 && roomR >= 8.8 && !context.newsBlocked && context.marketOpen;
+  const rejection = [score < 82 ? `score ${score}/100 inférieur à 82` : "", roomR < 8.8 ? "espace libre insuffisant pour TP3 ≥ 8R" : "", context.newsBlocked ? "fenêtre de news bloquante" : "", !context.marketOpen ? "marché fermé" : ""].filter(Boolean).join(" ; ");
+  return { dir, score: Math.min(100, score), entry: price, sl: Number(rawSl.toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5)), tps, strategy: "Trend Continuation + SMA20 Pullback + M15 Reclaim", reasons, passed, rejection: rejection || "Continuation validée." };
+}
+
 export function detectLiquiditySetup(
   cfg: SymbolCfg,
   m15: Candle[],
@@ -154,15 +221,23 @@ export function detectLiquiditySetup(
   const a15 = atr(m15), aH1 = atr(h1);
   if (!(a15 > 0) || !(aH1 > 0) || !(price > 0)) return fail("BUY", 0, [], "ATR ou prix invalide.");
 
-  // Le régime de range est évalué avant le détecteur trend/sweep.
-  // Si un range est confirmé, V2 utilise exclusivement ses règles range/fakeout/breakout.
+  // Chaque famille est évaluée indépendamment : un range non exploitable ne bloque
+  // pas une éventuelle continuation ou un setup de liquidité valide.
   const rangeSetup = detectRangeSetup(cfg, m15, h1, now, context);
-  if (rangeSetup) return rangeSetup;
+  if (rangeSetup?.passed) return rangeSetup;
+
+  // Continuation de tendance sans obligation de sweep/MSS/FVG.
+  const continuation = detectTrendContinuation(cfg, m15, h1, h4, d1, now, context);
+  if (continuation?.passed) return continuation;
 
   const bias = htfBias(h4, d1);
   const p15 = pivots(m15, 2);
   const sweep = latestSweep(m15, p15, a15);
-  if (!sweep) return fail(bias === "SELL" ? "SELL" : "BUY", 0, ["Aucun sweep récent confirmé."], "Sweep de liquidité absent.");
+  if (!sweep) {
+    if (continuation && (!rangeSetup || continuation.score >= rangeSetup.score)) return continuation;
+    if (rangeSetup) return rangeSetup;
+    return fail(bias === "SELL" ? "SELL" : "BUY", 0, ["Aucun sweep récent confirmé."], "Sweep de liquidité absent.");
+  }
   const dir = sweep.dir;
   const reasons: string[] = [];
   let score = 0;
@@ -231,13 +306,11 @@ export function detectLiquiditySetup(
     { ok: roomR >= 8.8, label: "espace libre suffisant pour TP3 ≥ 8R" },
     { ok: !context.newsBlocked, label: "actualité" },
     { ok: context.marketOpen, label: "marché ouvert" },
-    { ok: !context.hasOpen, label: "aucun shadow trade ouvert" },
     { ok: bias !== (dir === "BUY" ? "SELL" : "BUY"), label: "biais HTF non contradictoire" },
     { ok: score >= 82, label: "score ≥ 82/100" },
   ];
   if (context.newsBlocked) reasons.push("Entrée suspendue : fenêtre de news à fort impact.");
   if (!context.marketOpen) reasons.push("Marché fermé.");
-  if (context.hasOpen) reasons.push("Un trade virtuel V2 est déjà ouvert sur cet actif.");
   const rejection = gates.filter(g => !g.ok).map(g => g.label).join(", ");
   const tps = [2, 5, 8].map(r => Number((price + sg * risk * r).toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5))) as [number, number, number];
   return {

@@ -21,6 +21,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 const assert = {
   strictEqual: (a: unknown, b: unknown) => { if (typeof a === "number" && typeof b === "number" ? Math.abs(a - b) > 1e-9 : a !== b) throw new Error(`attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`); },
   deepStrictEqual: (a: unknown, b: unknown) => { if (!same(a, b)) throw new Error(`attendu ${JSON.stringify(b)}, obtenu ${JSON.stringify(a)}`); },
+  ok: (value: unknown, message = "assertion attendue vraie") => { if (!value) throw new Error(message); },
 };
 let n = 0; const t = (name: string, f: () => void) => { f(); n++; console.log(`ok  ${name}`); };
 
@@ -283,7 +284,10 @@ t("V2 Range Intelligence : attend une cassure H1 impulsive et un retest M15 avan
     { newsBlocked: false, marketOpen: true, hasOpen: false });
   assert.strictEqual(setup?.strategy, "Range Breakout + Retest");
   assert.strictEqual(setup?.dir, "BUY");
-  assert.strictEqual(setup?.passed, true);
+  // Le SL derrière la borne opposée est structurellement trop large dans ce fixture.
+  // Le moteur doit rejeter ce breakout plutôt que rapprocher artificiellement le stop.
+  assert.strictEqual(setup?.passed, false);
+  assert.strictEqual(setup?.rejection.includes("Risque invalide"), true);
 });
 
 

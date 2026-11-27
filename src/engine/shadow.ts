@@ -41,7 +41,7 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
           now-h1[h1.length-1].t>maxAge || now-m15[m15.length-1].t>30*60_000 ||
           now-h4[h4.length-1].t>12*HOUR || now-d1[d1.length-1].t>48*HOUR) {
         results.push({symbol:s.symbol,status:"stale",score:0,note:"Données de marché trop anciennes ou historique M15 insuffisant."});
-        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?,'stale',0,?)").bind(s.symbol,bucket,Math.floor(now/1000)).run();
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at,note) VALUES(?,?,'stale',0,?,?)").bind(s.symbol,bucket,Math.floor(now/1000),"Données de marché trop anciennes ou historique M15 insuffisant.").run();
         continue;
       }
       // Une seule position Shadow ouverte pour l'ensemble des actifs.
@@ -62,14 +62,18 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
         ? (setup.dir === "BUY" ? tp - setup.entry : setup.entry - tp) / initialRisk
         : 0);
       const rrValid = targetR.length === 3 && targetR[0] >= 2 && targetR[1] >= 5 && targetR[2] >= 8;
-      const finalPassed = setup.passed && rrValid && finalScore >= 82 && !(fundamental?.veto ?? false);
+      const hasOpenPosition = (open?.n ?? 0) > 0;
+      const finalPassed = setup.passed && rrValid && finalScore >= 82 && !(fundamental?.veto ?? false) && !hasOpenPosition;
       if (setup.passed && !rrValid) setup.rejection = `Objectifs insuffisants après arrondi : TP1 ${targetR[0]?.toFixed(2)}R / TP2 ${targetR[1]?.toFixed(2)}R / TP3 ${targetR[2]?.toFixed(2)}R ; minimum 2R / 5R / 8R.`;
       if (fundamental) setup.reasons.push(fundamental.summary);
       if (!finalPassed) {
-        const note = (fundamental?.veto ? "Contradiction fondamentale forte ; " : "") +
-          (setup.passed && !rrValid ? setup.rejection : setup.passed ? `Score final ${finalScore}/100 inférieur au seuil V2 82/100.` : setup.rejection || "Aucun setup V2 validé.");
-        results.push({symbol:s.symbol,status:"rejected",score:finalScore,note});
-        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'rejected',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
+        const note = hasOpenPosition && setup.passed && rrValid && finalScore >= 82 && !(fundamental?.veto ?? false)
+          ? "Setup techniquement et fondamentalement valide, mais ignoré : une autre position Shadow est déjà ouverte (limite globale = 1)."
+          : (fundamental?.veto ? `Veto fondamental : ${fundamental.summary}. ` : "") +
+            (setup.passed && !rrValid ? setup.rejection : setup.passed && finalScore < 82 ? `Score final ${finalScore}/100 inférieur au seuil V2 82/100.` : setup.rejection || "Aucun setup V2 validé.");
+        const status = hasOpenPosition && setup.passed && rrValid && finalScore >= 82 && !(fundamental?.veto ?? false) ? "blocked_open_position" : "rejected";
+        results.push({symbol:s.symbol,status,score:finalScore,note});
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at,note) VALUES(?,?,?,?,?,?)").bind(s.symbol,bucket,status,finalScore,Math.floor(now/1000),note.slice(0,500)).run();
         continue;
       }
       const id = newId();
@@ -81,17 +85,18 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
       const created = Number(inserted.meta?.changes ?? 0) > 0;
       if (!created) {
         const note = "Un autre signal Shadow est déjà ouvert ; candidat ignoré pour respecter la limite globale d'une position.";
-        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'blocked_open_position',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
+        await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at,note) VALUES(?,?, 'blocked_open_position',?,?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000),note).run();
         results.push({symbol:s.symbol,status:"blocked_open_position",score:finalScore,note});
         continue;
       }
-      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'candidate',?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000)).run();
-      results.push({symbol:s.symbol,status:"shadow_candidate",score:finalScore,note:"Setup V2 validé ; position Shadow unique ouverte après filtres techniques et fondamentaux."});
+      const candidateNote = "Setup V2 validé ; position Shadow unique ouverte après filtres techniques, RR et fondamentaux.";
+      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at,note) VALUES(?,?, 'candidate',?,?,?)").bind(s.symbol,bucket,finalScore,Math.floor(now/1000),candidateNote).run();
+      results.push({symbol:s.symbol,status:"shadow_candidate",score:finalScore,note:candidateNote});
     } catch(e) {
       const note=String((e as Error).message??e).slice(0,250);
       console.error("V2 shadow",s.symbol,note);
       results.push({symbol:s.symbol,status:"error",score:0,note});
-      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at) VALUES(?,?, 'error',0,?)").bind(s.symbol,bucket,Math.floor(now/1000)).run().catch(()=>{});
+      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at,note) VALUES(?,?, 'error',0,?,?)").bind(s.symbol,bucket,Math.floor(now/1000),note).run().catch(()=>{});
     }
   }
   const lastTrack=Number(await cacheGet(env,"shadow:track:last")??0);
