@@ -6,7 +6,7 @@ import { SYMBOLS } from "../src/engine/config";
 import { tfStat, structuralStop } from "../src/engine/analyze";
 import { adaptiveProfile } from "../src/engine/run";
 import { PROFILES } from "../src/engine/config";
-import { detectCRT, getKillzone, detectBreakerBlocks } from "../src/engine/ictcrt";
+import { detectCRT, getKillzone, detectBreakerBlocks, getAsianRange, sweptAsianRange } from "../src/engine/ictcrt";
 import { pipUnit, estimatedUsd } from "../src/lib/telegram";
 import { detectPoolSweeps } from "../src/engine/smc";
 import { detectLiquiditySetup } from "../src/engine/liquidity-engine";
@@ -147,6 +147,24 @@ t("CRT : sweep du low de la bougie de référence puis réintégration", () => {
 t("Kill Zone Londres détectée en heure locale", () => {
   const x = getKillzone(Date.UTC(2026, 10, 19, 8, 0));
   assert.deepStrictEqual([x.active, x.name, x.localTime], [true, "London", "08:00"]);
+});
+t("Session asiatique : calcule les extrêmes 20h–minuit en heure de New York", () => {
+  const candles = [
+    { t: Date.UTC(2026, 10, 18, 20, 0), o: 100, h: 102, l: 99, c: 101 }, // 15:00 NY, hors session
+    { t: Date.UTC(2026, 10, 19, 1, 0), o: 100, h: 105, l: 98, c: 101 }, // 20:00 NY
+    { t: Date.UTC(2026, 10, 19, 2, 0), o: 101, h: 104, l: 97, c: 100 }, // 21:00 NY
+    { t: Date.UTC(2026, 10, 19, 3, 0), o: 100, h: 103, l: 98, c: 102 }, // 22:00 NY
+  ];
+  const range = getAsianRange(candles, Date.UTC(2026, 10, 19, 4, 0));
+  assert.deepStrictEqual(range && [range.high, range.low, range.candles], [105, 97, 3]);
+  assert.strictEqual(sweptAsianRange([{ t: 1, o: 97, h: 99, l: 96, c: 98 }], range, "BUY"), true);
+  assert.strictEqual(sweptAsianRange([{ t: 1, o: 105, h: 106, l: 104, c: 104.5 }], range, "SELL"), true);
+  assert.strictEqual(sweptAsianRange([{ t: 1, o: 100, h: 101, l: 99, c: 100 }], range, "BUY"), false);
+});
+t("Kill Zone inactive : l'état est simplement informatif", () => {
+  const x = getKillzone(Date.UTC(2026, 10, 19, 16, 0));
+  assert.strictEqual(x.active, false);
+  assert.strictEqual(x.name, "none");
 });
 t("Breaker Block : ancien OB haussier invalidé puis retesté devient résistance", () => {
   const bars = [
