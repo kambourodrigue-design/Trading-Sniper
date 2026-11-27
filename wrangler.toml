@@ -32,7 +32,7 @@ enabled = true
 MAX_PER_RUN = "1"              # actifs analysés par passage : "1" sur Workers Free (limite CPU 10 ms) ; "4" sur Workers Paid
 PROFILE = "adaptive"          # seuils adaptés à l’alignement H4/D1 ; filtres de risque conservés
 AI_INDEPENDENT = "off"          # désactivé : GPT ne génère pas de signaux indépendants
-AI_PREFILTER_SCORE = "30"
+AI_PREFILTER_SCORE = "30"\nTELEGRAM_V2_ENABLED = "true"\nTELEGRAM_V2_MIN_SCORE = "75"
 AUTONOMOUS_ONLY = "false"
 HYBRID_GPT = "true"
 OPENAI_MODEL = "gpt-6-luna"
@@ -44,5 +44,5 @@ OPENAI_EFFORT = "medium"
 #   OPENAI_API_KEY ou DEEPSEEK_API_KEY (Secrets facultatifs) : OpenAI est prioritaire, DeepSeek sert de repli pour le second avis.
 #   OPENAI_MODEL=gpt-6-luna et OPENAI_EFFORT=medium sont configurés ; l’API est facturée séparément de ChatGPT.
 #   HYBRID_GPT=true : le second avis IA enrichit le signal autonome, sans le bloquer ni modifier ses niveaux.
-#   optionnel : TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram)
+#   optionnel : TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (notifications Telegram Origin et V2)\n#   TELEGRAM_V2_ENABLED=true et TELEGRAM_V2_MIN_SCORE=75 : alertes des setups virtuels V2
 #   plus tard : STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CINETPAY_API_KEY, CINETPAY_SITE_ID

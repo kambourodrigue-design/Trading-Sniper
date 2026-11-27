@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS shadow_signals (
   score INTEGER NOT NULL, strategy TEXT, reasoning TEXT,
   outcome TEXT NOT NULL DEFAULT 'open', tp_reached INTEGER NOT NULL DEFAULT 0,
   r_multiple REAL, created_at INTEGER NOT NULL, bucket_hour INTEGER NOT NULL,
-  progress_at INTEGER, closed_at INTEGER
+  progress_at INTEGER, closed_at INTEGER, telegram_sent_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_shadow_open ON shadow_signals(outcome,symbol);
 CREATE INDEX IF NOT EXISTS idx_shadow_created ON shadow_signals(created_at DESC);
