@@ -1,6 +1,7 @@
 import type { Candle, Dir } from "./types";
 import type { SymbolCfg } from "./config";
 import { getAsianRange, getKillzone, sweptAsianRange } from "./ictcrt";
+import { buildTargets } from "./targets";
 
 export interface RangeContext {
   newsBlocked: boolean;
@@ -214,10 +215,7 @@ function buildRangeSetup(
   // Profil sniper : aucun objectif ne doit être rapproché artificiellement.
   // Les trois TP sont fixés à 2R / 5R / 8R ; le setup est rejeté si la
   // structure du range ne laisse pas au moins 8,8R avant la borne opposée.
-  const sg = dir === "BUY" ? 1 : -1;
-  const tps = [2, 5, 8].map(r => Number((price + sg * risk * r).toFixed(
-    Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5
-  ))) as [number, number, number];
+  const tps = buildTargets(price, risk, dir, roomR);
 
   const gates = [
     { ok: score >= 82, label: "score ≥ 82/100" },

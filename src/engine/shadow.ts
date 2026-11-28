@@ -28,10 +28,16 @@ export async function runShadowEngine(env: Env, opts: { force?: boolean; symbol?
   const results: Array<{symbol:string;status:string;score:number;note:string}> = [];
   for (const s of SYMBOLS) {
     if (opts.symbol && opts.symbol !== s.symbol) continue;
-    if (!opts.force && !isMarketOpen(s, now)) continue;
     const bucket = Math.floor(now / SLOT);
     const seen = await env.DB.prepare("SELECT symbol FROM shadow_runs WHERE symbol=? AND bucket_hour=?").bind(s.symbol,bucket).first();
     if (seen) continue;
+    if (!opts.force && !isMarketOpen(s, now)) {
+      const note = "MARKET_CLOSED : actif hors de sa séance de cotation ; aucune donnée périmée utilisée.";
+      results.push({symbol:s.symbol,status:"market_closed",score:0,note});
+      await env.DB.prepare("INSERT OR IGNORE INTO shadow_runs(symbol,bucket_hour,status,score,created_at,note) VALUES(?,?, 'market_closed',0,?,?)")
+        .bind(s.symbol,bucket,Math.floor(now/1000),note).run();
+      continue;
+    }
     try {
       const maxAge = s.session === "us" ? 9_000_000 : 7_500_000;
       const bundle = await getBundle(env,s,now,maxAge);
@@ -290,5 +296,5 @@ export async function shadowReport(env: Env) {
   const bySymbol=await env.DB.prepare("SELECT symbol,COUNT(*) total,SUM(CASE WHEN outcome='open' THEN 1 ELSE 0 END) open,SUM(CASE WHEN outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END) wins,SUM(CASE WHEN outcome='sl' THEN 1 ELSE 0 END) losses,ROUND(AVG(r_multiple),3) avg_r FROM shadow_signals GROUP BY symbol ORDER BY symbol").all();
   const recent=await env.DB.prepare("SELECT id,symbol,direction,entry,stop_loss,tp1,tp2,tp3,score,strategy,outcome,tp_reached,r_multiple,created_at,closed_at FROM shadow_signals ORDER BY created_at DESC LIMIT 50").all();
   const runs=await env.DB.prepare("SELECT status,COUNT(*) total FROM shadow_runs GROUP BY status ORDER BY status").all();
-  return {version:2,mode:"shadow_only",algorithm:"liquidity_intelligence_ict_smc",live_engine:"origin",live_signals_modified:false,notifications_enabled:env.TELEGRAM_V2_ENABLED !== "false" && tgConfigured(env),telegram_min_score:Number(env.TELEGRAM_V2_MIN_SCORE)||82,totals,bySymbol:bySymbol.results,recent:recent.results,runs:runs.results};
+  return {version:2,mode:"shadow_only",algorithm:"multi_strategy_shadow_v2",live_engine:"origin",live_signals_modified:false,notifications_enabled:env.TELEGRAM_V2_ENABLED !== "false" && tgConfigured(env),telegram_min_score:Number(env.TELEGRAM_V2_MIN_SCORE)||82,totals,bySymbol:bySymbol.results,recent:recent.results,runs:runs.results};
 }

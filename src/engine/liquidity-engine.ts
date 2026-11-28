@@ -2,6 +2,7 @@ import type { Candle, Dir, Pivot } from "./types";
 import type { SymbolCfg } from "./config";
 import { getAsianRange, getKillzone, sweptAsianRange } from "./ictcrt";
 import { detectRangeSetup } from "./range-engine";
+import { buildTargets } from "./targets";
 
 export interface LiquiditySetup {
   dir: Dir;
@@ -195,7 +196,7 @@ export function detectTrendContinuation(
   else reasons.push(`Obstacle structurel trop proche (${roomR.toFixed(1)}R)`);
   reasons.push(`SL structurel derrière le swing M15 ; buffer ${buffer.toFixed(5)} ; risque ${riskAtr.toFixed(2)} ATR`);
 
-  const tps = [2, 5, 8].map(r => Number((price + (dir === "BUY" ? 1 : -1) * risk * r).toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5))) as [number, number, number];
+  const tps = buildTargets(price, risk, dir, roomR);
   const passed = score >= 82 && roomR >= 8.8 && !context.newsBlocked && context.marketOpen;
   const rejection = [score < 82 ? `score ${score}/100 inférieur à 82` : "", roomR < 8.8 ? "espace libre insuffisant pour TP3 ≥ 8R" : "", context.newsBlocked ? "fenêtre de news bloquante" : "", !context.marketOpen ? "marché fermé" : ""].filter(Boolean).join(" ; ");
   return { dir, score: Math.min(100, score), entry: price, sl: Number(rawSl.toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5)), tps, strategy: "Trend Continuation + SMA20 Pullback + M15 Reclaim", reasons, passed, rejection: rejection || "Continuation validée." };
@@ -224,19 +225,24 @@ export function detectLiquiditySetup(
   // Chaque famille est évaluée indépendamment : un range non exploitable ne bloque
   // pas une éventuelle continuation ou un setup de liquidité valide.
   const rangeSetup = detectRangeSetup(cfg, m15, h1, now, context);
-  if (rangeSetup?.passed) return rangeSetup;
-
   // Continuation de tendance sans obligation de sweep/MSS/FVG.
   const continuation = detectTrendContinuation(cfg, m15, h1, h4, d1, now, context);
-  if (continuation?.passed) return continuation;
+  const independentCandidates: LiquiditySetup[] = [
+    ...(rangeSetup ? [rangeSetup] : []),
+    ...(continuation ? [continuation] : []),
+  ];
+  const bestIndependent = (onlyPassed: boolean) => independentCandidates
+    .filter(candidate => !onlyPassed || candidate.passed)
+    .sort((a, b) => b.score - a.score)[0] ?? null;
 
   const bias = htfBias(h4, d1);
   const p15 = pivots(m15, 2);
   const sweep = latestSweep(m15, p15, a15);
   if (!sweep) {
-    if (continuation && (!rangeSetup || continuation.score >= rangeSetup.score)) return continuation;
-    if (rangeSetup) return rangeSetup;
-    return fail(bias === "SELL" ? "SELL" : "BUY", 0, ["Aucun sweep récent confirmé."], "Sweep de liquidité absent.");
+    // En l'absence de sweep, une stratégie indépendante valide reste éligible.
+    // Si aucune ne passe, conserver le meilleur diagnostic plutôt qu'un faux motif sweep obligatoire.
+    return bestIndependent(true) ?? bestIndependent(false) ??
+      fail(bias === "SELL" ? "SELL" : "BUY", 0, ["Aucun candidat indépendant ni sweep récent confirmé."], "Aucun setup indépendant valide ; sweep de liquidité absent.");
   }
   const dir = sweep.dir;
   const reasons: string[] = [];
@@ -312,10 +318,17 @@ export function detectLiquiditySetup(
   if (context.newsBlocked) reasons.push("Entrée suspendue : fenêtre de news à fort impact.");
   if (!context.marketOpen) reasons.push("Marché fermé.");
   const rejection = gates.filter(g => !g.ok).map(g => g.label).join(", ");
-  const tps = [2, 5, 8].map(r => Number((price + sg * risk * r).toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5))) as [number, number, number];
-  return {
+  const tps = buildTargets(price, risk, dir, roomR);
+  const liquidityCandidate: LiquiditySetup = {
     dir, score: Math.min(100, score), entry: price, sl: Number(sl.toFixed(Math.abs(price) >= 1000 ? 2 : Math.abs(price) >= 10 ? 3 : 5)),
     tps, strategy: "Liquidity Sweep + MSS + Displacement + FVG Retest",
     reasons, passed: gates.every(g => g.ok), rejection: rejection || "Setup V2 validé."
   };
+  // Les candidats valides des trois familles sont comparés au score ; le moteur
+  // ne privilégie plus mécaniquement Range ou Continuation par ordre d'appel.
+  const ranked = [...independentCandidates, liquidityCandidate]
+    .filter(candidate => candidate.passed)
+    .sort((a, b) => b.score - a.score);
+  return ranked[0] ?? [liquidityCandidate, ...independentCandidates]
+    .sort((a, b) => b.score - a.score)[0];
 }

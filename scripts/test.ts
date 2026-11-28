@@ -12,6 +12,7 @@ import { detectPoolSweeps } from "../src/engine/smc";
 import { detectLiquiditySetup } from "../src/engine/liquidity-engine";
 import { detectRangeSetup } from "../src/engine/range-engine";
 import { assessFundamentals } from "../src/engine/fundamental-engine";
+import { targetMultiples, buildTargets } from "../src/engine/targets";
 
 
 const M = 900_000, t0 = 1_700_000_000_000;
@@ -211,7 +212,7 @@ t("classification des unités et estimation 0,01 lot : Forex, or et crypto", () 
   assert.strictEqual(pipUnit("ABC/DEF"), null);
 });
 
-t("V2 Liquidity Intelligence : les 15 actifs configurés sont traités par la même interface multi-actifs", () => {
+t("V2 multi-stratégies : une tendance seule, sans pullback/reprise, ne crée pas de signal", () => {
   const candles = (count: number, step: number) => Array.from({ length: count }, (_, i) => {
     const o = 100 + i * step, c = o + step * 0.5;
     return { t: t0 + i * M, o, h: c + step * 0.5, l: o - step * 0.5, c };
@@ -219,10 +220,22 @@ t("V2 Liquidity Intelligence : les 15 actifs configurés sont traités par la m�
   const m15 = candles(80, 0.01), h1 = candles(100, 0.04), h4 = candles(100, 0.12), d1 = candles(100, 0.3);
   for (const cfg of SYMBOLS) {
     const result = detectLiquiditySetup(cfg, m15, h1, h4, d1, t0 + 100 * M, { newsBlocked: false, marketOpen: true, hasOpen: false });
-    assert.strictEqual(result.passed, false); // une simple tendance sans sweep ne doit jamais créer de signal V2
-    assert.strictEqual(result.rejection.includes("Sweep"), true);
+    assert.strictEqual(result.passed, false); // une tendance seule ne suffit pas : pullback et reprise sont obligatoires
+    assert.strictEqual(result.entry > 0, true);
   }
 });
+
+t("TP adaptatifs : minimums 2R/5R/8R et extension plafonnée à 30R selon l'espace structurel", () => {
+  assert.deepStrictEqual(targetMultiples(8.8), [2, 5, 8]);
+  assert.deepStrictEqual(targetMultiples(12), [2, 5, 11]);
+  assert.deepStrictEqual(targetMultiples(40), [2, 5, 30]);
+  assert.deepStrictEqual(targetMultiples(Number.POSITIVE_INFINITY), [2, 5, 8]);
+  const buy = buildTargets(100, 2, "BUY", 12);
+  const sell = buildTargets(100, 2, "SELL", 12);
+  assert.deepStrictEqual(buy, [104, 110, 122]);
+  assert.deepStrictEqual(sell, [96, 90, 78]);
+});
+
 t("V2 Liquidity Intelligence : refuse un historique trop court sans produire de signal", () => {
   const cfg = SYMBOLS[0];
   const result = detectLiquiditySetup(cfg, [], [], [], [], t0, { newsBlocked: false, marketOpen: true, hasOpen: false });
